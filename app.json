@@ -8,7 +8,8 @@
     "scheme": "capsule",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.denys.bohatyrchuk.capsule"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,14 +18,20 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.denys.bohatyrchuk.capsule"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "root": "src/app"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -34,7 +41,18 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-status-bar",
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "entitlementsProfile": "production",
+          "forceCxx20": true,
+          "enableOpenCL": true
+        }
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,
