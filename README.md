@@ -1,57 +1,120 @@
-# Welcome to your Expo app 👋
+# Capsule
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> Offline-first. Fully private. Configurable. Self-contained.
 
-## Get started
+Capsule is a React Native app that runs AI chat and structured personal data entirely on your device — no servers, no telemetry, no network required. Every model inference, every search, every byte of your data stays local.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## What it does
 
-2. Start the app
+**AI Chat** — talk to large language models without sending a single token to the cloud. Models run via [llama.cpp](https://github.com/ggerganov/llama.cpp) through the [llama.rn](https://github.com/mybigday/llama.rn) JSI bridge. Download a GGUF model once; everything else works in airplane mode.
 
-   ```bash
-   npx expo start
-   ```
+**Capsules** — a structured personal database with custom schemas. Define your own field types (text, number, date, boolean, select, relation, attachment), create reusable templates, and keep records that belong to you.
 
-In the output, you'll find options to open the app in a
+**AI × Data (coming)** — local RAG that lets you chat with your own capsules using on-device embeddings. No data leaves your device.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Core principles
 
-## Get a fresh project
+| Principle | What it means in practice |
+|---|---|
+| Offline-first | Zero network = fully functional. Network absence is the default assumption. |
+| Fully private | No external servers, no analytics, no SDKs that phone home. Privacy is verifiable. |
+| Self-contained | Each capsule carries its own data and schema. No hidden dependencies. |
+| Configurable | Expose configuration rather than hardcode opinions. |
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Platform | React Native (iOS + Android) · Expo SDK 56 |
+| Navigation | expo-router (file-based routing) |
+| Styling | react-native-unistyles |
+| Animations | react-native-reanimated 4 |
+| Structured storage | expo-sqlite |
+| Key-value / settings | MMKV |
+| On-device LLM | llama.rn → llama.cpp (GGUF, Metal / OpenCL GPU) |
+| On-device STT | whisper.rn → whisper.cpp *(Phase 3)* |
+| Encryption | SQLCipher + expo-secure-store / Keychain *(Phase 4)* |
+| Sync | CRDT-based LAN sync, flagged off by default *(deferred)* |
+
+---
+
+## Architecture
+
+The project follows [Feature Sliced Design](https://feature-sliced.design/) (FSD):
+
+```
+src/
+  app/        # expo-router routes + app-wide providers
+  widgets/    # composite UI blocks (ChatThread, CapsuleEditor, …)
+  features/   # user interactions with business logic (send-message, manage-models, …)
+  entities/   # domain models + local CRUD (conversation, message, capsule, …)
+  shared/     # reusable primitives: ui kit, db client, llm/stt wrappers, utils
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Layer rule: each layer may only import from layers below it. `shared/llm` owns all llama.rn interaction — nothing else calls it directly.
 
-### Other setup steps
+---
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Roadmap
 
-## Learn more
+The app ships in phases, each independently usable:
 
-To learn more about developing your project with Expo, look at the following resources:
+- **Phase 0** — Foundation (db, storage, theme, llm wrapper, router shell)
+- **Phase 1** — AI chat core (model download, streaming inference, conversation management)
+- **Phase 2** — AI configurability (sampling params, personas, conversation branching)
+- **Phase 3** — Voice (on-device STT + TTS)
+- **Phase 4** — Privacy core (encryption at rest, app lock, audit log, secure wipe)
+- **Phase 5** — Portability (open portable format, import/export, migration from ChatGPT/Claude)
+- **Phase 6** — Capsule data core (custom schemas, search, filter, relations)
+- **Phase 7** — AI × data (local RAG over capsules)
+- **Phase 8** — Polish (multimodal, prompt library, accessibility, command palette)
+- **Phase 9** — LAN sync (CRDT-based, device-to-device, E2E encrypted, off by default)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+See [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the full checklist.
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## Privacy guarantee
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# Capsule
+- **No outbound requests** from core logic — ever.
+- Model download is the single allowed network action; it is user-initiated and clearly indicated.
+- All storage is local: SQLite files and MMKV on your device.
+- A live egress indicator and audit log make privacy verifiable, not just claimed.
+- Every dependency is audited for runtime outbound requests before being added.
+
+---
+
+## Getting started
+
+```bash
+# Install dependencies
+npm install
+
+# iOS
+npx expo run:ios
+
+# Android
+npx expo run:android
+```
+
+> llama.rn requires a native build — Expo Go is not supported. Use a development build.
+
+---
+
+## Docs
+
+- [Architecture](docs/ARCHITECTURE.md) — FSD layer rules, slice map, navigation structure
+- [Development Plan](docs/DEVELOPMENT_PLAN.md) — phased roadmap with task checklist
+- [Design](docs/DESIGN.md) — tokens, spacing, typography, layout constants
+
+---
+
+## License
+
+MIT
