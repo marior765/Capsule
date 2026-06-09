@@ -1,4 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p docs)",
+      "Bash(git mv *)",
+      "Bash(cat ~/.claude/settings.json 2>/dev/null; echo \"---project---\"; cat .claude/settings.json 2>/dev/null)",
+      "Read(//Users/denysbohatyrchuk/.claude/**)",
+      "Bash(curl -s https://code.claude.com/docs/en/mcp-servers.md)"
+    ]
+  },
+  "allowedMcpServers": [{"type": "http", "url": "https://mcp.expo.dev/mcp"}],
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }
