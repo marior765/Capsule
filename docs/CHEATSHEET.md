@@ -18,12 +18,14 @@ have). Add a row to the status table when you adopt a feature for real.
 | MCP servers | ✅ Learned | 2026-06-08 |
 | Subagents (Agent tool) | ✅ Used | 2026-06-08 |
 | Custom skills (`.claude/commands/`) | ✅ Used | 2026-06-08 |
-| Hooks (settings.json) | ⬜ Not yet | — |
-| Loops (`/loop`) | ⬜ Not yet | — |
-| Scheduled agents (`/schedule`) | ⬜ Not yet | — |
-| Memory (persistent) | ⬜ Not yet | — |
-| Plan mode | ⬜ Not yet | — |
-| Code review (`/code-review`) | ⬜ Not yet | — |
+| Hooks (settings.json) | ✅ Used | 2026-06-09 |
+| Loops (`/loop`) | ✅ Learned | 2026-06-09 |
+| `update-config` skill | ✅ Used | 2026-06-09 |
+| Scheduled agents (`/schedule`) | ✅ Learned | 2026-06-09 |
+| Memory (persistent) | ✅ Learned | 2026-06-17 |
+| `/plan` custom skill | ✅ Used | 2026-06-17 |
+| Plan mode (`defaultMode: plan`) | ✅ Learned | 2026-06-17 |
+| Code review (`/code-review`) | ✅ Learned | 2026-06-17 |
 
 ---
 
@@ -117,18 +119,151 @@ have). Add a row to the status table when you adopt a feature for real.
   `/security-review`, `/run` — these are Anthropic-backed, more powerful than
   plain prompt files.
 
+### Hooks (settings.json)
+- **What:** Shell commands (or HTTP/prompt/agent calls) that fire automatically on
+  events in Claude Code's lifecycle — before/after tool calls, on session stop, etc.
+  The harness runs them unconditionally; the AI cannot skip them.
+- **How:** Add a `"hooks"` key to `.claude/settings.json`. Each event maps to an
+  array of `{ matcher, hooks: [{ type, command }] }` entries.
+  - `matcher` — regex/pipe-separated tool name filter (`"Edit|Write"`, `"Bash"`)
+  - `type: "command"` — shell command; receives hook context as JSON on stdin
+  - `exit 2` from a `PreToolUse` hook blocks the tool call
+  - `async: true` — fire and forget, don't block Claude
+- **Key events:** `PreToolUse` (can block), `PostToolUse`, `Stop`, `SessionStart`,
+  `PermissionRequest`, `PreCompact`
+- **Here:** Three hooks added to `.claude/settings.json`:
+  1. **Privacy guard** (`PostToolUse` / `Edit|Write`) — scans written content for
+     `fetch(`, `axios`, `XMLHttpRequest`, `https?://`, analytics imports. Warns
+     Claude via stderr if found. Enforces the "no network in core logic" hard rule.
+  2. **Audit log** (`PostToolUse` / `Edit|Write|Bash`) — appends a timestamped
+     line to `.claude/audit.log` for every file edit or shell command. Async.
+  3. **Stop notification** (`Stop`) — fires `osascript` to send a macOS system
+     notification when Claude finishes a response. Async.
+- **Gotcha:** Hooks are discovered at startup. After editing `settings.json` in an
+  active session, open `/hooks` in the UI or restart to reload them.
+- **The key distinction:** Hooks are deterministic guarantees. CLAUDE.md
+  instructions are behavioral guidance. Use hooks when you need enforcement,
+  not suggestions.
+
+### Loops (`/loop`)
+- **What:** Runs a prompt or `/command` repeatedly — on a fixed interval or
+  self-paced (model decides the delay) — until cancelled or a stop condition is met.
+- **How:**
+  ```
+  /loop 5m "check if build is passing"        ← fixed interval
+  /loop /check-privacy                         ← self-paced, no interval
+  /loop "implement X until tests pass. Stop when tsc + jest both pass cleanly."
+  ```
+- **Three questions every loop prompt must answer:**
+  1. **What** — feature + architecture slice to work on
+  2. **Check** — how to verify completion (tsc, jest, or both)
+  3. **Stop** — when check passes, or after N failed attempts
+- **TDD is the natural fit:** pre-written failing tests give the loop a binary,
+  machine-readable exit signal. Without tests the loop has no reliable definition
+  of done — it can only self-assess, which is unreliable.
+- **Safety ceiling:** always add a max-attempts clause (`"or after 5 failed
+  attempts, stop and report what's blocking"`) to prevent infinite retry loops
+  on genuinely broken approaches.
+- **Parallel sessions:** run a watchdog loop in a second chat window while
+  directing work in the main session. Rule: loop sessions *read and report*,
+  main session *writes* — avoids file conflicts.
+- **Token cost:** every iteration is a full model call. Match interval to how
+  fast the thing actually changes. Self-paced is more efficient than fixed for
+  variable-length work.
+- **Here:** Learned the full loop anatomy. Established TDD as the standard
+  loop pattern for Capsule feature development. Not yet run on real code —
+  pending Jest setup in Phase 0.
+
+### `update-config` skill (built-in)
+- **What:** A built-in Claude Code skill that configures `settings.json` — hooks,
+  permissions, env vars, MCP servers. Handles merging with existing config safely.
+- **How:** Invoke via the Skill tool with a description of what to configure.
+  It reads the target file first, merges carefully, pipe-tests hook commands
+  before writing, and validates JSON structure after.
+- **Here:** Used to implement the three Capsule hooks (privacy guard, audit log,
+  stop notification). Caught the pipe-test workflow — synthesize stdin payload,
+  run raw command, verify exit code and side effect before writing to settings.
+
+### Scheduled agents (`/schedule`)
+- **What:** Cloud-hosted Claude Code sessions that run on a cron schedule without
+  you being present. Defined with a prompt + schedule; run on Anthropic's
+  infrastructure with full access to your repo and tools.
+- **How:**
+  ```
+  /schedule "every day at 9am — summarize progress to docs/ARTICLE.md"
+  /schedule "every Monday at 8am — parse audit.log and report token spend"
+  /schedule "once at 3pm today — run /create-tests 0.2, medium"
+  ```
+- **vs. Loops:** loops need you present to start, run on your machine, best for
+  implementation. Scheduled agents run on a clock, run in the cloud, best for
+  reports/checks/reminders.
+- **Best use cases for Capsule:**
+  - Daily standup digest (what completed, what's next, blockers)
+  - Weekly token cost report from `audit.log`
+  - Weekly dependency audit
+  - Pre-session progress summary
+- **Here:** Learned the full model. Not yet set up a live schedule — weekly token
+  report is the first candidate once real coding begins.
+
+### Memory (persistent)
+- **What:** Per-fact `.md` files stored at `~/.claude/projects/<project>/memory/`
+  and indexed in `MEMORY.md`. Loaded selectively into each session — index always
+  loads, individual files pulled in when relevant to the conversation.
+- **Scope:** Global across all projects (unlike `CLAUDE.md` which is project-only).
+- **Who writes:** Claude — on instruction ("remember X", "forget Y", "update Z")
+  or proactively when learning something worth keeping.
+- **Four types:** `user` (your profile/preferences), `feedback` (behavioral
+  corrections), `project` (decisions, active work), `reference` (where things live)
+- **How to enforce:**
+  - Save: *"remember that I prefer X"*
+  - Delete: *"forget the memory about Y"*
+  - Update: *"update your memory — we switched from X to Y"*
+  - Or edit the files directly in `~/.claude/projects/.../memory/`
+- **Context cost:** same as `CLAUDE.md` — each loaded file occupies context window.
+  Keep entries lean: write the signal, not the story. ~200 entry index cap.
+- **vs. CLAUDE.md:**
+  - `CLAUDE.md` — project-scoped, static, developer-maintained
+  - Memory — global, dynamic, Claude-maintained
+- **Here:** Learned the full model. First memory entries to be written: user
+  profile (React Native background, new to llama.rn) and feedback from this session.
+
+### `/plan` custom skill
+- **What:** Read-only planning command — explores the codebase, identifies files
+  to create/modify, key decisions, risks, and implementation order. Produces a
+  structured plan for approval before any code is written.
+- **How:** `/plan 0.2` or `/plan "step 1.5 — features/send-message"`
+- **Rules encoded in the skill:** no `Edit`, `Write`, or `Bash` during planning.
+  Ends with "Approve to proceed, or let me know what to change."
+- **Why custom:** `/plan` doesn't exist as a built-in Claude Code command. Created
+  as `.claude/commands/plan.md` to fill the gap.
+
+### Plan Mode (`defaultMode: "plan"`)
+- **What:** A harness-level permission mode that physically blocks `Edit`, `Write`,
+  and `Bash`. Claude can only read. Not a slash command — set in `settings.json`
+  or toggled in the Claude Code UI.
+- **How:** `{ "permissions": { "defaultMode": "plan" } }` in `.claude/settings.json`
+- **vs. `/plan` skill:** the skill is a convention (Claude chooses not to edit).
+  Plan Mode is a guarantee (harness physically blocks it).
+- **Here:** Learned but not enabled by default — `/plan` skill covers our needs.
+
+### Code review (`/code-review`)
+- **What:** Built-in skill that reviews the current diff for bugs, inefficiencies,
+  simplification opportunities.
+- **Modes:** default (high-confidence only), `high` (broader), `ultra` (multi-agent
+  cloud review — most independent). `--fix` applies findings. `--comment` posts
+  inline PR comments.
+- **Honest limitation:** running it on AI-generated code has limited value — same
+  model, same blind spots. `ultra` has more value (independent agents). Most
+  useful on your own code, or as a final pass before committing.
+- **Here:** Learned. Not yet in the standard workflow — human review of the diff
+  is the primary gate after `/safe-loop`.
+
 ---
 
 ## To learn (Goal #4 backlog)
 
 - **MCP servers (hands-on)** — actually wire up Expo MCP and use it in a task.
-- **Hooks** — run shell commands automatically on events (e.g. lint on save,
-  format before commit). Configured in `settings.json`.
-- **Loops** — run a prompt/command on an interval or self-paced.
-- **Scheduled agents** — cron-style remote agents.
-- **Memory** — persistent facts across sessions.
-- **Plan mode** — design before editing; required by our conventions for
-  multi-file changes.
 
 <!-- When you use one of the above for real, move it up into "Features" with a
 how-we-used-it note, and flip its row in the status table. -->
+

@@ -99,4 +99,393 @@ to write the actual article.
 
 ---
 
+### 2026-06-09 — Skills: custom slash commands
+
+**What we did**
+
+- Learned what skills (custom slash commands) are in Claude Code.
+- User created `.claude/skills/explain.md` — wrong folder, doesn't work.
+- Moved it to the correct location: `.claude/commands/explain.md`.
+- Confirmed skills require a **restart** to be discovered — Claude Code scans
+  `.claude/commands/` at startup only.
+- Learned that `$ARGUMENTS` is the single placeholder for user input after the
+  command name.
+
+**Why it matters (article angle)**
+
+- Skills are just Markdown files with a prompt — no special syntax, no registration,
+  no config changes needed. The simplicity is the point.
+- The wrong-folder mistake is easy to make and completely silent — no error, the
+  command just doesn't appear. Worth calling out explicitly in the article.
+- **The real power is custom workflows:** a `/check-privacy` or `/phase-status`
+  command specific to your project is more valuable than a generic one. Skills
+  let you encode your project's recurring checks as first-class commands.
+- Takeaway: **skills are pre-saved prompts, nothing more — but that's enough.**
+  The value is ergonomic: one short command instead of re-typing a prompt you
+  use repeatedly.
+
+---
+
+### 2026-06-09 — Hooks: deterministic automation
+
+**What we did**
+
+- Learned the full hooks system: events, matchers, exit codes, scopes.
+- Discussed the three best hooks for Capsule's hard rules.
+- Implemented all three in `.claude/settings.json`:
+  1. **Privacy guard** (`PostToolUse` / `Edit|Write`) — scans written content for
+     network call patterns (`fetch(`, `axios`, `https?://`, analytics imports) and
+     warns Claude via stderr. Enforces the "no network in core logic" rule.
+  2. **Audit log** (`PostToolUse` / `Edit|Write|Bash`) — appends a timestamped
+     line to `.claude/audit.log` for every file edit or shell command.
+  3. **Stop notification + sound** (`Stop`) — fires an `osascript` macOS
+     notification and plays a Glass chime (`afplay`) when Claude finishes.
+- Pipe-tested every hook command before writing it to settings.
+- Confirmed hooks cost **zero tokens** (`type: "command"` is pure shell).
+
+**Why it matters (article angle)**
+
+- **Hooks vs. CLAUDE.md instructions:** CLAUDE.md rules are behavioral guidance —
+  the AI follows them by judgment and can miss them. Hooks are guarantees — the
+  harness runs them unconditionally regardless of what the AI does. Use hooks
+  when you need enforcement, not suggestions.
+- **The privacy guard pattern:** Capsule's "no network calls in core logic" rule
+  is important enough to be mechanically enforced, not just documented. A hook
+  that scans every written file is a cheap, zero-token way to catch violations
+  the moment they happen — before a PR review, before a build.
+- **Pipe-testing before writing:** The skill showed the right workflow — synthesize
+  the stdin payload, pipe it to the raw command, check exit code AND side effect.
+  A hook that silently does nothing is worse than no hook.
+- **Audit log as a project artifact:** The `.claude/audit.log` is a timestamped
+  record of every file the AI touched and every command it ran. Useful for the
+  article itself ("here's the full trace of an AI-built feature") and aligns with
+  Capsule's own audit-log philosophy.
+- Takeaway: **automate the rules you care most about at the harness level, not
+  the prompt level.** The closer a constraint is to the metal, the harder it is
+  to accidentally violate.
+
+---
+
+### 2026-06-09 — Loops: the anatomy of autonomous AI development
+
+**What we did**
+
+- Learned what loops are: a repeat wrapper that runs a prompt or `/command`
+  on an interval or self-paced until cancelled or a stop condition is met.
+- Established the three-question formula every loop prompt must answer:
+  1. **What to do** — feature + architecture slice
+  2. **What to check between iterations** — static checks (tsc) + tests (jest)
+  3. **When to stop** — check passes, or max attempts reached
+- Discussed parallel loop sessions: a watchdog loop in Chat 2 while directing
+  work in Chat 1. Safe pattern: loop sessions *read and report*, main session *writes*.
+- Reached the conclusion that **TDD is the natural fit for loop-driven development**.
+
+**The TDD conclusion (article angle)**
+
+This is one of the more valuable insights of the whole project:
+
+The loop needs a binary exit signal — pass or fail, stop or continue. The only
+reliable source of that signal is a test suite. Static checks (tsc, eslint) catch
+structural mistakes but can't verify intent. Self-assessment ("looks good to me")
+is unreliable. Tests are the only thing that give the loop an unambiguous definition
+of done.
+
+TDD flips the loop into a clean cycle:
+- Write failing tests that describe the expected behavior (the spec)
+- Start the loop: implement until tests pass
+- Loop exits on green; human reviews the diff
+
+There's a deeper benefit specific to AI development: **tests constrain the AI's
+solution space**. Without tests, a loop can implement something that compiles but
+misses the intent entirely. With failing tests written upfront, the only valid exit
+is code that satisfies the spec you defined.
+
+The article conclusion this points to: *the most effective AI development loop is
+TDD — not just because it's good software practice, but because it gives the AI
+an unambiguous, machine-readable definition of done. The loop doesn't need to
+understand what "done" means. It just reads the exit code.*
+
+**Verification hierarchy for mobile**
+
+Also established the honest limits of loop verification for React Native:
+
+| Layer | Tool | Confidence | Cost |
+|---|---|---|---|
+| Types | `tsc --noEmit` | High (structure) | Zero |
+| Logic | `jest` | High (behavior) | Low |
+| UI / runtime | Simulator + `/verify` | Real | High |
+
+The practical approach: tsc + jest gets through Phases 0–3. Simulator verification
+is a manual gate before each phase ships. A Detox + Claude AI testing library
+(discussed as a future open source project) would close the last gap.
+
+---
+
+### 2026-06-09 — The safe-loop pattern: audit files as loop memory
+
+**What we did**
+
+- Identified a key weakness in raw loops: no persistent context between iterations.
+  If a loop runs 5 iterations, iteration 5 has no memory of what iterations 1–4 did.
+- Designed and implemented the **safe-loop pattern** as a custom skill:
+  `.claude/commands/safe-loop.md`
+- The pattern: create `.claude/loop-audit.md` at loop start, update it before and
+  after every iteration, delete it on loop exit.
+- Usage: `/safe-loop "Phase 0 tasks from docs/DEVELOPMENT_PLAN.md"`
+
+**What the audit file solves**
+
+A loop without shared memory is stateless — each iteration re-reads the codebase
+from scratch and has no record of what previous iterations attempted or why they
+failed. The audit file acts as a **scratchpad visible to both the loop and the
+developer**:
+
+- The loop writes its intent *before* each task — so if it crashes mid-iteration
+  you know what it was doing
+- The loop writes the result *after* — so the next iteration has context on what
+  already passed or failed
+- The developer can open it in a side tab and watch the loop work in real time
+
+Deleting it on exit keeps the repo clean — it's ephemeral working memory, not
+a permanent artifact.
+
+**Why it matters (article angle)**
+
+- **Loops are stateless by default** — this is a fundamental constraint worth
+  calling out. Each iteration is a fresh model call with no memory of prior ones.
+  Any state that needs to persist across iterations must be written to a file.
+- **The audit file is a general pattern** — not just for loops. Any long-running
+  AI task benefits from a scratchpad that externalizes working memory. The model's
+  context window is finite and ephemeral; the filesystem is not.
+- **Observability matters for autonomous work** — when the AI is working
+  unsupervised, you need a window into what it's doing. The audit file is that
+  window. Without it, a loop is a black box.
+- Takeaway: **treat the filesystem as the AI's working memory for long-running
+  tasks.** Write state to files, read it back next iteration. Delete when done.
+
+---
+
+### 2026-06-09 — Closing the loop: tests, testIDs, and a complete AI dev workflow
+
+**What we did**
+
+- Created `/create-tests` skill: takes a step number + coverage depth (`light` /
+  `medium` / `hard`), reads the plan and architecture, writes failing tests before
+  implementation. TDD enforced by convention.
+- Defined coverage depth levels:
+  - `light` — happy path + edge cases
+  - `medium` — happy path + edge cases + error handling
+  - `hard` — all of the above + constraint violations + boundary/impossible cases
+- Established a strict testID system in `CLAUDE.md` based on a real production
+  pattern: `createComponentTestIDs`, typed categories, static `.testIDs` property
+  on every component, no hardcoded strings.
+- Added step `0.9` to Phase 0: `shared/testing` utilities must exist before any
+  widget is written.
+- Numbered every phase step (0.1, 0.2 … 9.4) so loop commands can target
+  individual tasks precisely.
+
+**The complete AI development workflow we arrived at**
+
+By the end of this session, the full loop-driven development cycle is defined:
+
+```
+1. /create-tests 0.2, medium     → write failing tests (TDD)
+2. /safe-loop "implement step 0.2"  → implement until tsc + jest pass
+3. /code-review                  → review the diff
+4. mark [x] in DEVELOPMENT_PLAN.md → progress tracked
+```
+
+Every piece is a custom skill or standing instruction. The developer's job is to
+direct — pick the step, choose the coverage depth, review the output. The AI
+does the writing.
+
+**Why it matters (article angle)**
+
+- **testIDs as a first-class concern:** In AI-generated UI code, testIDs are
+  easy to forget or apply inconsistently — the model has no memory of what it
+  named things two components ago. Encoding the full convention in `CLAUDE.md`
+  (category table, prefix table, static property pattern, no hardcoded strings)
+  makes it impossible to get wrong. The AI follows the spec on every component
+  without being reminded.
+- **The `/create-tests` skill inverts the loop dependency:** The loop needs a
+  binary exit signal. Tests provide that. The skill makes writing those tests
+  a one-command operation — you specify intent (step + depth), the AI writes
+  the spec. This is the practical implementation of TDD in an AI-first workflow.
+- **Skills as workflow primitives:** By the end of Phase 0 setup, we have
+  `/create-tests`, `/safe-loop`, `/explain`, `/update-article`, `/update-cheetsheet`
+  — a vocabulary of reusable commands that encode the entire development process.
+  Each session starts with these already available. The AI doesn't need to be
+  taught the workflow each time; it's in the skills.
+- Takeaway: **the goal of AI workspace setup is to make the right workflow the
+  path of least resistance.** Every convention in `CLAUDE.md`, every skill in
+  `.claude/commands/`, every hook in `settings.json` reduces the cost of doing
+  things correctly and raises the cost of doing them wrong.
+
+---
+
+### 2026-06-09 — Token tracking hook + audit log finalized
+
+**What we did**
+
+- Investigated how to track token usage per request. Discovered Claude Code writes
+  full session transcripts to `~/.claude/projects/<project>/` as JSONL, each
+  assistant turn containing a `message.usage` object with `input_tokens`,
+  `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`.
+- Added a second Stop hook that parses the latest transcript, aggregates session
+  token totals, and appends them to `.claude/audit.log` on every response.
+- Removed the privacy guard hook — premature for the current stage.
+- Restored the `Edit|Write` audit log hook that had been accidentally dropped.
+
+**Final hook set in `.claude/settings.json`:**
+1. `PostToolUse / Edit|Write` — logs file path to `audit.log`
+2. `PostToolUse / Bash` — logs command to `audit.log`
+3. `Stop` — macOS notification + Glass chime + session token totals to `audit.log`
+
+**audit.log entry format:**
+```
+[2026-06-09 13:42:11] Edit: src/shared/db/index.ts
+[2026-06-09 13:42:11] Bash: npx tsc --noEmit
+[2026-06-09 13:42:11] TOKENS session-total — in:6076 out:108741 cache_read:15722742 cache_created:717809
+```
+
+**Why it matters (article angle)**
+
+- **Transcripts as a data source:** Claude Code's JSONL transcripts are an
+  underused artifact. They contain the full record of a session — every turn,
+  every tool call, every token count. Parsing them unlocks observability that
+  the UI doesn't surface: cost per loop iteration, cost per feature, cache
+  efficiency over time.
+- **Build the data pipe before you need the graph:** the hook costs nothing to
+  run and produces a flat log that's trivially parseable later. When you do want
+  the graph, the data is already there. This is the right order — instrument
+  early, visualize when the signal is worth reading.
+- **Hooks as zero-cost observability:** all three active hooks are `async: true`
+  and `type: command` — pure shell, zero tokens, zero latency impact on Claude.
+  The entire audit + notification system costs nothing to operate.
+
+---
+
+### 2026-06-09 — Scheduled agents: async, unattended work
+
+**What we did**
+
+- Learned what scheduled agents are: cloud-hosted Claude Code sessions running
+  on a cron schedule without the developer present.
+- Understood the key distinction from loops: loops are manual + local + for
+  implementation; scheduled agents are clock-triggered + cloud + for reports
+  and checks.
+- Identified best use cases for Capsule: daily standup digest, weekly token
+  cost report from `audit.log`, dependency audits, pre-session summaries.
+
+**Why it matters (article angle)**
+
+- **The async layer of an AI workspace:** hooks automate reactions to events,
+  loops automate implementation sprints, scheduled agents automate the
+  recurring background work that doesn't need your attention — reports,
+  digests, audits. Together they form a complete automation stack.
+- **The standup use case is underrated:** a scheduled agent that reads
+  `DEVELOPMENT_PLAN.md` and `ARTICLE.md` every morning and writes a 3-bullet
+  summary costs almost nothing and saves a cognitive load tax at the start of
+  every session. You open your laptop knowing exactly where you are.
+- **Cloud execution changes the model:** unlike loops, scheduled agents don't
+  require your machine to be on or your session to be open. They're genuinely
+  autonomous — closer to a CI job than a terminal command.
+- Takeaway: **the full AI workspace automation stack is hooks (event-driven) +
+  loops (implementation-driven) + scheduled agents (time-driven).** Each layer
+  handles a different trigger type. Together they cover almost everything that
+  would otherwise require manual attention.
+
+---
+
+### 2026-06-17 — Memory: the dynamic layer of AI context
+
+**What we explored**
+
+- Learned what Claude Code's persistent memory system is and how it differs from
+  `CLAUDE.md`.
+- Understood the file-per-fact structure: one `.md` file per memory entry, indexed
+  in `MEMORY.md` (200-line cap). Selective loading — index always loaded, individual
+  files pulled in when relevant.
+- Confirmed memory is global across all projects, not scoped to Capsule.
+- Established that memory files are created and maintained by Claude, not the
+  developer — though you can instruct Claude to save, update, or delete specific
+  entries at any time.
+- Clarified that memory size affects token consumption the same way `CLAUDE.md`
+  does — each loaded file occupies context window space.
+
+**The one-line distinction:**
+- `CLAUDE.md` — project-scoped, static, developer-maintained, loaded every session
+- **Memory** — global, dynamic, Claude-maintained, selectively loaded per session
+
+**Why it matters (article angle)**
+
+- **Memory is the AI's running notes about you** — preferences learned mid-session,
+  decisions made, your background, active work context. Without it, every session
+  starts cold and you re-teach the same things repeatedly.
+- **The file-per-fact structure is intentional:** selective loading is only possible
+  because each fact is its own file. A monolithic memory file would be
+  all-or-nothing. This is worth teaching — structure your AI's memory the same way
+  you'd structure a database: normalized, not one big blob.
+- **You can enforce memory explicitly:** "remember X", "forget Y", "update the
+  memory about Z" — Claude acts immediately. The files are also plain Markdown,
+  directly editable.
+- **The context cost question:** global memory loads into every session, so the
+  same trimming discipline applies as with `CLAUDE.md`. Write the signal, not the
+  story. A 50-token entry beats a 500-token one with the same information.
+- Takeaway: **the complete AI context stack is `CLAUDE.md` (project rules) +
+  memory (dynamic facts about you) + reference docs (looked up on demand).** Each
+  layer has a different owner, lifespan, and loading strategy. Understanding all
+  three is what separates a well-configured AI workspace from one that starts
+  fresh every session.
+
+---
+
+### 2026-06-17 — Plan mode, code review, and completing the skill vocabulary
+
+**What we explored**
+
+- Learned `/code-review` — built-in skill for reviewing diffs. Discussed honestly
+  why running it on AI-generated code has limited value (same model, same blind
+  spots). `ultra` mode has more value — independent agents with no memory of
+  writing the code. Standard mode most useful when reviewing your own code.
+- Learned Plan Mode — a harness-level permission lock that physically prevents
+  Claude from writing files until released. Set via `defaultMode: "plan"` in
+  settings, not a slash command.
+- Discovered `/plan` and `/plan-mode` don't exist as built-in commands — I
+  described them incorrectly. Corrected and created a custom `/plan` skill instead.
+- Created `.claude/commands/plan.md` — read-only by instruction, produces a
+  structured plan (files to create/modify, key decisions, risks, implementation
+  order), ends with "Approve to proceed."
+
+**The complete skill vocabulary for Capsule is now:**
+
+| Skill | Purpose |
+|---|---|
+| `/plan` | Design before implementation — read-only, approval-gated |
+| `/create-tests` | Write failing tests before implementation (TDD) |
+| `/safe-loop` | Implement until tsc + jest pass, with audit file |
+| `/explain` | Explain any concept with examples |
+| `/update-article` | Append to development diary |
+| `/update-cheetsheet` | Update AI features catalog |
+
+**Why it matters (article angle)**
+
+- **On self-review limitations:** this is an honest observation worth including
+  in the article. AI code review on AI-generated code is largely theater — the
+  model that wrote it will tend to approve it. The real review gate is human eyes
+  on the diff, or `ultra` mode with genuinely independent agents. Don't cargo-cult
+  `/code-review` into every workflow just because it exists.
+- **On correcting mistakes publicly:** I described `/plan` and `/plan-mode` as
+  commands that don't exist. The user caught it immediately. Worth noting in the
+  article: AI tools make confident factual errors. Verify claims about tool
+  capabilities before building workflows around them.
+- **The custom skill as a fix:** rather than abandoning the concept, we built
+  what I described as a custom skill. This is the right response — when a built-in
+  doesn't exist, `.claude/commands/` fills the gap in minutes.
+- Takeaway: **the skill vocabulary is the interface to your AI workspace.** By the
+  end of setup, a full feature cycle is: `/plan` → `/create-tests` → `/safe-loop`
+  → human review. Each step is one command. The complexity is encoded, not repeated.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

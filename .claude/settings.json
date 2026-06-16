@@ -11,5 +11,45 @@
   "allowedMcpServers": [{"type": "http", "url": "https://mcp.expo.dev/mcp"}],
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); TOOL=$(echo \"$INPUT\" | jq -r '.tool_name'); TARGET=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // \"\"'); echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $TOOL: $TARGET\" >> .claude/audit.log",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // \"\"'); echo \"[$(date +'%Y-%m-%d %H:%M:%S')] Bash: $CMD\" >> .claude/audit.log",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude finished\" with title \"Capsule\"' && afplay /System/Library/Sounds/Glass.aiff",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "TRANSCRIPT_DIR=\"$HOME/.claude/projects/-Users-denysbohatyrchuk-projects-capsule\"; LATEST=$(ls -t \"$TRANSCRIPT_DIR\"/*.jsonl 2>/dev/null | head -1); [ -z \"$LATEST\" ] && exit 0; TOTALS=$(cat \"$LATEST\" | jq -s '[.[] | select(.message.usage != null) | .message.usage] | {input: ([.[].input_tokens] | add // 0), output: ([.[].output_tokens] | add // 0), cache_read: ([.[].cache_read_input_tokens] | add // 0), cache_created: ([.[].cache_creation_input_tokens] | add // 0)}'); IN=$(echo \"$TOTALS\" | jq '.input'); OUT=$(echo \"$TOTALS\" | jq '.output'); CR=$(echo \"$TOTALS\" | jq '.cache_read'); CC=$(echo \"$TOTALS\" | jq '.cache_created'); echo \"[$(date +'%Y-%m-%d %H:%M:%S')] TOKENS session-total — in:$IN out:$OUT cache_read:$CR cache_created:$CC\" >> .claude/audit.log",
+            "async": true
+          }
+        ]
+      }
+    ]
   }
 }
