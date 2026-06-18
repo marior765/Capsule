@@ -5,7 +5,9 @@
       "Bash(git mv *)",
       "Bash(cat ~/.claude/settings.json 2>/dev/null; echo \"---project---\"; cat .claude/settings.json 2>/dev/null)",
       "Read(//Users/denysbohatyrchuk/.claude/**)",
-      "Bash(curl -s https://code.claude.com/docs/en/mcp-servers.md)"
+      "Bash(curl -s https://code.claude.com/docs/en/mcp-servers.md)",
+      "Edit(.claude/loop-audit.md)",
+      "Write(.claude/loop-audit.md)"
     ]
   },
   "allowedMcpServers": [{"type": "http", "url": "https://mcp.expo.dev/mcp"}],

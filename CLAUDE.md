@@ -31,8 +31,17 @@ The list below are **one-shot triggers**. When a feature is used for the first t
 - Loops — first `/loop` invoked
 - Scheduled agents — first `/schedule` used
 - Memory — first persistent memory written
-- Plan mode — first time plan mode is entered
-- Built-in skills — first time `/code-review`, `/verify`, or similar is invoked
+- `/simplify` — first time invoked
+- `/security-review` — first time invoked
+- `/verify` — first time invoked
+- `/run` — first time invoked
+- `/fewer-permission-prompts` — first time invoked
+- `/compact` — first time invoked
+- `/cost` — first time invoked
+- Worktrees — first worktree created
+- Background agents — first background agent spawned
+- Keybindings — first keybinding customized
+- Status line — first status line configured
 
 ---
 

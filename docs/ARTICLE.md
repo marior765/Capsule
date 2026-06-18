@@ -488,4 +488,71 @@ does the writing.
 
 ---
 
+### 2026-06-17 — Phase 0: Foundation complete
+
+**What we built**
+
+Phase 0 is done. All 9 steps implemented, `tsc` clean, 63 tests passing. The
+foundation the rest of the app will be built on:
+
+| Step | What |
+|---|---|
+| 0.1 | FSD folder structure + `eslint-plugin-boundaries` — layer imports enforced at lint time |
+| 0.2 | `shared/db` — SQLite client (expo-sqlite) + typed migration runner |
+| 0.3 | `shared/storage` — MMKV typed wrapper (`getString`/`setString`/etc.) |
+| 0.4 | `shared/ui` — design tokens + unistyles v3 theme configuration |
+| 0.5 | `shared/llm` — llama.rn wrapper (`initLlm`, `runCompletion`, `abortCompletion`, `releaseLlm`) |
+| 0.6 | `shared/config` — `FEATURE_FLAGS` + `APP_CONSTANTS` |
+| 0.7 | expo-router shell — `Providers` component, root layout, 4-tab navigation |
+| 0.8 | llama.rn Expo plugin config (pre-existing) |
+| 0.9 | `shared/testing` — `buildTestID`, `createComponentTestIDs`, `extendIDs`, `getInputTestId` |
+
+**How it was built**
+
+The full TDD + safe-loop workflow was used for the first time on real code:
+
+1. `/plan 0.X` — read-only plan, approved before any code written
+2. `/create-tests 0.X, medium` — failing tests written first (the spec)
+3. Direct implementation (steps were finite and known — no loop needed)
+4. `tsc --noEmit + jest` — both must pass before marking `[x]`
+
+Steps 0.2–0.5 were implemented in a single `/safe-loop` run that handled
+4 steps consecutively, self-correcting on failures (MMKV v4 API change,
+llama.rn type mismatch, missing Jest types in tsconfig).
+
+**Things that surprised us along the way**
+
+- `eslint-plugin-boundaries` v6 renamed the main rule from `element-types` to
+  `dependencies`. The subagent that looked up the config syntax gave v5 syntax.
+  Caught by running eslint and reading the error.
+- `react-native-mmkv` v4 dropped the `MMKV` class constructor in favour of a
+  `createMMKV()` factory. Our mock was written for the old API and needed updating.
+- `unistyles` v3 removed `UnistylesRegistry` entirely — setup is now a side-effect
+  import of a file that calls `StyleSheet.configure()`. No provider wrapper needed.
+- The llama.rn public `CompletionParams` type strips `emit_partial_completion` —
+  it's handled internally. TypeScript caught this immediately.
+
+**Why it matters (article angle)**
+
+- **TDD is the right default for AI-generated code**, not because the AI needs
+  discipline, but because the tests give it an unambiguous exit signal. Without
+  them, "done" is a judgment call. With them, it's an exit code.
+- **The loop self-corrects.** The MMKV API mismatch, the type errors, the eslint
+  rule rename — none of these required human intervention. The loop hit the error,
+  read the message, fixed it, re-ran. This is the loop working as intended.
+- **Plans before code saves more time than it costs.** Two of the steps (0.7, 0.9)
+  had near-zero rework because the plan surfaced the decision points upfront
+  (unistyles API, extendIDs signature). The 15 minutes on planning saved more
+  than 15 minutes of debugging.
+- **The foundation phase is where you pay down future complexity.** Every hard
+  rule now enforced at lint time (FSD layers), every naming convention encoded
+  in a utility (`createComponentTestIDs`), every wrapper abstracted away (`shared/llm`)
+  — these reduce the surface area where Phase 1 can go wrong.
+- Takeaway: **the AI's code quality is a function of the constraints you give it.**
+  Lint rules, test suites, typed wrappers, and CLAUDE.md conventions are not
+  overhead — they are the mechanism by which AI-generated code stays correct
+  as the codebase grows.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

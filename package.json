@@ -37,13 +37,16 @@
     "whisper.rn": "^0.6.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-boundaries": "^6.0.2",
     "eslint-plugin-prettier": "^5.5.6",
     "expo-mcp": "~0.2.1",
+    "jest-expo": "^56.0.5",
     "prettier": "^3.8.3",
     "typescript": "~6.0.3"
   },
@@ -53,7 +56,25 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": [
+      "llama.rn/jest/mock"
+    ],
+    "moduleNameMapper": {
+      "^react-native-mmkv$": "<rootDir>/src/__mocks__/react-native-mmkv.ts",
+      "^expo-sqlite$": "<rootDir>/src/__mocks__/expo-sqlite.ts"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|drizzle-orm|react-native-mmkv|llama.rn|whisper.rn|react-native-unistyles|react-native-reanimated|react-native-nitro-modules)"
+    ],
+    "testMatch": [
+      "<rootDir>/src/**/__tests__/**/*.test.(ts|tsx)"
+    ]
   },
   "private": true
 }

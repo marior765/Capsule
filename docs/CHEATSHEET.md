@@ -26,6 +26,17 @@ have). Add a row to the status table when you adopt a feature for real.
 | `/plan` custom skill | ✅ Used | 2026-06-17 |
 | Plan mode (`defaultMode: plan`) | ✅ Learned | 2026-06-17 |
 | Code review (`/code-review`) | ✅ Learned | 2026-06-17 |
+| `/simplify` | ⬜ Not yet | — |
+| `/security-review` | ⬜ Not yet | — |
+| `/verify` | ⬜ Not yet | — |
+| `/run` | ⬜ Not yet | — |
+| `/fewer-permission-prompts` | ⬜ Not yet | — |
+| `/compact` | ⬜ Not yet | — |
+| `/cost` | ⬜ Not yet | — |
+| Worktrees | ⬜ Not yet | — |
+| Background agents | ⬜ Not yet | — |
+| Keybindings | ⬜ Not yet | — |
+| Status line | ⬜ Not yet | — |
 
 ---
 
@@ -263,6 +274,17 @@ have). Add a row to the status table when you adopt a feature for real.
 ## To learn (Goal #4 backlog)
 
 - **MCP servers (hands-on)** — actually wire up Expo MCP and use it in a task.
+- **`/simplify`** — cleanup-only code review, applies fixes automatically (reuse, efficiency, altitude)
+- **`/security-review`** — full security audit of pending changes
+- **`/verify`** — runs the app and observes behavior to confirm a change works
+- **`/run`** — launches the app live to see a change working
+- **`/fewer-permission-prompts`** — scans transcripts, auto-adds allowlist rules to reduce prompts
+- **`/compact`** — manually compact conversation context before auto-compression
+- **`/cost`** — built-in session token + cost report
+- **Worktrees** — isolated git worktrees for parallel agent work without main checkout conflicts
+- **Background agents** — long-running agents you detach from and check back on
+- **Keybindings** — customize keyboard shortcuts via `~/.claude/keybindings.json`
+- **Status line** — custom terminal status bar configured in `settings.json`
 
 <!-- When you use one of the above for real, move it up into "Features" with a
 how-we-used-it note, and flip its row in the status table. -->

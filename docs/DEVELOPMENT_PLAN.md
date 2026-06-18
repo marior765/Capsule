@@ -71,15 +71,15 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 > **Recommended launch wedge: Phases 0–5.** Delivers a fully functional, visibly-more-private offline AI chat app with voice, encryption, app lock, wipe, branching, and portable data — before tackling the capsule data layer or the hardest items (RAG, sync).
 
 ### Phase 0 — Foundation
-- [ ] 0.1 FSD folder scaffolding + layer-import lint rule
-- [ ] 0.2 `shared/db` — SQLite client + migration runner
-- [ ] 0.3 `shared/storage` — MMKV settings wrapper
-- [ ] 0.4 `shared/ui` — baseline kit + unistyles theme (light/dark)
-- [ ] 0.5 `shared/llm` — llama.rn wrapper (init, load, complete, abort, model info)
-- [ ] 0.6 `shared/config` — feature flags, constants
-- [ ] 0.7 expo-router shell (`_layout`, tabs/stack) + empty routes
+- [x] 0.1 FSD folder scaffolding + layer-import lint rule
+- [x] 0.2 `shared/db` — SQLite client + migration runner
+- [x] 0.3 `shared/storage` — MMKV settings wrapper
+- [x] 0.4 `shared/ui` — baseline kit + unistyles theme (light/dark)
+- [x] 0.5 `shared/llm` — llama.rn wrapper (init, load, complete, abort, model info)
+- [x] 0.6 `shared/config` — feature flags, constants
+- [x] 0.7 expo-router shell (`_layout`, tabs/stack) + empty routes
 - [x] 0.8 llama.rn Expo plugin config (app.json / app.config.js)
-- [ ] 0.9 `shared/testing` — `buildTestID`, `createComponentTestIDs`, `extendIDs`, `getInputTestId` utilities (required before any widget)
+- [x] 0.9 `shared/testing` — `buildTestID`, `createComponentTestIDs`, `extendIDs`, `getInputTestId` utilities (required before any widget)
 
 ### Phase 1 — AI chat core ← start here
 - [ ] 1.1 `entities/model` — model metadata schema + CRUD

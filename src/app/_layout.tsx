@@ -1,10 +1,13 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
+import { Providers } from "./providers";
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(app)" />
-      <Stack.Screen name="onboarding" />
-    </Stack>
+    <Providers>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(app)" />
+        <Stack.Screen name="onboarding" />
+      </Stack>
+    </Providers>
   );
 }
