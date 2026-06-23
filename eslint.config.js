@@ -35,8 +35,14 @@ module.exports = defineConfig([
         {
           default: "disallow",
           rules: [
-            { from: "app", allow: ["widgets", "features", "entities", "shared"] },
-            { from: "widgets", allow: ["features", "entities", "shared"] },
+            {
+              from: "app",
+              allow: ["widgets", "features", "entities", "shared"],
+            },
+            {
+              from: "widgets",
+              allow: ["widgets", "features", "entities", "shared"],
+            },
             { from: "features", allow: ["entities", "shared"] },
             { from: "entities", allow: ["shared"] },
             { from: "shared", allow: [] },

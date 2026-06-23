@@ -110,6 +110,13 @@ src/
     config/               # feature flags, constants
 ```
 
+> **Deferred — `shared/fs` wrapper.** Filesystem + the one allowed network action
+> (GGUF model download) currently live directly inside `features/manage-models`,
+> which *is* the isolated network/fs boundary. When a second slice needs the
+> filesystem (e.g. `attachment` in Phase 6/8), extract a `shared/fs` wrapper that
+> owns all `expo-file-system` interaction — same principle as `shared/llm` owning
+> llama.rn. Until then, YAGNI.
+
 ---
 
 ## Navigation Structure (expo-router)

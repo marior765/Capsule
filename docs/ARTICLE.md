@@ -555,4 +555,87 @@ llama.rn type mismatch, missing Jest types in tsconfig).
 
 ---
 
+### 2026-06-19 — Phase 1 complete: a working offline AI chat app
+
+**What we built**
+
+Phase 1 (AI chat core) is done — 11 steps, the app now runs an end-to-end chat
+loop: download a model → it loads into memory → send a message → stream a reply
+→ everything persisted locally. `tsc` clean, 130 unit tests passing.
+
+| Step | What |
+|---|---|
+| 1.1 | `entities/model` — model metadata + CRUD |
+| 1.2 | `features/manage-models` — GGUF download (the one network action), list, delete, select |
+| 1.3 | `ModelPicker` widget + hardware-aware recommendation logic |
+| 1.4 | `entities/conversation` + `entities/message` — CRUD |
+| 1.5 | `features/send-message` — persist user → stream completion → persist assistant |
+| 1.6 | `ChatThread` + `ChatBubble` + `ChatInput` widgets (markdown deferred → 1.6.1) |
+| 1.7 | `InferenceStats` widget |
+| 1.8 | `features/manage-conversations` — create, rename, delete (cascade), search |
+| 1.9 | chat routes (list, new, thread) |
+| 1.10 | models route (download / select / delete) |
+| 1.11 | onboarding (download first model → first chat) |
+
+**The workflow that carried the whole phase**
+
+Every step ran the same loop, and it held up across data layers, features, and UI:
+
+```
+/plan <step>            → read-only plan, approved before any code
+/create-tests <step>    → failing tests = the spec (data/logic steps only)
+/safe-loop <step>       → implement until tsc + jest pass, audit file tracks progress
+mark [x] + tear down
+```
+
+For the final UI batch (1.6, 1.7, 1.9, 1.10, 1.11) we ran **one safe-loop over five
+steps at once**. It completed in a single iteration. The loop self-corrected several
+real errors without human help: an MMKV v4 API change, an `expo-file-system` types
+mismatch (`moduleNameMapper` is jest-only, so mock helpers had to import from the
+mock path while `File` stayed on the real module), a missing `Conversation`
+re-export, and a `theme.spacing.xl` typo that didn't exist.
+
+**Three things worth teaching in the article**
+
+1. **The data/UI test split is the honest answer to "how do you test AI-built UI?"**
+   We extracted every testable decision into pure functions (model recommendation,
+   send-message orchestration, conversation cascade) and tested those hard. The
+   `.tsx` components are tsc-checked and verified by a human in the simulator. The
+   loop's gate proves *compilation*, not *appearance* — and we said so explicitly
+   rather than pretending green tests meant the UI worked. 130 tests cover logic;
+   zero cover pixels, by design.
+
+2. **High-frequency state must stay out of React context.** The `LlmProvider`
+   holds only the loaded model handle + status — stable, changes a few times per
+   session. The streaming tokens (many updates/second) live in the chat screen's
+   local state. Putting them in context would re-render every consumer on every
+   token. The user caught this by asking "does the provider hold high-frequency
+   state?" before approving — exactly the kind of design question that prevents a
+   class of bug before it's written.
+
+3. **The AI's correctness is a function of the constraints you give it.** Across
+   Phase 1 the loop never produced a layering violation, because `eslint-plugin-
+   boundaries` makes FSD layers mechanically enforced — when ChatThread needed to
+   compose ChatBubble, the rule *forced a deliberate decision* (allow widgets →
+   widgets) rather than letting it happen silently. testIDs are consistent because
+   `createComponentTestIDs` makes the convention the path of least resistance. The
+   scaffolding built in Phase 0 is what kept five steps of AI-generated UI coherent.
+
+**Deferred, on purpose**
+- **Markdown rendering + code-copy (1.6.1)** — needs two deps; split out so the core
+  chat loop shipped and stays verifiable. A reminder that "done" can mean "the
+  valuable 80% works and the polish is a tracked follow-up," not "every sub-clause
+  of the plan line is satisfied."
+- **Live inference verification** — the chat *shell* is verifiable in the simulator
+  now; streaming a real reply needs a multi-GB GGUF on-device, which is the
+  onboarding/models path the user will exercise.
+
+**Takeaway:** by the end of Phase 1 the human's role was almost entirely *direction
+and verification* — pick the step, choose coverage depth, approve the plan, review
+the diff, verify the UI. The AI wrote the code; the workspace (CLAUDE.md rules,
+skills, hooks, lint gates, test scaffolding) kept it correct. That division of
+labor is the actual subject of the article.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

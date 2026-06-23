@@ -82,17 +82,18 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 0.9 `shared/testing` — `buildTestID`, `createComponentTestIDs`, `extendIDs`, `getInputTestId` utilities (required before any widget)
 
 ### Phase 1 — AI chat core ← start here
-- [ ] 1.1 `entities/model` — model metadata schema + CRUD
-- [ ] 1.2 `features/manage-models` — download GGUF from HuggingFace, list, delete, select
-- [ ] 1.3 `ModelPicker` widget with hardware-aware recommendations
-- [ ] 1.4 `entities/conversation` + `entities/message` — models + CRUD
-- [ ] 1.5 `features/send-message` — compose → stream LLM completion → persist
-- [ ] 1.6 `ChatThread` + `ChatBubble` (markdown + code blocks + copy) + `ChatInput`
-- [ ] 1.7 `InferenceStats` — token/sec + context usage display
-- [ ] 1.8 `features/manage-conversations` — create, rename, delete, search
-- [ ] 1.9 chat routes: `chat/index`, `chat/new`, `chat/[id]`
-- [ ] 1.10 models route: `models/index`
-- [ ] 1.11 Onboarding flow: welcome → download first model → first chat
+- [x] 1.1 `entities/model` — model metadata schema + CRUD
+- [x] 1.2 `features/manage-models` — download GGUF from HuggingFace, list, delete, select
+- [x] 1.3 `ModelPicker` widget with hardware-aware recommendations
+- [x] 1.4 `entities/conversation` + `entities/message` — models + CRUD
+- [x] 1.5 `features/send-message` — compose → stream LLM completion → persist
+- [x] 1.6 `ChatThread` + `ChatBubble` + `ChatInput` (plain text; markdown deferred → 1.6.1)
+- [ ] 1.6.1 `ChatBubble` markdown rendering + code blocks + copy (deferred — needs `react-native-markdown-display` + `expo-clipboard`)
+- [x] 1.7 `InferenceStats` — token/sec + context usage display
+- [x] 1.8 `features/manage-conversations` — create, rename, delete, search
+- [x] 1.9 chat routes: `chat/index`, `chat/new`, `chat/[id]`
+- [x] 1.10 models route: `models/index`
+- [x] 1.11 Onboarding flow: welcome → download first model → first chat
 
 ### Phase 2 — AI configurability
 - [ ] 2.1 `features/configure-inference` — temperature, top-p/k, repeat penalty, context length, seed

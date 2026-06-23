@@ -7,6 +7,10 @@ export type Migration = {
 
 let instance: SQLiteDatabase | null = null;
 
+export function _resetDbForTesting(): void {
+  instance = null;
+}
+
 export function openDb(): SQLiteDatabase {
   if (!instance) {
     instance = openDatabaseSync("capsule.db");

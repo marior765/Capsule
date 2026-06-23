@@ -1,1 +1,1 @@
-export {};
+export { ChatBubble } from "./ChatBubble";

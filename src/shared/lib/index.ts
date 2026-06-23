@@ -1,1 +1,1 @@
-export {};
+export { generateId } from "./uuid";

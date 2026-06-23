@@ -1,1 +1,1 @@
-export {};
+export { ChatThread } from "./ChatThread";

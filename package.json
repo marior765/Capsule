@@ -37,8 +37,10 @@
     "whisper.rn": "^0.6.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
+    "better-sqlite3": "^12.11.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4",
@@ -67,7 +69,8 @@
     ],
     "moduleNameMapper": {
       "^react-native-mmkv$": "<rootDir>/src/__mocks__/react-native-mmkv.ts",
-      "^expo-sqlite$": "<rootDir>/src/__mocks__/expo-sqlite.ts"
+      "^expo-sqlite$": "<rootDir>/src/__mocks__/expo-sqlite.ts",
+      "^expo-file-system$": "<rootDir>/src/__mocks__/expo-file-system.ts"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|drizzle-orm|react-native-mmkv|llama.rn|whisper.rn|react-native-unistyles|react-native-reanimated|react-native-nitro-modules)"

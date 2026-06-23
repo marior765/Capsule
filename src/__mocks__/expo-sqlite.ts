@@ -1,20 +1,25 @@
+import Database from "better-sqlite3";
+
 const createMockDb = () => {
-  const rows: Record<string, unknown[]> = {};
+  const db = new Database(":memory:");
 
   return {
-    execSync: jest.fn(),
-    runSync: jest.fn(),
-    getAllSync: jest.fn((sql: string): unknown[] => {
-      const table = Object.keys(rows).find((t) => sql.includes(t));
-      return table ? rows[table] : [];
-    }),
-    getFirstSync: jest.fn((sql: string): unknown | null => {
-      const table = Object.keys(rows).find((t) => sql.includes(t));
-      return table ? (rows[table][0] ?? null) : null;
-    }),
-    closeSync: jest.fn(),
-    _rows: rows,
+    execSync: (sql: string) => {
+      db.exec(sql);
+    },
+    runSync: (sql: string, ...params: unknown[]) => {
+      db.prepare(sql).run(...params);
+    },
+    getAllSync: (sql: string, ...params: unknown[]): unknown[] => {
+      return db.prepare(sql).all(...params);
+    },
+    getFirstSync: (sql: string, ...params: unknown[]): unknown | null => {
+      return db.prepare(sql).get(...params) ?? null;
+    },
+    closeSync: () => {
+      db.close();
+    },
   };
 };
 
-export const openDatabaseSync = jest.fn(() => createMockDb());
+export const openDatabaseSync = jest.fn((_name: string) => createMockDb());

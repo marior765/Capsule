@@ -1,5 +1,9 @@
 // Tests for step 0.2 — written before implementation (TDD)
-import { openDb, runMigrations } from "../index";
+import { openDb, runMigrations, _resetDbForTesting } from "../index";
+
+beforeEach(() => {
+  _resetDbForTesting();
+});
 
 describe("shared/db — openDb", () => {
   it("returns a database instance", () => {
