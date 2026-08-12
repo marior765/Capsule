@@ -42,7 +42,6 @@ The list below are **one-shot triggers**. When a feature is used for the first t
 2. Remove that feature's line from this list immediately.
 
 **Pending triggers (remove each line on first use):**
-- Loops — first `/loop` invoked
 - Scheduled agents — first `/schedule` used
 - Memory — first persistent memory written
 - `/simplify` — first time invoked

@@ -70,7 +70,8 @@
     "moduleNameMapper": {
       "^react-native-mmkv$": "<rootDir>/src/__mocks__/react-native-mmkv.ts",
       "^expo-sqlite$": "<rootDir>/src/__mocks__/expo-sqlite.ts",
-      "^expo-file-system$": "<rootDir>/src/__mocks__/expo-file-system.ts"
+      "^expo-file-system$": "<rootDir>/src/__mocks__/expo-file-system.ts",
+      "^whisper.rn$": "<rootDir>/src/__mocks__/whisper.rn.ts"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|drizzle-orm|react-native-mmkv|llama.rn|whisper.rn|react-native-unistyles|react-native-reanimated|react-native-nitro-modules)"

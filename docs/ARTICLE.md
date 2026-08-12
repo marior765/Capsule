@@ -960,6 +960,65 @@ limiting factor in delegation isn't how much the agent can do unattended; it's h
 precisely you can state what counts as proof. Everything the loop can't prove has
 to have somewhere to go, or it silently becomes a checked box that lies.
 
+## 2026-08-13 — The first unattended beat, and the test that proved nothing
+
+The loop ran for real: `/loop /safe-loop all`, self-paced, no human in the
+iteration. Beat one picked step 3.1 — the whisper.rn wrapper — wrote 24 tests
+first, confirmed they failed, implemented `shared/stt`, and drove the gate to
+green. tsc clean, 220 tests passing, eslint clean. By every automated measure the
+step was done.
+
+The checker disagreed, and it was right.
+
+Its lead finding: `releaseStt` calls `ctx.release()` to free the native whisper
+context, and *no test asserted that*. One test checked the null guard, another
+checked that the call resolved without throwing. Replace the entire function body
+with `if (!ctx) return;` — never releasing anything, leaking a native context per
+model load — and all 24 tests still pass. The sibling function `abortTranscription`
+had the assertion; `releaseStt` had been left with a shape that looks like
+coverage and isn't. This is the 2026-07-17 lesson wearing a different hat: that
+time the tests asserted a mock's return value, this time they asserted that a
+function didn't crash. Both feel like tests. Neither can fail for the right reason.
+
+It found two more of the same species — a `toBeDefined()` that survives any
+implementation returning anything, and a test named "omits params the caller left
+unset" whose assertion (`toBeUndefined()`) cannot distinguish an absent key from a
+key explicitly set to `undefined`, and so passes against an implementation that
+does the exact opposite of its name.
+
+Then the one that mattered most. The step text reads "init, **record**,
+transcribe, abort". I'd shipped four functions, none of them recording, on the
+argument that audio capture needs a dependency the project doesn't have. The
+checker went and read `docs/ARCHITECTURE.md:109` — a file I hadn't consulted —
+which independently assigns recording to `shared/stt`. Its verdict: *under-delivers*,
+because the omission silently contradicts a spec document that was never amended.
+
+The tempting fix was to edit that line of the architecture doc so the step would
+be complete as built. That is the single most dangerous move available to an
+unattended loop: when the work doesn't match the spec, quietly change the spec.
+It converts every shortfall into a green checkbox and leaves no trace. So the
+architecture doc stayed as written, `record` went to the human-gate queue as an
+explicit either/or (approve `expo-audio`, or move recording to `features/voice-input`),
+and step 3.1's checkbox stayed unticked.
+
+One more thing worth recording: the checker also corrected a citation. I'd
+justified converting whisper's timestamps by ×10 with a source comment reading
+`// t0/t1 is 10ms unit` — which turns out to sit in the VAD code and describe VAD
+segments, not transcription segments. The conversion was right; my evidence for it
+was not. The checker verified it properly, down to `to_timestamp` in whisper.cpp
+(`msec = t * 10`). Right answer, wrong reason, caught only because something with
+no stake in my conclusion went and looked.
+
+**Article angle:** a passing test suite is a claim that the code does something,
+not a claim that it does the *right* something — and the gap between those is
+invisible from inside the agent that wrote both halves. The useful question isn't
+"do the tests pass?" but "which of these tests could still pass if I deleted the
+function?" Every test that survives that deletion is decoration. An autonomous
+loop can run that check on itself only in principle; in practice it takes a second
+agent with no investment in the answer, explicitly instructed to refute rather than
+confirm. The gate tells you the code compiles and runs. Only the checker tells you
+the code is *doing its job* — and only a human gets to decide what the job was.
+
 ---
 
 <!-- Append new dated entries above this line as work progresses. -->

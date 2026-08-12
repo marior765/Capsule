@@ -19,7 +19,7 @@ have). Add a row to the status table when you adopt a feature for real.
 | Subagents (Agent tool) | ✅ Used | 2026-06-08 |
 | Custom skills (`.claude/commands/`) | ✅ Used | 2026-06-08 |
 | Hooks (settings.json) | ✅ Used | 2026-06-09 |
-| Loops (`/loop`) | ✅ Learned | 2026-06-09 |
+| Loops (`/loop`) | ✅ Used | 2026-08-13 |
 | `update-config` skill | ✅ Used | 2026-06-09 |
 | Scheduled agents (`/schedule`) | ✅ Learned | 2026-06-09 |
 | Memory (persistent) | ✅ Learned | 2026-06-17 |
@@ -184,9 +184,25 @@ have). Add a row to the status table when you adopt a feature for real.
 - **Token cost:** every iteration is a full model call. Match interval to how
   fast the thing actually changes. Self-paced is more efficient than fixed for
   variable-length work.
-- **Here:** Learned the full loop anatomy. Established TDD as the standard
-  loop pattern for Capsule feature development. Not yet run on real code —
-  pending Jest setup in Phase 0.
+- **The six-part anatomy** (heartbeat · isolation · skill · checker · connector ·
+  spine) is the checklist to audit a loop against. Ours was missing three:
+  no heartbeat, no checker, and a spine that deleted itself on teardown.
+- **A prose log is not a spine.** Each beat is a fresh session with no memory, so
+  resumable state must be *parsed*, not interpreted: `state.json` (cursor,
+  attempt counts, failure signatures) separate from `journal.md` (narrative).
+  Never delete either — for an unattended run, the log *is* the deliverable.
+- **The loop must not grade its own homework.** Same agent writing code, writing
+  the tests, and judging the result is a rubber stamp. A checker subagent with no
+  implementation context, told to *refute* and to default to `fail`, is the fix.
+- **Say what counts as proof.** `tsc + jest` prove logic, never that the app runs
+  on a device. Steps are classified `logic` / `ui` / `native`; native steps get
+  implemented and queued for a device check with their plan box left unchecked.
+- **Here:** ✅ Run for real on 2026-08-13 — `/loop /safe-loop all`, self-paced,
+  driving `.claude/commands/safe-loop.md` as the engine over
+  `docs/DEVELOPMENT_PLAN.md`. First beat implemented step 3.1 (`shared/stt`).
+  The checker returned `fail` on its first pass and caught a real defect the
+  gate could not: `releaseStt` had no assertion that it released anything —
+  deleting the function body left all 24 tests green.
 
 ### `update-config` skill (built-in)
 - **What:** A built-in Claude Code skill that configures `settings.json` — hooks,
