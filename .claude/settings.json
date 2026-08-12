@@ -27,9 +27,10 @@
       "Bash(git commit -m *)",
       "Bash(git reset --hard *)",
 
-      "Edit(docs/DEVELOPMENT_PLAN.md)",
-      "Edit(docs/ARTICLE.md)",
-      "Edit(docs/CHEATSHEET.md)",
+      "Edit(docs/**)",
+      "Write(docs/**)",
+      "Read(docs/**)",
+      "Edit(CLAUDE.md)",
 
       "Skill(create-tests)",
       "Skill(create-tests:*)",

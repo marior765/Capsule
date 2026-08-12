@@ -101,8 +101,43 @@ still type-checked against the real API. Plus prettier autofix.
    on the same choice.
 
 **Gate:** tsc ✅ · jest ✅ 220/17 suites · eslint ✅
-**Review:** re-review in flight (same checker, context intact).
-**Checkpoint:** pending verdict — nothing committed yet.
+**Review:** **pass** on re-review — and the checker verified by *mutation*, not by
+reading: it copied the tree to a sandbox, reverted each fix, and confirmed each new
+assertion actually fails. Notably the rewritten "omits params" test kills exactly
+the implementation it previously could not distinguish. It left four non-blocking
+findings, all fixed before checkpoint:
+- I had propagated `ARCHITECTURE.md:108` when the `stt/` line is **109** (108 is the
+  llama.rn line) — into BLOCKED.md twice, ARTICLE.md, and state.json. BLOCKED.md is
+  the one file whose whole job is directing a specific human edit, so an off-by-one
+  target is a real defect. Fixed everywhere.
+- Stale "(24 tests)" → 25.
+- The mock's header gave the wrong reason for hand-writing it: `whisper.rn/jest-mock`
+  *does* match the `"./*"` exports pattern; it is unresolvable because the exports
+  targets are extensionless. Corrected — same class of imprecise citation as the ×10
+  one, caught twice now.
+- `Omit<TranscriptionParams, never>` is an identity type; simplified.
+
+**Two spine defects of my own**, found while fixing the above: a **duplicate `3.3`
+key** in state.json (JSON keeps the last, silently flipping it from `blocked` back
+to `pending` — the spine would have lied to the next beat) and a duplicated
+"Needs a decision" heading in BLOCKED.md. Both fixed. The machine-readable spine
+needs its own validation, not just careful editing.
+
+**Checkpoint:** `f4cbf60` — staged step paths only. `.vscode/settings.json`
+(Peacock editor colors, unrelated) deliberately left uncommitted for the user.
+
+**Result:** blocked 🚧 — transcribe half delivered and green; `record` half awaiting
+a dependency decision. `docs/DEVELOPMENT_PLAN.md` 3.1 stays `[ ]`.
+
+**Environment (unchanged, needs the user):** `codebase-memory-mcp` still not
+resolvable in-session and `expo` MCP still unauthorized, so CLAUDE.md's
+"graph tools first" rule degraded to Read/Grep for this whole beat.
+
+**Permissions note:** a mid-beat attempt to widen the allowlist was abandoned at the
+user's request; the loop continues under the original narrow rules, plus auto-allow
+for the spine and docs. The gate runs through `npx`, so a future deny on `npx *`
+would silently disable all three gate commands — worth moving the gate into
+`npm run` scripts before tightening that.
 
 ---
 

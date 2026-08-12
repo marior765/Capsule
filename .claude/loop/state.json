@@ -6,7 +6,7 @@
     "status": "running"
   },
   "cursor": {
-    "step": "3.1",
+    "step": "3.2",
     "phase": 3
   },
   "steps": {
@@ -27,14 +27,14 @@
       "notes": "Needs react-native-markdown-display + expo-clipboard. Installing a dependency is a decision — queued to BLOCKED.md."
     },
     "3.1": {
-      "status": "in_progress",
+      "status": "blocked",
       "class": "native",
       "attempts": 2,
       "failureSignatures": [
         "gate: TS2307 cannot find module 'whisper.rn' (package exports map has no '.' entry) + prettier formatting",
         "checker: fail — releaseStt had no assertion it released anything; 'omits params' test could not fail; toBeDefined filler; record omission contradicts docs/ARCHITECTURE.md:109"
       ],
-      "checkpoint": null,
+      "checkpoint": "f4cbf60",
       "notes": "whisper.rn wrapper. Beat 1. Delivered init/transcribe/abort/release, 25 tests. 'record' NOT delivered — needs expo-audio (not a dependency) and ARCHITECTURE.md:109 assigns record to shared/stt, so the omission is queued to BLOCKED.md as a user decision rather than papered over by editing the spec. Box stays unchecked (class native + partial delivery). Checker passed on re-review with mutation evidence."
     },
     "3.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Expo plugin config; needs prebuild to verify" },
