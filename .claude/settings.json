@@ -6,11 +6,43 @@
       "Bash(cat ~/.claude/settings.json 2>/dev/null; echo \"---project---\"; cat .claude/settings.json 2>/dev/null)",
       "Read(//Users/denysbohatyrchuk/.claude/**)",
       "Bash(curl -s https://code.claude.com/docs/en/mcp-servers.md)",
-      "Edit(.claude/loop-audit.md)",
-      "Write(.claude/loop-audit.md)"
+
+      "Write(.claude/loop/**)",
+      "Edit(.claude/loop/**)",
+      "Read(.claude/loop/**)",
+
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx jest *)",
+      "Bash(npx jest)",
+      "Bash(npx eslint src)",
+
+      "Bash(git status *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git rev-parse *)",
+      "Bash(git add -A)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)",
+      "Bash(git reset --hard *)",
+
+      "Edit(docs/DEVELOPMENT_PLAN.md)",
+      "Edit(docs/ARTICLE.md)",
+      "Edit(docs/CHEATSHEET.md)",
+
+      "Skill(create-tests)",
+      "Skill(create-tests:*)",
+      "Skill(loop-review)",
+      "Skill(loop-review:*)",
+      "Skill(plan)",
+      "Skill(plan:*)"
     ]
   },
-  "allowedMcpServers": [{"type": "http", "url": "https://mcp.expo.dev/mcp"}],
+  "allowedMcpServers": [
+    {"serverUrl": "https://mcp.expo.dev/mcp"},
+    {"serverCommand": "/Users/denysbohatyrchuk/.local/bin/codebase-memory-mcp"}
+  ],
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   },

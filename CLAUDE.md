@@ -17,6 +17,20 @@ the *why*, and especially the *article angle* — the insight a reader would tak
 Include: setup decisions, architectural choices, AI workflows used, mistakes and
 corrections, tools discovered. Skip purely mechanical steps with no insight value.
 
+### Code discovery — always start with codebase-memory-mcp
+Any time you scan, explore, or search the codebase, use the `codebase-memory-mcp`
+tools **first** — before Grep/Glob/Read:
+- `search_graph` (name_pattern / label / qn_pattern) — find functions, classes, routes
+- `trace_path` (mode = `calls` | `data_flow` | `cross_service`) — call chains
+- `get_code_snippet` (qualified_name) — exact source for a symbol
+- `query_graph` — complex Cypher patterns
+- `get_architecture` — project structure
+- `search_code` — graph-augmented text search
+
+If the repo is not indexed yet, run `index_repository` before anything else.
+Grep/Glob/Read stay fine for text, configs, and non-code files — and always
+`Read` a file before editing it.
+
 ### docs/DEVELOPMENT_PLAN.md — progress tracking
 When completing any task that maps to a checklist item in `docs/DEVELOPMENT_PLAN.md`,
 mark it `[x]` immediately. Keep the file current so it always reflects real progress.
@@ -100,6 +114,7 @@ When modeling: *"Does this capsule make sense on its own, without relying on ext
 
 ## Project Conventions
 
+- Explore code through `codebase-memory-mcp` first; fall back to Grep/Glob only for non-code files
 - Discuss architecture and approach **before** writing code for any non-trivial feature
 - Use **plan mode** for multi-file changes
 - Keep business logic decoupled from UI — LLM and capsule operations must be testable without rendering

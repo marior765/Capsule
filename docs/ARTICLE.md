@@ -910,4 +910,56 @@ up to it.**
 
 ---
 
+## 2026-08-12 — Building the loop that builds the app
+
+The ask was to stop driving development step by step and hand the whole
+`DEVELOPMENT_PLAN.md` to an autonomous loop. The pieces looked like they were
+already there: a `/safe-loop` command, a `/create-tests` command encoding TDD, and
+an audit file for state. They weren't.
+
+Auditing the existing `safe-loop.md` against the standard anatomy of an agent loop
+— heartbeat, isolation, skill, checker, connector, spine — turned up three real
+defects, and the smallest one was the most instructive. The command's teardown
+step said: *delete `.claude/loop-audit.md`*. The spine was being destroyed at
+exactly the moment it became valuable. That's a tidiness reflex applied to the one
+artifact an unattended run produces. If nobody watched the run, the log **is** the
+deliverable.
+
+The second defect: the audit file was prose. Prose is fine for a human reading
+afterward, useless for a fresh beat resuming. Each beat starts with no memory —
+so "what did the last beat do" has to be answerable by parsing, not by
+interpretation. The fix was to split the roles: `state.json` holds the cursor,
+attempt counters, and failure signatures; `journal.md` holds the narrative;
+`BLOCKED.md` holds everything needing a human. Notably, the step *registry* stays
+in `DEVELOPMENT_PLAN.md` — copying the step list into the state file would have
+created a second source of truth that drifts.
+
+The third and biggest: there was no checker. The loop wrote the tests, wrote the
+code, then ran its own tests and declared victory. That's a rubber stamp with
+extra steps — and this project already has the scar to prove it. The 2026-07-17
+entry is about a suite of tests that only asserted that llama.rn's mock returned
+text. A maker-checker split with a reviewer that has no implementation context,
+told to *refute* rather than assess, defaulting to `fail` when uncertain, is what
+catches that class of bug.
+
+The hardest design question wasn't loop mechanics at all — it was **what a green
+test actually proves here**. Roughly half the remaining plan is native: whisper.rn,
+SQLCipher, biometrics, a real model download. `jest` can prove the logic around
+them and nothing about whether the app boots on a phone. A loop that treats mocked
+green as done will hand back a fully-ticked plan and a broken app. So
+classification became a first-class concept: `logic` and `ui` steps may tick their
+own box; `native` steps get implemented, proven as far as they can be, then queued
+to `BLOCKED.md` with their box deliberately **left unchecked**. The loop is not
+allowed to certify what it cannot execute.
+
+**Article angle:** the instinct when automating yourself is to make the loop
+capable of more. The work that actually mattered was making it *honest about
+less* — three stopping conditions instead of one, a reviewer empowered to reject
+its own author's work, and a queue of things it must refuse to sign off on. The
+limiting factor in delegation isn't how much the agent can do unattended; it's how
+precisely you can state what counts as proof. Everything the loop can't prove has
+to have somewhere to go, or it silently becomes a checked box that lies.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

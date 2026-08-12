@@ -1,0 +1,51 @@
+{
+  "run": {
+    "scope": "all",
+    "started": "2026-08-12T21:47:20Z",
+    "beat": 0,
+    "status": "ready"
+  },
+  "cursor": {
+    "step": "1.6.1",
+    "phase": 1
+  },
+  "steps": {
+    "1.2": {
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Box is ticked in the plan, but a real HuggingFace download is unverified on device. Confirm before trusting."
+    },
+    "1.6.1": {
+      "status": "deferred",
+      "class": "deferred",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Needs react-native-markdown-display + expo-clipboard. Installing a dependency is a decision — queued to BLOCKED.md."
+    },
+    "3.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "whisper.rn wrapper" },
+    "3.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Expo plugin config; needs prebuild to verify" },
+    "3.3": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "record -> transcribe -> insert" },
+    "3.4": { "status": "pending", "class": "ui", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "VoiceRecordButton widget; UI provable, recording is not" },
+    "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "OS Speech API" },
+    "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store; requires dev build" },
+    "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics; requires device" },
+    "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
+    "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
+    "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
+    "9.3": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
+    "9.4": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" }
+  },
+  "quarantinedThisRun": [],
+  "lastGate": {
+    "tsc": "pass",
+    "jest": "pass",
+    "eslint": "pass",
+    "at": "2026-08-12T21:47:20Z",
+    "head": "e0020342eb2c6f53f7054ccd069046fdea5270e9",
+    "note": "16 suites, 195 tests passing at bootstrap"
+  }
+}
