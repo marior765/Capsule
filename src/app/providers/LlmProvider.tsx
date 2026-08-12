@@ -5,11 +5,22 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { getActiveModel, type Model } from "@/entities/model";
+import { getActiveModel, getAllModels, type Model } from "@/entities/model";
+import { getInferenceSettings } from "@/features/configure-inference";
 import { openDb } from "@/shared/db";
 import { initLlm, releaseLlm, type LlamaContext } from "@/shared/llm";
 
-export type LlmStatus = "no-model" | "loading" | "ready" | "error";
+/**
+ * `no-model` = nothing downloaded. `no-active-model` = models exist but none is
+ * selected — a genuinely different problem, and telling the user to "download a
+ * model" when they already have one is worse than saying nothing.
+ */
+export type LlmStatus =
+  | "no-model"
+  | "no-active-model"
+  | "loading"
+  | "ready"
+  | "error";
 
 type LlmState = {
   ctx: LlamaContext | null;
@@ -32,18 +43,24 @@ export function LlmProvider({ children }: PropsWithChildren) {
     let loaded: LlamaContext | null = null;
 
     const load = async () => {
-      const model = getActiveModel(openDb());
+      const db = openDb();
+      const model = getActiveModel(db);
       setActiveModel(model);
 
       if (!model) {
-        setStatus("no-model");
+        setStatus(getAllModels(db).length > 0 ? "no-active-model" : "no-model");
         setCtx(null);
         return;
       }
 
       setStatus("loading");
       try {
-        loaded = await initLlm(model.path);
+        // Context length is fixed at load time, so it is read here rather than
+        // per completion — `reload` is what applies a change to it.
+        loaded = await initLlm(
+          model.path,
+          getInferenceSettings().contextLength,
+        );
         if (cancelled) {
           await releaseLlm(loaded);
           return;

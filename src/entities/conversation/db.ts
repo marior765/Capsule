@@ -21,6 +21,25 @@ export const conversationsMigration: Migration = {
   },
 };
 
+/**
+ * Additive migration — the v2 `conversations` table already shipped, so the
+ * column must be added rather than folded into the original CREATE TABLE.
+ */
+export const conversationsPersonaMigration: Migration = {
+  version: 5,
+  up: (db: SQLiteDatabase) => {
+    db.execSync("ALTER TABLE conversations ADD COLUMN persona_id TEXT;");
+  },
+};
+
+/** Additive migration — see `conversationsPersonaMigration`. */
+export const conversationsLeafMigration: Migration = {
+  version: 7,
+  up: (db: SQLiteDatabase) => {
+    db.execSync("ALTER TABLE conversations ADD COLUMN active_leaf_id TEXT;");
+  },
+};
+
 export function getAllConversations(db: SQLiteDatabase): Conversation[] {
   const rows = db.getAllSync(
     "SELECT * FROM conversations ORDER BY updated_at DESC;",
@@ -44,11 +63,13 @@ export function insertConversation(
   conversation: Conversation,
 ): void {
   db.runSync(
-    `INSERT INTO conversations (id, title, model_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?);`,
+    `INSERT INTO conversations (id, title, model_id, persona_id, active_leaf_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?);`,
     conversation.id,
     conversation.title,
     conversation.modelId,
+    conversation.personaId,
+    conversation.activeLeafId,
     conversation.createdAt,
     conversation.updatedAt,
   );
@@ -69,6 +90,14 @@ export function updateConversation(
   if (patch.modelId !== undefined) {
     fields.push("model_id = ?");
     values.push(patch.modelId);
+  }
+  if (patch.personaId !== undefined) {
+    fields.push("persona_id = ?");
+    values.push(patch.personaId);
+  }
+  if (patch.activeLeafId !== undefined) {
+    fields.push("active_leaf_id = ?");
+    values.push(patch.activeLeafId);
   }
   if (patch.createdAt !== undefined) {
     fields.push("created_at = ?");

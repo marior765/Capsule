@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb, useLlm } from "@/app/providers";
 import { RECOMMENDED_MODELS } from "@/shared/config";
-import type { Model } from "@/entities/model";
+import { getActiveModel, type Model } from "@/entities/model";
 import {
   deleteModelById,
   downloadModel,
@@ -19,12 +19,13 @@ export default function ModelsScreen() {
   const { activeModel, reload } = useLlm();
   const [models, setModels] = useState<Model[]>([]);
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(() => setModels(listModels(db)), [db]);
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+    }, [refresh]),
   );
 
   const handleSelect = (model: Model) => {
@@ -41,8 +42,21 @@ export default function ModelsScreen() {
 
   const handleDownload = async (spec: ModelSpec) => {
     setDownloadingUrl(spec.url);
+    setError(null);
     try {
-      await downloadModel(db, spec);
+      const model = await downloadModel(db, spec);
+
+      // A downloaded model that isn't selected is inert, and the chat screen
+      // would tell the user to "download a model" they already have. If nothing
+      // is active yet, make this one usable immediately.
+      if (!getActiveModel(db)) {
+        selectModel(db, model.id);
+        reload();
+      }
+    } catch (e) {
+      // Previously this rejected into the void: the button reset, no model
+      // appeared, and nothing said why.
+      setError(e instanceof Error ? e.message : "Download failed");
     } finally {
       setDownloadingUrl(null);
       refresh();
@@ -51,7 +65,7 @@ export default function ModelsScreen() {
 
   const downloadedNames = new Set(models.map((m) => m.name));
   const available = RECOMMENDED_MODELS.filter(
-    (s) => !downloadedNames.has(s.name)
+    (s) => !downloadedNames.has(s.name),
   );
 
   return (
@@ -82,6 +96,7 @@ export default function ModelsScreen() {
       })}
 
       <Text style={styles.heading}>Download</Text>
+      {error && <Text style={styles.error}>{error}</Text>}
       {available.length === 0 && (
         <Text style={styles.muted}>All recommended models downloaded.</Text>
       )}
@@ -123,6 +138,15 @@ const styles = StyleSheet.create((theme) => ({
   muted: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
+  },
+  error: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    padding: theme.spacing.three,
+    borderRadius: theme.spacing.two,
+    backgroundColor: theme.colors.backgroundSelected,
+    marginBottom: theme.spacing.two,
   },
   row: {
     flexDirection: "row",

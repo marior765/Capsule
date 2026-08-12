@@ -26,7 +26,7 @@ export type ModelDownloadSpec = {
 export async function downloadModel(
   db: SQLiteDatabase,
   spec: ModelDownloadSpec,
-  onProgress?: (fraction: number) => void
+  onProgress?: (fraction: number) => void,
 ): Promise<Model> {
   const dir = new Directory(Paths.document, "models");
   if (!dir.exists) {
@@ -57,7 +57,7 @@ export function listModels(db: SQLiteDatabase): Model[] {
 
 export async function deleteModelById(
   db: SQLiteDatabase,
-  id: string
+  id: string,
 ): Promise<void> {
   const model = getModelById(db, id);
   if (!model) return;

@@ -12,7 +12,7 @@ describe("buildTestID", () => {
 
   it("preserves casing exactly", () => {
     expect(buildTestID("input", "SearchBar", "query")).toBe(
-      "input_SearchBar_query"
+      "input_SearchBar_query",
     );
   });
 });

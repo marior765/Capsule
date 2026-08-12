@@ -22,25 +22,22 @@ export const modelsMigration: Migration = {
 
 export function getAllModels(db: SQLiteDatabase): Model[] {
   const rows = db.getAllSync(
-    "SELECT * FROM models ORDER BY downloaded_at DESC;"
+    "SELECT * FROM models ORDER BY downloaded_at DESC;",
   ) as ModelRow[];
   return rows.map(rowToModel);
 }
 
-export function getModelById(
-  db: SQLiteDatabase,
-  id: string
-): Model | null {
+export function getModelById(db: SQLiteDatabase, id: string): Model | null {
   const row = db.getFirstSync(
     "SELECT * FROM models WHERE id = ?;",
-    id
+    id,
   ) as ModelRow | null;
   return row ? rowToModel(row) : null;
 }
 
 export function getActiveModel(db: SQLiteDatabase): Model | null {
   const row = db.getFirstSync(
-    "SELECT * FROM models WHERE is_active = 1 LIMIT 1;"
+    "SELECT * FROM models WHERE is_active = 1 LIMIT 1;",
   ) as ModelRow | null;
   return row ? rowToModel(row) : null;
 }
@@ -56,32 +53,53 @@ export function insertModel(db: SQLiteDatabase, model: Model): void {
     model.parameters,
     model.quantization,
     model.isActive ? 1 : 0,
-    model.downloadedAt
+    model.downloadedAt,
   );
 }
 
 export function updateModel(
   db: SQLiteDatabase,
   id: string,
-  patch: Partial<Omit<Model, "id">>
+  patch: Partial<Omit<Model, "id">>,
 ): void {
   const fields: string[] = [];
   const values: unknown[] = [];
 
-  if (patch.name !== undefined) { fields.push("name = ?"); values.push(patch.name); }
-  if (patch.path !== undefined) { fields.push("path = ?"); values.push(patch.path); }
-  if (patch.size !== undefined) { fields.push("size = ?"); values.push(patch.size); }
-  if (patch.parameters !== undefined) { fields.push("parameters = ?"); values.push(patch.parameters); }
-  if (patch.quantization !== undefined) { fields.push("quantization = ?"); values.push(patch.quantization); }
-  if (patch.isActive !== undefined) { fields.push("is_active = ?"); values.push(patch.isActive ? 1 : 0); }
-  if (patch.downloadedAt !== undefined) { fields.push("downloaded_at = ?"); values.push(patch.downloadedAt); }
+  if (patch.name !== undefined) {
+    fields.push("name = ?");
+    values.push(patch.name);
+  }
+  if (patch.path !== undefined) {
+    fields.push("path = ?");
+    values.push(patch.path);
+  }
+  if (patch.size !== undefined) {
+    fields.push("size = ?");
+    values.push(patch.size);
+  }
+  if (patch.parameters !== undefined) {
+    fields.push("parameters = ?");
+    values.push(patch.parameters);
+  }
+  if (patch.quantization !== undefined) {
+    fields.push("quantization = ?");
+    values.push(patch.quantization);
+  }
+  if (patch.isActive !== undefined) {
+    fields.push("is_active = ?");
+    values.push(patch.isActive ? 1 : 0);
+  }
+  if (patch.downloadedAt !== undefined) {
+    fields.push("downloaded_at = ?");
+    values.push(patch.downloadedAt);
+  }
 
   if (fields.length === 0) return;
 
   values.push(id);
   db.runSync(
     `UPDATE models SET ${fields.join(", ")} WHERE id = ?;`,
-    ...(values as SQLiteVariadicBindParams)
+    ...(values as SQLiteVariadicBindParams),
   );
 }
 

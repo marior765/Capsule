@@ -39,7 +39,6 @@ The list below are **one-shot triggers**. When a feature is used for the first t
 - `/compact` — first time invoked
 - `/cost` — first time invoked
 - Worktrees — first worktree created
-- Background agents — first background agent spawned
 - Keybindings — first keybinding customized
 - Status line — first status line configured
 

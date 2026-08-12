@@ -18,14 +18,12 @@ type Category = keyof typeof CATEGORY_PREFIXES;
 type ElementMap = Partial<Record<Category, readonly string[]>>;
 type MappedCategory<T extends readonly string[]> = { [K in T[number]]: string };
 type MappedTestIDs<T extends ElementMap> = {
-  [K in keyof T]: T[K] extends readonly string[]
-    ? MappedCategory<T[K]>
-    : never;
+  [K in keyof T]: T[K] extends readonly string[] ? MappedCategory<T[K]> : never;
 };
 
 export function createComponentTestIDs<T extends ElementMap>(
   componentName: string,
-  categories: T
+  categories: T,
 ): MappedTestIDs<T> {
   const result = {} as MappedTestIDs<T>;
 

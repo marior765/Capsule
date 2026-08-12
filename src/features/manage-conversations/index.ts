@@ -12,17 +12,20 @@ import { generateId } from "@/shared/lib";
 export type CreateConversationInput = {
   title?: string;
   modelId?: string | null;
+  personaId?: string | null;
 };
 
 export function createConversation(
   db: SQLiteDatabase,
-  input: CreateConversationInput = {}
+  input: CreateConversationInput = {},
 ): Conversation {
   const now = Date.now();
   const conversation: Conversation = {
     id: generateId(),
     title: input.title ?? "New chat",
     modelId: input.modelId ?? null,
+    personaId: input.personaId ?? null,
+    activeLeafId: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -33,7 +36,7 @@ export function createConversation(
 export function renameConversation(
   db: SQLiteDatabase,
   id: string,
-  title: string
+  title: string,
 ): void {
   updateConversation(db, id, { title, updatedAt: Date.now() });
 }
@@ -53,10 +56,10 @@ export function listConversations(db: SQLiteDatabase): Conversation[] {
 
 export function searchConversations(
   db: SQLiteDatabase,
-  query: string
+  query: string,
 ): Conversation[] {
   const needle = query.toLowerCase();
   return getAllConversations(db).filter((c) =>
-    c.title.toLowerCase().includes(needle)
+    c.title.toLowerCase().includes(needle),
   );
 }

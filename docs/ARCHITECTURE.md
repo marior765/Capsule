@@ -34,9 +34,14 @@ src/
     _layout.tsx           # root layout; mounts providers
 
   entities/
-    conversation/         # Conversation model + local CRUD
-    message/              # Message model + CRUD (linked to conversation)
+    conversation/         # Conversation model + local CRUD; activeLeafId = visible branch tip
+    message/              # Message model + CRUD. Messages form a *tree* via parentId —
+                          #   editing forks a sibling branch rather than overwriting.
+                          #   getMessagesByConversation = flat (all branches);
+                          #   getMessagePath(leafId) = the visible branch.
     model/                # Downloaded model metadata + CRUD
+    persona/              # Reusable system prompt + CRUD; conversations reference it
+                          #   (a deleted persona leaves a dangling personaId — consumers degrade)
     capsule/              # Capsule model + local CRUD
     capsule-type/         # schema/template model + CRUD
     field/                # CapsuleField definitions + value (de)serialization

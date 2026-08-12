@@ -10,7 +10,7 @@ export type RecommendedModel = Model & { fits: boolean };
  */
 export function recommendModels(
   ramBytes: number | null,
-  models: Model[]
+  models: Model[],
 ): RecommendedModel[] {
   const budget =
     ramBytes == null ? null : ramBytes * APP_CONSTANTS.modelRamSafeFraction;
@@ -28,7 +28,7 @@ export function recommendModels(
  */
 export function pickDefaultModel(
   ramBytes: number | null,
-  models: Model[]
+  models: Model[],
 ): Model | null {
   if (models.length === 0) return null;
 

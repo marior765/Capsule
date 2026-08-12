@@ -1,1 +1,1 @@
-export {};
+export { PersonaSelector } from "./PersonaSelector";

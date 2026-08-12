@@ -6,12 +6,14 @@ import {
   getMessagesByConversation,
   insertMessage,
   messagesMigration,
+  messagesParentMigration,
   type Message,
 } from "../index";
 
 const makeMessage = (overrides: Partial<Message> = {}): Message => ({
   id: `m-${Math.random().toString(36).slice(2)}`,
   conversationId: "conv-1",
+  parentId: null,
   role: "user",
   content: "Hello",
   tokenCount: 0,
@@ -24,7 +26,7 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [messagesMigration]);
+  runMigrations(db, [messagesMigration, messagesParentMigration]);
 });
 
 describe("entities/message — happy path", () => {
@@ -40,7 +42,10 @@ describe("entities/message — happy path", () => {
   it("persists all three roles", () => {
     insertMessage(db, makeMessage({ id: "s", role: "system", createdAt: 1 }));
     insertMessage(db, makeMessage({ id: "u", role: "user", createdAt: 2 }));
-    insertMessage(db, makeMessage({ id: "a", role: "assistant", createdAt: 3 }));
+    insertMessage(
+      db,
+      makeMessage({ id: "a", role: "assistant", createdAt: 3 }),
+    );
     const roles = getMessagesByConversation(db, "conv-1").map((m) => m.role);
     expect(roles).toEqual(["system", "user", "assistant"]);
   });
@@ -48,7 +53,7 @@ describe("entities/message — happy path", () => {
   it("records content and tokenCount", () => {
     insertMessage(
       db,
-      makeMessage({ id: "x", content: "Hi there", tokenCount: 2 })
+      makeMessage({ id: "x", content: "Hi there", tokenCount: 2 }),
     );
     const [m] = getMessagesByConversation(db, "conv-1");
     expect(m.content).toBe("Hi there");

@@ -3,11 +3,24 @@ import "@/shared/ui/unistyles";
 import { useState, type PropsWithChildren } from "react";
 import { openDb, runMigrations } from "@/shared/db";
 import { modelsMigration } from "@/entities/model";
-import { conversationsMigration } from "@/entities/conversation";
-import { messagesMigration } from "@/entities/message";
+import {
+  conversationsLeafMigration,
+  conversationsMigration,
+  conversationsPersonaMigration,
+} from "@/entities/conversation";
+import { messagesMigration, messagesParentMigration } from "@/entities/message";
+import { personasMigration } from "@/entities/persona";
 import { LlmProvider } from "./LlmProvider";
 
-const migrations = [modelsMigration, conversationsMigration, messagesMigration];
+const migrations = [
+  modelsMigration,
+  conversationsMigration,
+  messagesMigration,
+  personasMigration,
+  conversationsPersonaMigration,
+  messagesParentMigration,
+  conversationsLeafMigration,
+];
 
 export function Providers({ children }: PropsWithChildren) {
   // Run migrations synchronously on first render, before any child (including

@@ -41,7 +41,7 @@ export class File {
       const file = new File(`${destination.uri}/model-${downloadCounter}.gguf`);
       file.size = 2_000_000_000;
       return file;
-    }
+    },
   );
 }
 

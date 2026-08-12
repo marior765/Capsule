@@ -13,14 +13,31 @@ export default function ChatListScreen() {
   useFocusEffect(
     useCallback(() => {
       setConversations(listConversations(db));
-    }, [db])
+    }, [db]),
   );
 
   return (
     <View style={styles.root}>
-      <Pressable style={styles.newButton} onPress={() => router.push("/chat/new")}>
-        <Text style={styles.newLabel}>New chat</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => router.push("/chat/new")}
+        >
+          <Text style={styles.newLabel}>New chat</Text>
+        </Pressable>
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => router.push("/chat/ephemeral")}
+        >
+          <Text style={styles.newLabel}>Ephemeral</Text>
+        </Pressable>
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => router.push("/models")}
+        >
+          <Text style={styles.newLabel}>Models</Text>
+        </Pressable>
+      </View>
       <FlatList
         data={conversations}
         keyExtractor={(c) => c.id}
@@ -43,12 +60,17 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.background,
     padding: theme.spacing.three,
   },
-  newButton: {
+  actions: {
+    flexDirection: "row",
+    gap: theme.spacing.two,
+    marginBottom: theme.spacing.three,
+  },
+  actionButton: {
+    flex: 1,
     paddingVertical: theme.spacing.three,
     alignItems: "center",
     borderRadius: theme.spacing.two,
     backgroundColor: theme.colors.backgroundSelected,
-    marginBottom: theme.spacing.three,
   },
   newLabel: {
     color: theme.colors.text,

@@ -111,7 +111,7 @@ describe("entities/model — error handling", () => {
     const model = makeModel({ path: "/same.gguf" });
     insertModel(db, model);
     expect(() =>
-      insertModel(db, makeModel({ id: "other", path: "/same.gguf" }))
+      insertModel(db, makeModel({ id: "other", path: "/same.gguf" })),
     ).toThrow();
   });
 });

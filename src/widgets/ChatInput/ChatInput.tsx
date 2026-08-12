@@ -6,10 +6,21 @@ import { createComponentTestIDs } from "@/shared/testing";
 type ChatInputProps = {
   onSend: (text: string) => void;
   disabled?: boolean;
+  /**
+   * Seeds the field — used to prefill the text of a message being edited.
+   * Remount (via `key`) to re-seed after the first render.
+   */
+  initialText?: string;
+  sendLabel?: string;
 };
 
-export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
-  const [text, setText] = useState("");
+export function ChatInput({
+  onSend,
+  disabled = false,
+  initialText = "",
+  sendLabel = "Send",
+}: ChatInputProps) {
+  const [text, setText] = useState(initialText);
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -35,7 +46,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
         onPress={handleSend}
         disabled={disabled}
       >
-        <Text style={styles.sendLabel}>Send</Text>
+        <Text style={styles.sendLabel}>{sendLabel}</Text>
       </Pressable>
     </View>
   );

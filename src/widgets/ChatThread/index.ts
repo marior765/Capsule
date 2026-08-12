@@ -1,1 +1,1 @@
-export { ChatThread } from "./ChatThread";
+export { ChatThread, type BranchPosition } from "./ChatThread";

@@ -26,6 +26,7 @@ have). Add a row to the status table when you adopt a feature for real.
 | `/plan` custom skill | ✅ Used | 2026-06-17 |
 | Plan mode (`defaultMode: plan`) | ✅ Learned | 2026-06-17 |
 | Code review (`/code-review`) | ✅ Learned | 2026-06-17 |
+| `claude-api` skill | ✅ Used | 2026-07-17 |
 | `/simplify` | ⬜ Not yet | — |
 | `/security-review` | ⬜ Not yet | — |
 | `/verify` | ⬜ Not yet | — |
@@ -34,7 +35,9 @@ have). Add a row to the status table when you adopt a feature for real.
 | `/compact` | ⬜ Not yet | — |
 | `/cost` | ⬜ Not yet | — |
 | Worktrees | ⬜ Not yet | — |
-| Background agents | ⬜ Not yet | — |
+| Background agents | ✅ Used | 2026-06-19 |
+| Remote Control (phone) | ✅ Learned | 2026-06-19 |
+| Mobile push notifications | ✅ Learned | 2026-06-19 |
 | Keybindings | ⬜ Not yet | — |
 | Status line | ⬜ Not yet | — |
 
@@ -268,6 +271,66 @@ have). Add a row to the status table when you adopt a feature for real.
   useful on your own code, or as a final pass before committing.
 - **Here:** Learned. Not yet in the standard workflow — human review of the diff
   is the primary gate after `/safe-loop`.
+
+### Background agents
+- **What:** A subagent spawned to run **asynchronously** — it works while you keep
+  going, and fires a task-notification when it completes.
+- **How:** Spawn with `run_in_background: true` (default for the Agent tool). You
+  get notified on completion; `SendMessage` continues an agent with its context.
+- **Here:** Used a background `claude-code-guide` agent to look up Remote Control
+  setup while simultaneously prepping the loop — the answer arrived as a
+  notification mid-turn.
+- **When it's worth it:** research/lookup that doesn't block your next action. If
+  you need the answer *before* the next step, run synchronously
+  (`run_in_background: false`) instead.
+
+### Remote Control (drive the session from a phone)
+- **What:** Makes a running local Claude Code session drivable from the Claude
+  mobile app or `claude.ai/code` — read output, send messages, approve prompts.
+- **How:**
+  ```bash
+  claude remote-control          # prints a QR code — scan with the Claude app
+  claude --remote-control "Name" # this session only
+  ```
+  Or `/remote-control` in-session, or `/config` → "Enable Remote Control for all
+  sessions". Access: scan the QR, or open claude.ai/code, or the **Code** tab in
+  the Claude app (green dot = online).
+- **Requires:** Pro/Max/Team/Enterprise (not API-key auth), same account signed in
+  on the phone, Claude Code v2.1.51+. Team/Enterprise: owner must enable the
+  Remote Control toggle in admin settings.
+- **Why it matters:** the bottleneck on a long unattended loop is a *permission
+  prompt with nobody there to answer it*. Remote control turns that into a phone
+  tap — the actual enabler of multi-hour autonomy.
+
+### Mobile push notifications
+- **What:** Pushes to the Claude mobile app when Claude needs you or finishes.
+- **How:** `/config` → enable **"Push when actions required"** (permission prompts,
+  questions) and/or **"Push when Claude decides"** (long task finished).
+- **Requires:** Claude app installed + signed in with the same account,
+  notification permission granted, CC v2.1.110+.
+- **Troubleshooting:** if `/config` shows "No mobile registered", open the Claude
+  app to refresh its push token. iOS: check Focus modes. Android: exempt Claude
+  from battery optimization.
+- **Note:** the setting names are *not* `inputNeededNotifEnabled` /
+  `agentPushNotifEnabled` in the UI — they're the plain-English toggles in
+  `/config`.
+
+### `claude-api` skill (built-in)
+- **What:** Reference for the Claude API / Anthropic SDK — current model IDs,
+  pricing, thinking/effort params, streaming, tool use, caching, migration guides.
+- **How:** Invoke via the Skill tool. It carries a **trigger rule**: never answer
+  questions about model pricing / model choice / limits / caching *from memory* —
+  load the skill first. It's explicit that training priors on this go stale.
+- **Here:** Used to settle whether a "Fable 5 for planning → Sonnet for
+  implementation" pipeline was worth building. The skill's pricing table showed
+  **Fable 5 is 2× Opus** ($10/$50 vs $5/$25 per MTok) — the premium tier, not a
+  saving. The proposed optimisation would have *increased* cost.
+- **Why it earned its keep:** it changed the answer. Cache reads are 0.1× input
+  and cache writes 2× (1h TTL) — combined with our own token log, that showed 93%
+  of session cost was context re-reading, not generation. Guessing at these
+  numbers would have produced confidently wrong architecture advice.
+- **Lesson:** for any pricing/model-choice question, the skill is not optional
+  garnish — it's the difference between analysis and plausible-sounding fiction.
 
 ---
 

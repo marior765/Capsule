@@ -21,7 +21,7 @@ export function InferenceStats({
     parts.push(
       contextTotal !== undefined
         ? `${contextUsed}/${contextTotal} ctx`
-        : `${contextUsed} ctx`
+        : `${contextUsed} ctx`,
     );
   }
 

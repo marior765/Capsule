@@ -49,6 +49,34 @@ export const RECOMMENDED_MODELS = [
   quantization: Quantization;
 }[];
 
+/**
+ * Sampling / context settings for on-device inference.
+ *
+ * Note the asymmetry: every field except `contextLength` is a *completion*
+ * parameter applied per request. `contextLength` maps to llama.rn's `n_ctx`,
+ * which is a *context init* parameter — changing it requires reloading the
+ * model into memory. See `requiresModelReload` in features/configure-inference.
+ */
+export type InferenceSettings = {
+  temperature: number;
+  topP: number;
+  topK: number;
+  repeatPenalty: number;
+  contextLength: number;
+  /** -1 selects a random seed per completion. */
+  seed: number;
+};
+
+/** llama.cpp's documented defaults, which are sane starting points. */
+export const DEFAULT_INFERENCE: InferenceSettings = {
+  temperature: 0.8,
+  topP: 0.95,
+  topK: 40,
+  repeatPenalty: 1.0,
+  contextLength: 4096,
+  seed: -1,
+};
+
 export const APP_CONSTANTS = {
   dbName: "capsule.db",
   mmkvId: "capsule",

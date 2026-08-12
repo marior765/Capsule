@@ -2,7 +2,9 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  conversationsLeafMigration,
   conversationsMigration,
+  conversationsPersonaMigration,
   deleteConversation,
   getAllConversations,
   getConversationById,
@@ -12,11 +14,13 @@ import {
 } from "../index";
 
 const makeConversation = (
-  overrides: Partial<Conversation> = {}
+  overrides: Partial<Conversation> = {},
 ): Conversation => ({
   id: `c-${Math.random().toString(36).slice(2)}`,
   title: "New chat",
   modelId: "model-1",
+  personaId: null,
+  activeLeafId: null,
   createdAt: 1000,
   updatedAt: 1000,
   ...overrides,
@@ -27,7 +31,11 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [conversationsMigration]);
+  runMigrations(db, [
+    conversationsMigration,
+    conversationsPersonaMigration,
+    conversationsLeafMigration,
+  ]);
 });
 
 describe("entities/conversation — happy path", () => {
@@ -88,6 +96,8 @@ describe("entities/conversation — error handling", () => {
   it("throws on duplicate id insert", () => {
     const c = makeConversation({ id: "dup" });
     insertConversation(db, c);
-    expect(() => insertConversation(db, makeConversation({ id: "dup" }))).toThrow();
+    expect(() =>
+      insertConversation(db, makeConversation({ id: "dup" })),
+    ).toThrow();
   });
 });

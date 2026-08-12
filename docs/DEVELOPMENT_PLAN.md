@@ -96,12 +96,13 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 1.11 Onboarding flow: welcome → download first model → first chat
 
 ### Phase 2 — AI configurability
-- [ ] 2.1 `features/configure-inference` — temperature, top-p/k, repeat penalty, context length, seed
-- [ ] 2.2 Settings → inference screen
-- [ ] 2.3 Custom system prompts / personas — create, edit, delete, select per conversation
-- [ ] 2.4 `PersonaSelector` widget + personas route
-- [ ] 2.5 `features/branch-conversation` — edit message → fork generation path, preserve tree
-- [ ] 2.6 Ephemeral chats (session-only, never written to disk)
+- [x] 2.1 `features/configure-inference` — temperature, top-p/k, repeat penalty, context length, seed
+- [x] 2.2 Settings → inference screen (+ settings hub — every settings screen was unreachable)
+- [x] 2.3 Custom system prompts / personas — create, edit, delete, select per conversation (`entities/persona` + `selectPersona`; UI in 2.4)
+- [x] 2.4 `PersonaSelector` widget + personas route (+ `chat/new` is now a picker; branch nav + ephemeral route wired)
+- [x] 2.7 Prompt templating — `buildMessages` emits structured chat turns and `runCompletion` passes them to llama.rn with `jinja: true`, so each GGUF's own embedded chat template renders the prompt. We write no prompt markup ourselves; the wrapper stays model-agnostic.
+- [x] 2.5 `features/branch-conversation` — edit message → fork generation path, preserve tree (data layer; UI in 2.2/2.4 batch)
+- [x] 2.6 Ephemeral chats (session-only, never written to disk) — `sendEphemeralMessage` takes no db handle; UI wiring pending
 
 ### Phase 3 — Voice
 - [ ] 3.1 `shared/stt` — whisper.rn wrapper (init, record, transcribe, abort)

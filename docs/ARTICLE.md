@@ -638,4 +638,276 @@ labor is the actual subject of the article.
 
 ---
 
+### 2026-06-19 — First device run: the bug that compiled perfectly
+
+**What happened**
+
+First simulator run of the Phase 1 build. The models screen worked, a model
+started downloading — and the bottom tab bar had **~17 tabs** crammed with
+truncated labels and placeholder triangle icons. It compiled clean, passed all
+130 tests, and was completely wrong.
+
+**Root cause:** expo-router `<Tabs>` turns every *leaf route* in the group into a
+tab unless a folder has its own nested navigator. `chat/`, `capsules/`,
+`settings/`, and `types/` had no `_layout`, so `chat/new`, `chat/[id]`,
+`settings/privacy`, `settings/storage`, … each became its own tab. Fix: add a
+`Stack` `_layout.tsx` to each multi-route folder, collapsing it to one tab with
+its sub-routes as stack screens.
+
+**Why it matters (article angle)**
+
+This is the thesis made concrete. Nothing a type checker or a unit test could
+catch — the code was valid, the routes existed, the imports resolved. It was only
+*wrong on screen*. The entire Phase 1 UI batch shipped behind a "tsc + jest"
+gate that is, by construction, blind to this class of error. The human running
+the app for ten seconds found it instantly.
+
+The lesson isn't "the AI made a mistake" — the navigation structure was a
+reasonable first attempt. The lesson is **where the verification boundary sits**:
+AI + a good test harness gets you compiling, correct *logic*. A human (or, later,
+a Detox/vision loop) is still the gate for *does it look and behave right*. Any
+workflow that treats green CI as "UI done" will ship exactly this bug. Naming that
+boundary honestly — and building the human check into the loop deliberately — is
+the difference between an AI workflow that works and one that just looks like it
+does.
+
+---
+
+### 2026-06-19 — The stranded screen, and taking the session mobile
+
+**1. A second UI bug tests could never catch**
+
+Right after the tab-bar fix, the next question was: *"How do I download a model?
+There's no place to do it — or is that expected?"*
+
+It wasn't expected. The models route was `href: null` (deliberately hidden from
+the tab bar, intended to be reached by navigation) — but **nothing ever linked to
+it**. The download UI existed, was fully implemented, tested where testable… and
+was unreachable from the running app. Onboarding had the other download path, but
+it never auto-showed on first launch. Fixed by adding a **Models** button to the
+chat list and making the *"Download a model to start chatting"* prompt tappable.
+
+**Article angle:** this is a *different* class of invisible bug from the tab
+explosion. That one rendered wrong; this one rendered *fine* and was simply
+unreachable. Both share a root: **information architecture compiles regardless of
+whether a human can navigate it.** A type checker proves a route *exists*. Only a
+person opening the app proves it's *findable*. Two navigation bugs, found in
+seconds of real use, with exactly zero possible test coverage under our gate. If
+the article needs one concrete image for "where the verification boundary sits" —
+it's a fully-working download screen that no user could ever reach.
+
+**2. Remote control — driving Claude Code from a phone**
+
+Needing to leave for a couple of hours mid-build surfaced a feature we hadn't
+touched:
+
+- `claude remote-control` → prints a QR code → scan with the Claude mobile app →
+  the local session is now drivable from the phone. (Also `/remote-control`
+  in-session, or auto-enable via `/config`.)
+- `/config` → **"Push when actions required"** (ping on permission prompts /
+  questions) and **"Push when Claude decides"** (ping when long tasks finish).
+- Requires Pro/Max/Team, the same account signed in on the phone, CC v2.1.51+.
+
+**Article angle:** this reframes what "autonomous" means. The bottleneck on a
+multi-hour unattended loop was never the model's ability to keep working — it's
+that a **permission prompt blocks forever with nobody there to answer it**. Remote
+control + push turns a blocking prompt into a notification and a thumb tap from a
+café. That's the difference between an agent that runs for two minutes and one
+that runs for two hours. The enabling infrastructure for autonomy is
+*notification plumbing*, not intelligence.
+
+**3. The real question behind "can I leave this running?"**
+
+Scoping the away-run produced the sharpest insight of the phase. Asked to pick
+what the unattended loop should build, the honest answer wasn't about size or
+difficulty — it's that **a loop is only as trustworthy as its gate**:
+
+| Step type | Gate | Safe unattended? |
+|---|---|---|
+| Data / logic (with tests written first) | `tsc` + `jest` | **Yes** — the gate actually proves correctness |
+| UI | `tsc` only | **No** — "it compiles" ≠ "it works" |
+
+We had *just* watched a compile-gated UI batch ship two navigation bugs. That's
+not a hypothetical risk; it's the evidence from the previous hour. So the choice
+of what to run unsupervised isn't "what's most valuable" — it's "what has a real
+exit signal."
+
+**Takeaway:** *"Can I leave this running?"* is really *"does this step have a
+binary, machine-checkable definition of done?"* If tests define correctness, walk
+away. If the only gate is the compiler, you're not running a verified loop — you're
+generating plausible code and hoping. Naming that distinction out loud, rather
+than treating every step as equally loop-able, is what keeps the workflow honest.
+
+**Status:** the Phase 2 loop was started and then interrupted — Phase 2 remains
+unimplemented. Phase 1 stands complete (with 1.6.1 markdown deferred).
+
+---
+
+### 2026-07-17 — Phase 2 complete: privacy you can't accidentally break
+
+**What shipped**
+
+All six Phase 2 steps — inference settings, personas, conversation branching,
+ephemeral chats, plus the settings/personas UI. `tsc` clean, 186 tests, zero FSD
+boundary violations. Every loop completed on its **first iteration**.
+
+**1. The best idea in this phase: a function that cannot break its promise**
+
+*"Ephemeral chats — session-only, never written to disk"* is a Set 2 **privacy
+guarantee**, not a feature. Three designs were on the table:
+
+| Design | Why it fails |
+|---|---|
+| `conversation.ephemeral` flag; `sendMessage` branches on it | The guarantee reduces to *"we remembered the `if`"* — one refactor from silently persisting private chats |
+| Abstract a storage layer (sqlite vs memory) | Needs abstracting three entities, and the guarantee still rests on wiring the right impl |
+| **`sendEphemeralMessage` takes no `db` parameter** | ✅ |
+
+```ts
+sendMessage(db, ctx, input, onToken?, settings?)        // persists
+sendEphemeralMessage(ctx, input, onToken?, settings?)   // no db — cannot persist
+```
+
+**The function can't write to disk because it has no handle to write with.** The
+privacy property is enforced by the type system, not by discipline or review.
+The test — `"writes nothing to the database"` — passes *trivially*, and that's the
+point: it documents a property the signature already guarantees. The ephemeral
+chat even gets its own route, so no screen that *can* persist is ever used for a
+private chat.
+
+**Article angle:** "verifiable privacy" is Capsule's differentiator, and this is
+what makes it more than marketing. Most privacy bugs aren't malice — they're a
+flag that didn't get checked on some path someone added later. The fix isn't more
+vigilance; it's removing the capability. **If the code physically cannot do the
+wrong thing, you don't need to trust that it won't.** That principle generalises
+far past this app.
+
+**2. The type system's blind spot — now confirmed twice**
+
+Adding required fields (`personaId`, then `parentId` + `activeLeafId`) let the
+compiler enumerate every fixture needing updates — it found 8 sites, including
+two UI spots I'd have missed (an optimistic message, a synthetic streaming
+bubble). Compiler-driven refactoring at its best.
+
+But **every additive migration also broke test suites that `tsc` could not see.**
+A suite that runs `runMigrations(db, [conversationsMigration])` without the new
+`ALTER TABLE` compiles perfectly and then dies at runtime:
+`SqliteError: table conversations has no column named persona_id`.
+
+**Article angle:** the type system knows the shape of your *data*; it knows
+nothing about the shape of your *database*. Those drift independently, and the
+gap is invisible until something runs. Two phases in a row, same lesson —
+worth stating as a rule: **schema changes need a runtime gate, not just a
+compile gate.**
+
+**3. The cost data inverted my own argument**
+
+The user proposed a pipeline: switch to Fable 5 for planning → verify → switch to
+Sonnet to implement. I argued it was backwards — planning needs accumulated
+context (200 turns of decisions), while implementation against approved tests is
+context-light because **the tests externalise the spec**. So delegate the
+*implementation*, not the planning.
+
+Then we actually read the token log we'd instrumented weeks earlier:
+
+| | Volume |
+|---|---|
+| Output (generation) | 0.70 M |
+| **Cache read (context re-reading)** | **217.55 M** |
+| Cache created | 10.27 M |
+
+**93% of the cost was re-reading context — ~300× the volume of everything we'd
+generated.** That reframed the whole thing: the cold start I'd called a *downside*
+for planning is the dominant *cost win* for implementation, because a fresh agent
+reads ~40 K of context instead of dragging 200 turns into every request. The model
+tier was worth ~2.5×; not carrying the conversation was worth ~13×. (Also: Fable 5
+is 2× Opus per token — the premium tier, not a saving. The original plan would
+have cost *more*.)
+
+**Article angle:** two lessons stacked. First, **instrument early and read it
+later** — the Stop hook that logged tokens cost nothing for weeks, then settled an
+architecture debate with data instead of intuition. Second, and more uncomfortable:
+I reached the right conclusion for the wrong reason, and only the measurement
+showed it. Reasoning felt rigorous; it was still guessing.
+
+**4. A third stranded screen**
+
+The settings hub was an empty `<View />`. Every settings sub-screen — inference,
+privacy, storage — was unreachable. The inference screen we were about to build
+would have been **born stranded**, the same defect as the models route.
+
+That's now three occurrences of one bug class: **information architecture compiles
+regardless of whether a human can navigate it.** The response was to promote
+reachability to an explicit plan checklist item — every new screen gets its link
+in the same change — and to *not* link the empty Phase 4 stubs, because a link to
+a blank screen is worse than no link.
+
+**5. Recon before planning beat planning from the plan**
+
+The request was "plan 2.1, 2.4, 2.5." Ten minutes of recon found 2.4 was
+impossible: no `personas` entity existed (ARCHITECTURE.md never had one), and 2.4
+is the *UI* for data 2.3 hadn't built yet. The batch had been cut across a
+dependency.
+
+Re-cutting by actual dependencies — logic slices first (real test gates), UI last
+(compile gate, human verifies) — is the same shape that made Phase 1 go clean.
+
+**Takeaway:** the plan document is a map, not the territory. It said
+`configure-inference # …persona selection` but had no persona entity to select
+from. **Plans encode intent; only the code encodes reality** — and the gap between
+them is exactly what a recon pass is for.
+
+**Deferred, on purpose: 2.7 prompt templating.** `buildPrompt` emits naive
+`system:`/`user:`/`assistant:` lines and ignores each model's chat template
+(Llama 3.2 wants `<|start_header_id|>`). Logged rather than fixed blind — it's the
+one defect that will make everything else *look* broken on the first real model
+run, and it's better diagnosed with a device in hand than guessed at.
+
+---
+
+## 2026-07-17 — The empty bubble, and a mock that lied
+
+The deferred defect landed exactly where it was logged. First real model run:
+messages sent, assistant bubbles came back **empty, 0 tokens**. Not a crash — a
+polite nothing. The hand-rolled `system:`/`user:`/`assistant:` prompt is junk to
+Llama 3.2, which wants `<|start_header_id|>`, so the model saw noise and emitted
+end-of-sequence immediately. Predicted in the 2.6 entry, verified on device.
+
+The fix worth having wasn't "write the Llama 3.2 markers." Every model family
+wants different markup, and **every GGUF already ships its own chat template
+inside the file**. So `runCompletion` now hands llama.rn structured `messages`
+with `jinja: true` and lets the model's own template render the prompt. We write
+no markup at all. `buildPrompt` (returns a string) became `buildMessages`
+(returns turns) — the type change is the point: there is no longer a place in our
+code where prompt markup *could* be written.
+
+**Then the tests failed — and the failure was fiction.** Three `shared/llm` tests
+started throwing `Prompt is required`. The product was fine. llama.rn's own jest
+mock stubs the native chat formatter to return an empty prompt for *every* input
+— reasonably, since there's no real GGUF and therefore no template — and its
+`completion()` then rejects the empty prompt it just produced. Two attempts to
+inject a stand-in template both failed: the library snapshots the JSI globals into
+a private bindings object on first init and then `delete`s the globals, so there
+is nothing left to override.
+
+That dead end was the useful part, because it forced the real question: **what
+were those tests testing?** "Returns a result", "streams tokens", "handles
+maxTokens of 1" all asserted that *llama.rn's mock* returns text. That's the
+library's job to test, not ours. The half that's actually ours — camelCase → the
+snake_case sampling fields, `jinja: true`, turns passed through unmodified — needs
+no llama.rn machinery at all, just a fake ctx that records what it was handed.
+Rewritten that way the suite went from 3 failing tests that tested the library to
+11 passing tests that test the wrapper, including two (`jinja` is on, no `prompt`
+key is ever sent) that would have caught this bug in the first place.
+
+**Article angle:** a mock is a claim about a dependency, and when it can't
+represent reality it will fail your code for reasons your users never hit. The
+reflex is to fight the mock. The better move is to read the failure as a question:
+*if this test can only pass by simulating the library, was it ever testing me?*
+The tests that survived the rewrite are the ones that only ever needed my own
+code — which is another way of saying the mock's limitation drew the seam my test
+boundary should have had all along. **Don't test through your dependency; test
+up to it.**
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

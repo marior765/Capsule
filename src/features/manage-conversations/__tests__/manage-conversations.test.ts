@@ -2,13 +2,16 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  conversationsLeafMigration,
   conversationsMigration,
+  conversationsPersonaMigration,
   getConversationById,
 } from "@/entities/conversation";
 import {
   getMessagesByConversation,
   insertMessage,
   messagesMigration,
+  messagesParentMigration,
   type Message,
 } from "@/entities/message";
 import {
@@ -22,6 +25,7 @@ import {
 const makeMessage = (id: string, conversationId: string): Message => ({
   id,
   conversationId,
+  parentId: null,
   role: "user",
   content: "Hello",
   tokenCount: 0,
@@ -33,7 +37,13 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [conversationsMigration, messagesMigration]);
+  runMigrations(db, [
+    conversationsMigration,
+    messagesMigration,
+    conversationsPersonaMigration,
+    messagesParentMigration,
+    conversationsLeafMigration,
+  ]);
 });
 
 describe("createConversation — happy path", () => {
