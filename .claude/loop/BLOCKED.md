@@ -79,6 +79,25 @@ defaults, don't wait for me" and the loop will pick conservative, documented
 defaults and flag them clearly for your review afterward), or handle 4.1
 yourself outside the loop.
 
+## Precedent set (informational — no action needed)
+
+### Types-only devDependencies don't route through the dependency gate
+While building 1.6.1, `markdown-it` (a transitive dependency of
+`react-native-markdown-display`) turned out to ship no TypeScript types, and
+`@types/markdown-it` isn't installed. Rather than install it unattended, a
+minimal local ambient declaration was hand-written
+(`src/widgets/ChatBubble/markdown-it.d.ts`), scoped to only the members
+actually used.
+
+The checker judged this defensible — a types-only file introduces zero
+runtime code and can't make a network call, so CLAUDE.md's "audit
+dependencies for outbound requests" rule doesn't really bite here — but
+flagged that this is this loop's own unilateral interpretation: nothing in
+the original dependency-gate rule explicitly carved out devDependencies from
+runtime ones. Recording that interpretation here rather than leaving it only
+in a code comment. If you disagree, say so and future beats will route
+types-only packages through the same gate as everything else.
+
 ## Failed verification
 
 _(none)_

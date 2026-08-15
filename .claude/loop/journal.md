@@ -364,4 +364,69 @@ unblocked (Phase 3/4). Picking it up this beat.
 
 ---
 
+### 1.6.1 — `ChatBubble` markdown rendering + code blocks + copy · beat 5 · 2026-08-13T03:15Z
+
+**Class:** ui
+**Select:** first plan-order item unblocked by the reconciliation. Prior state
+was `export {};`-plain-text bubble.
+
+**Design decisions worth recording:**
+- The `image` render rule is overridden to never mount a real image
+  component, and `markdownit` is passed an explicit `{ html: false }` parser
+  — a message's content is the user's own text or the model's own output,
+  never a trusted document, so nothing in it should be able to trigger a
+  fetch just by being displayed.
+- Code blocks (`fence` + `code_block`) render through a `CodeBlock` component
+  with a copy-to-clipboard button, using `prepareCodeForCopy` (pure logic
+  mirroring the library's own trim-one-trailing-newline behavior).
+
+**Tests:** `prepareCodeForCopy.test.ts` (7 cases) — confirmed failing before
+implementation.
+
+**Attempt 1 (checker) — `fail`.** Three findings, all accepted:
+1. The copy button's testID was built from `node.key`, which turned out to be
+   an app-wide global counter reassigned on every render, not scoped to a
+   message — the testID changed on every re-render regardless of content.
+   Fixed: a position-based index closed over per `markdownRules(messageId)`
+   call, deterministic from message identity + document order.
+2. **The sharpest one.** The privacy claim in my own comment — "no markdown
+   content can trigger a fetch" — was never actually verified. Raw HTML
+   (`<img src="...">`) tokenizes as `html_block`/`html_inline`, a different
+   node type the `image` rule override never sees, and whether that path is
+   open depended entirely on an *implicit* markdown-it default
+   (`html: false`) nothing pinned in code. Fixed: `createMarkdownParser()`
+   sets `html: false` explicitly, backed by `markdownParser.test.ts` — 4
+   tests against the real `markdown-it` engine, not a mock.
+3. `setStringAsync`'s result was discarded outright — no feedback on success
+   or failure. Fixed: `CodeBlock` is now a real component with `useState`
+   backing a "Copied" label and a try/catch around the awaited promise.
+
+**A new wrinkle:** `markdown-it` ships no types, `@types/markdown-it` isn't
+installed. Rather than install a types-only devDependency unattended, wrote a
+minimal local ambient declaration (`markdown-it.d.ts`) covering only the used
+surface. Sent this specific call to the checker for judgment rather than
+deciding it alone.
+
+**Gate:** tsc ✅ · jest ✅ 251/21 suites · eslint ✅
+
+**Review (re-review) — pass.** The checker didn't take any fix on report —
+manually substituted `html: true` into the parser tests and confirmed all 4
+flip to failing, confirming the regression guard actually guards something.
+Confirmed the testID scheme is genuinely deterministic and collision-free
+(message ids are UUIDv4-shaped, already relied on elsewhere). Judged the
+`markdown-it.d.ts` workaround defensible — zero runtime code, can't make a
+network call — but flagged it as this loop's own unilateral interpretation of
+the dependency gate (nothing in the original rule explicitly exempts
+devDependencies), and that the reasoning should live in `BLOCKED.md`, not
+only a code comment. Added that breadcrumb before checkpoint. Two minor,
+non-blocking gaps noted for the record: no `setTimeout` cleanup on unmount,
+and a failed copy still shows "Copy" rather than something like "Failed" —
+neither judged worth blocking on for this scope.
+
+**Checkpoint:** staged step paths only. `.vscode/settings.json` excluded
+again.
+**Result:** done ✅ — `docs/DEVELOPMENT_PLAN.md` 1.6.1 ticked.
+
+---
+
 <!-- Append new beats above this line. -->

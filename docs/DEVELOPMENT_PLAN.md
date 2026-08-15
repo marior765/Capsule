@@ -88,7 +88,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 1.4 `entities/conversation` + `entities/message` — models + CRUD
 - [x] 1.5 `features/send-message` — compose → stream LLM completion → persist
 - [x] 1.6 `ChatThread` + `ChatBubble` + `ChatInput` (plain text; markdown deferred → 1.6.1)
-- [ ] 1.6.1 `ChatBubble` markdown rendering + code blocks + copy (deferred — needs `react-native-markdown-display` + `expo-clipboard`)
+- [x] 1.6.1 `ChatBubble` markdown rendering + code blocks + copy
 - [x] 1.7 `InferenceStats` — token/sec + context usage display
 - [x] 1.8 `features/manage-conversations` — create, rename, delete, search
 - [x] 1.9 chat routes: `chat/index`, `chat/new`, `chat/[id]`
