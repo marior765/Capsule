@@ -448,4 +448,28 @@ one unattended, since this is still crypto-critical.
 
 ---
 
+### Beat 6 open — 4.1 fully unblocked · 2026-08-16T~06:00Z
+
+**Health check:** tree at `c886ba4` plus uncommitted `package.json`/
+`package-lock.json` — the user installed `react-native-quick-crypto`
+themselves (I couldn't; `npm install` fails in this sandbox with
+`UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, a TLS cert error reaching the registry,
+confirmed twice). Gate green (tsc ✅ · jest ✅ 251/21 · eslint ✅) before
+touching anything.
+
+Checked whether it needs `app.json` config: it ships a real plugin
+(`app.plugin.js`, unlike whisper.rn/`expo-speech`) with no required options.
+Registered it. Committed the install + plugin registration as its own commit
+(`aba8fc3`), separately from any step work, before doing anything else — same
+discipline as the beat 5 dependency commit, protecting the user's manual work
+from a future quarantine's `git reset --hard`.
+
+Updated `BLOCKED.md`/`state.json`: 4.1 is now **fully unblocked** — both the
+design (received beat 5/prior turn: envelope encryption, wipe-and-restart on
+wrong key, rotation likely deferred) and the dependency are settled. Not
+picked up as this beat's actual work — 3.1's record half is earlier in plan
+order and the cursor was already there from beat 5's close.
+
+---
+
 <!-- Append new beats above this line. -->

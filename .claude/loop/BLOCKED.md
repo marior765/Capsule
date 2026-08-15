@@ -57,37 +57,23 @@ in `.claude/loop/state.json` and will be picked up in plan order over the
 next several beats. No further action from you needed on these — the items
 below are what's still genuinely open.
 
-## Needs a decision from you
+## Resolved (2026-08-16, beat 6)
 
-### 4.1 — one sub-decision: which library derives the passphrase key
-Design is settled (received directly from the user, 2026-08-13):
-1. **Key source: both.** A random master vault key lives in
-   `expo-secure-store`, wrapped by a key derived from the app-lock passphrase
-   (4.2) — envelope encryption. Neither the stored blob nor the passphrase
-   alone is enough; both are required to unlock the vault.
-2. **Wrong key / corrupted vault:** offer wipe-and-restart.
-3. **Key rotation:** likely deferred from v1 — not firmly committed, but the
-   envelope design keeps this cheap to add later regardless (rotating the
-   passphrase only re-wraps the small blob, not the whole database).
+### 4.1 — fully unblocked, design and dependency both settled
+Design (received directly from the user, 2026-08-13): key source is **both**
+— a random master vault key in `expo-secure-store`, wrapped by a key derived
+from the app-lock passphrase (envelope encryption; neither the stored blob
+nor the passphrase alone unlocks the vault). Wrong key / corrupted vault:
+**offer wipe-and-restart.** Key rotation: **likely deferred** from v1, but
+cheap to add later under this design (rotating the passphrase only re-wraps
+the small blob, not the whole database).
 
-What's still open: **no KDF-capable crypto primitive is installed.**
-`expo-secure-store` stores a blob; it doesn't derive a key from a passphrase.
-`expo-crypto` isn't installed either, and even if it were, its public API is
-digest/random-bytes, not a real password KDF (PBKDF2/scrypt) — using a bare
-SHA-256 hash of a passphrase as a key would be a real, avoidable security
-mistake (no work factor, no memory-hardness, brute-forceable).
-
-**You decide (recommended: option a):**
-- **(a)** `react-native-quick-crypto` — Node-`crypto`-API-compatible, JSI-based
-  (fast), supports `scrypt` (memory-hard, the better default for password-based
-  keys) and `pbkdf2`. Fits this project's existing native-module-heavy stack
-  (llama.rn, whisper.rn) rather than introducing a different pattern.
-- **(b)** A pure-JS PBKDF2 package — no native linking, but slower and PBKDF2
-  itself lacks scrypt's memory-hardness against brute force.
-- Or name a different library.
-
-Once the dependency lands, this step is fully unblocked — implementation can
-proceed under the normal TDD + checker cycle like everything else.
+You installed `react-native-quick-crypto` yourself (I couldn't — `npm
+install` fails in this sandbox with a TLS certificate error reaching the
+registry). It ships a real config plugin (`app.plugin.js`, unlike whisper.rn/
+`expo-speech`), registered in `app.json` with no options needed. No further
+action from you needed — 4.1 proceeds under the normal TDD + checker cycle
+whenever step selection reaches it.
 
 ## Precedent set (informational — no action needed)
 
