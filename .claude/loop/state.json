@@ -67,7 +67,7 @@
       "class": "native",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "STAGED",
+      "checkpoint": "1b4ab82",
       "notes": "Download half DONE: features/manage-stt-model (ensureSttModelDownloaded, getSttModelPath) -- mirrors manage-models' LLM download pattern, writes audit entry (model_download) only on actual download not on cache-hit, 10 tests, checker passed first attempt (no fail cycle needed). SttProvider + route wiring NOT YET done -- deliberate partial delivery, same precedent as 4.3 (entity checkpointed separately from widgets). Checker found the shared/fs extraction trigger (docs/ARCHITECTURE.md's own YAGNI condition) has now fired -- recorded as a low-risk follow-up in BLOCKED.md, not executed this beat (would touch two already-shipped modules). Box stays unchecked -- native class + SttProvider still owed."
     },
     "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Local TTS. Beat 5 reconciliation: expo-speech now a real dependency (verified in node_modules) -- unblocked. Not picked up this beat (1.6.1 is earlier in plan order)." },
