@@ -1,5 +1,6 @@
 // Tests for step 1.2 — written before implementation (TDD)
 import { modelsMigration } from "@/entities/model";
+import { auditMigration, getAllAuditEntries } from "@/entities/audit";
 import { _resetDbForTesting, openDb, runMigrations } from "@/shared/db";
 import { File } from "expo-file-system";
 import { __deletedUris, __resetFsMock } from "@/__mocks__/expo-file-system";
@@ -29,7 +30,7 @@ beforeEach(() => {
   __resetFsMock();
   jest.clearAllMocks();
   db = openDb();
-  runMigrations(db, [modelsMigration]);
+  runMigrations(db, [modelsMigration, auditMigration]);
 });
 
 describe("downloadModel — happy path", () => {
@@ -55,6 +56,18 @@ describe("downloadModel — happy path", () => {
     const onProgress = jest.fn();
     await downloadModel(db, spec(), onProgress);
     expect(onProgress).toHaveBeenCalledWith(1);
+  });
+
+  // CLAUDE.md hard rule: "Privacy-sensitive actions (export, decrypt, wipe,
+  // model download) must write to the audit entity." This is the one live
+  // caller of that rule today.
+  it("writes a model_download audit entry", async () => {
+    const model = await downloadModel(db, spec({ name: "Llama 3.2 3B" }));
+    const [entry] = getAllAuditEntries(db);
+    expect(entry).toBeDefined();
+    expect(entry.action).toBe("model_download");
+    expect(entry.detail).toBe("Llama 3.2 3B");
+    expect(entry.createdAt).toBe(model.downloadedAt);
   });
 });
 

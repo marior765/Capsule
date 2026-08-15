@@ -8,6 +8,7 @@ import {
   setActiveModel,
   type Model,
 } from "@/entities/model";
+import { insertAuditEntry } from "@/entities/audit";
 import type { ParameterSize, Quantization } from "@/shared/config";
 import { generateId } from "@/shared/lib";
 
@@ -47,6 +48,15 @@ export async function downloadModel(
   };
 
   insertModel(db, model);
+  // Model download is one of the four actions CLAUDE.md's hard rule names
+  // explicitly ("export, decrypt, wipe, model download") — the one allowed
+  // network action in this app, so it's the one place that rule applies today.
+  insertAuditEntry(db, {
+    id: generateId(),
+    action: "model_download",
+    detail: spec.name,
+    createdAt: model.downloadedAt,
+  });
   onProgress?.(1);
   return model;
 }

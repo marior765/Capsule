@@ -10,6 +10,7 @@ import {
 } from "@/entities/conversation";
 import { messagesMigration, messagesParentMigration } from "@/entities/message";
 import { personasMigration } from "@/entities/persona";
+import { auditMigration } from "@/entities/audit";
 import { LlmProvider } from "./LlmProvider";
 
 const migrations = [
@@ -20,6 +21,7 @@ const migrations = [
   conversationsPersonaMigration,
   messagesParentMigration,
   conversationsLeafMigration,
+  auditMigration,
 ];
 
 export function Providers({ children }: PropsWithChildren) {

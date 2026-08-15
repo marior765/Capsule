@@ -68,6 +68,41 @@ homework.
 
 Until then 3.1 stays unchecked and 3.3 is blocked on the same choice.
 
+### 4.1 — `features/encrypt-vault` (SQLCipher + key in secure store)
+This one is different from the other dependency-gap items below. SQLCipher
+itself is real and buildable here — `expo-sqlite` vendors SQLCipher's
+amalgamated source directly (`node_modules/expo-sqlite/vendor/sqlcipher/`)
+and its config plugin exposes a `useSQLCipher` flag on both platforms. The
+gap is `expo-secure-store` (key storage) — not installed.
+
+Unlike 3.1's transcribe/record split, shipping "encryption" here with no real
+secure key storage isn't an honest partial deliverable: a vault that looks
+encrypted without a securely-stored key undermines the entire point of a
+flagship privacy feature, and could read as "done" when it fundamentally
+isn't safe. Key-management design (KDF choice, wrong-key error handling, key
+rotation) is exactly the kind of non-trivial, security-critical decision
+CLAUDE.md says to discuss before writing code — not something this loop
+should design unattended just because a plugin flag exists.
+**You decide:** approve `expo-secure-store` AND weigh in on the key-management
+design (or explicitly say "use sensible defaults, don't wait for me"), or
+handle 4.1 yourself outside the loop.
+
+### 4.2 — `features/app-lock` (biometric / passphrase gate)
+Needs `expo-local-authentication`, not installed. Unlike 4.1, there's no
+partial path — app-lock genuinely can't do anything without it.
+**You decide:** approve `expo-local-authentication`, or name a different
+approach.
+
+### 3.5 — Local TTS for assistant responses
+Step calls for "OS-level Speech API as baseline." Expo's canonical wrapper for
+that is `expo-speech`, and it is not a dependency — not in `package.json`, not
+in `node_modules`. Unlike 3.1 (whisper.rn was already installed, so a wrapper
+could be written and tested against its real API), there is nothing real here
+to design `shared/tts` against without first picking a library — designing the
+interface blind risks guessing wrong and a rewrite once the real package lands.
+**You decide:** approve `expo-speech` (and confirm the audit — it's OS-level,
+no network, should be a clean addition), or name a different TTS approach.
+
 ### 1.6.1 — ChatBubble markdown rendering
 Requires adding `react-native-markdown-display` and `expo-clipboard`. Per
 `CLAUDE.md`, dependencies must be audited for outbound requests before adding —

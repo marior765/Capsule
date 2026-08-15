@@ -242,4 +242,99 @@ being mirrored, has zero render tests today either.
 
 ---
 
+### 3.5 — Local TTS for assistant responses · beat 4 · 2026-08-13T01:40Z
+
+**Class:** deferred (reclassified from `native` — see below)
+**Health check:** tree clean at `cc1341e`, gate green (tsc ✅ · jest ✅ 228/18 ·
+eslint ✅).
+
+**Reconcile → no dependency to build against.** Step text: "OS-level Speech API
+as baseline." Expo's canonical wrapper is `expo-speech`; confirmed absent from
+both `package.json` and `node_modules`. This differs from 3.1: whisper.rn *was*
+already installed there, so `shared/stt` could be written and tested against
+its real, mockable API even before the "record" half was decided. Here there is
+no real package at all — writing `shared/tts` now would mean inventing an
+interface with nothing to shape it against, risking a guess that doesn't match
+`expo-speech`'s real shape and a rewrite later. That's worse than waiting.
+
+No code written. Queued to `BLOCKED.md` as a dependency decision (same class as
+1.6.1). Phase 3 is now fully processed: 3.1/3.2/3.3/3.5 blocked, 3.4 done.
+
+---
+
+### 4.3 — `entities/audit` (data layer only) · beat 4 · 2026-08-13T02:10Z
+
+**Class:** logic
+**Select:** Phase 3 fully processed (3.1/3.2/3.3/3.5 blocked, 3.4 done). Moved
+to Phase 4. 4.1 (SQLCipher + secure store) and 4.2 (biometrics) both need
+missing native dependencies (`expo-secure-store`, `expo-local-authentication`).
+4.1 is more nuanced than a clean defer — SQLCipher itself is real and buildable
+(`expo-sqlite` vendors SQLCipher's amalgamated source directly and exposes a
+`useSQLCipher` plugin flag), but shipping encryption with no real secure key
+storage isn't an honest partial deliverable for a flagship privacy feature the
+way transcribe-without-record was for 3.1. Deliberately not attempted — queued
+as a decision, with a note that this one deserves real design discussion, not
+just a dependency approval. 4.2 is a clean full defer (app-lock genuinely can't
+do anything without the auth library).
+
+**4.3 is a compound line** — `entities/audit` + `PrivacyBanner` + `EgressLog`.
+Built the entity only this beat: widgets depend on it existing, so this is
+sequencing, not scope-avoidance. Followed the `entities/conversation`/`persona`
+CRUD pattern exactly. Migration version 8 (next in sequence), registered in
+`app/providers/index.tsx`.
+
+**Design call:** the audit log is append-only — no `updateAuditEntry` or
+`deleteAuditEntry` — because a privacy ledger callers can quietly edit or
+erase defeats its purpose.
+
+**Tests:** `src/entities/audit/__tests__/audit.test.ts` — 9 cases, confirmed
+failing before implementation.
+
+**Attempt 1 — gate red.** Prettier + a `require()` lint warning in the "no
+mutation API" test; fixed by importing the module statically instead.
+
+**Attempt 1 (checker) — `fail`.** Four findings, all accepted:
+1. The "stable order on tie" test asserted only `toHaveLength(2)` — proved
+   nothing about order. Fixed: added a genuine secondary sort
+   (`created_at DESC, id DESC`) and a test asserting the exact resulting order.
+2. The "append-only" claim was enforced only by two functions not existing —
+   trivially reversible by anyone adding them back. Fixed: real SQL triggers
+   (`BEFORE UPDATE`/`BEFORE DELETE`, `RAISE(ABORT, ...)`) on the migration,
+   tested directly against the real `better-sqlite3` engine the mock uses
+   (confirmed via `db.runSync` throwing on both statements).
+3. `.vscode/settings.json` stray diff — excluded from staging, as always.
+4. **The sharpest one:** the entity existed but nothing wrote to it —
+   `features/manage-models`'s `downloadModel` is a real, shipped, tested
+   caller of exactly the hard rule this entity exists to serve
+   ("model download" is one of CLAUDE.md's four named actions), and it never
+   called `insertAuditEntry`. Wired it in. Verified TDD discipline even though
+   this was a mid-cycle fix: temporarily reverted the wiring, confirmed the new
+   test failed (`entry` was `undefined`), restored it, confirmed green.
+
+**A scare worth recording:** after the fix, a stale "file modified externally"
+notification showed the `id DESC` secondary sort missing from `db.ts` on disk.
+Treated it as possibly real rather than dismissing it — re-read the file
+directly, confirmed the fix genuinely was present, re-ran the full gate to be
+certain. Turned out to be a delayed/stale hook notification, not an actual
+revert. Worth remembering: these notifications can lag behind the true file
+state — verify by reading, don't take either the reminder or your own memory
+of "I already wrote that" on faith.
+
+**Gate:** tsc ✅ · jest ✅ 240/19 suites · eslint ✅
+
+**Review (re-review) — pass.** The checker didn't take the fixes on report —
+independently mutated all three (removed the triggers, removed the secondary
+sort, removed the wiring) and confirmed each corresponding test fails exactly
+and only as expected. Also confirmed no other live caller of the three
+remaining `AuditAction` classes exists yet (wipe-data, import-export,
+encrypt-vault are all still stubs), so this closes the hard-rule gap
+completely for everything currently real.
+
+**Checkpoint:** staged entity + provider wiring + manage-models integration.
+`.vscode/settings.json` excluded again.
+**Result:** entities/audit done ✅ — `docs/DEVELOPMENT_PLAN.md` 4.3 stays
+**unchecked**; PrivacyBanner + EgressLog still owed.
+
+---
+
 <!-- Append new beats above this line. -->

@@ -2,12 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 3,
+    "beat": 4,
     "status": "running"
   },
   "cursor": {
-    "step": "3.5",
-    "phase": 3
+    "step": "4.3",
+    "phase": 4
   },
   "steps": {
     "1.2": {
@@ -49,9 +49,19 @@
       "checkpoint": "3644aa4",
       "notes": "VoiceRecordButton widget. Beat 3. Pure controlled component (isRecording prop, onHoldStart/onHoldCommit/onHoldCancel callbacks) + extracted holdGesture.ts pure logic (mirrors ModelPicker/recommend.ts pattern -- no @testing-library/react-native in this repo, so .tsx stays untested like every other widget here). Zero whisper.rn/audio-capture code -- correctly deferred to blocked 3.3. Checker passed on re-review, verifying the disabled-mid-press fix by hand-tracing every branch and confirming the rewritten test has real mutation-catching teeth."
     },
-    "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "OS Speech API. Quick check done beat 3: expo-speech is NOT a dependency (grep confirmed). Next beat: full reconciliation still needed, but expect this needs the same 'adding a dependency is a decision' treatment as 1.6.1 and 3.1's record half -- queue to BLOCKED.md rather than installing unattended." },
-    "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store; requires dev build" },
-    "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics; requires device" },
+    "3.5": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Local TTS. Beat 4. expo-speech (Expo's canonical Speech API) is not a dependency and not in node_modules -- unlike 3.1 (whisper.rn already installed, so a wrapper could be written against its real, mockable API), there is no real interface here to wrap or test against without first choosing and installing a library, which is itself the decision being deferred. Speculatively designing a shared/tts interface with no real dependency to shape it against risks guessing wrong and a rewrite. Queued to BLOCKED.md." },
+    "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store. Beat 4 recon: SQLCipher itself is real and buildable -- expo-sqlite vendors SQLCipher's amalgamated source directly (node_modules/expo-sqlite/vendor/sqlcipher/sqlite3.c) and its plugin exposes a useSQLCipher flag (ios/android) unlike whisper.rn/expo-speech. BUT expo-secure-store (key storage) is NOT a dependency, and unlike 3.1's transcribe/record split, a 'vault' with encryption but no real secure key storage is not an honest partial deliverable for a flagship privacy feature -- it would look encrypted without being securely so. Deliberately NOT attempted this beat: security-critical key-management design (KDF choice, error handling on wrong key, rotation) deserves human design discussion per CLAUDE.md's 'discuss architecture before writing code for non-trivial features', not an autonomous guess. Needs a BLOCKED.md entry (not yet written -- do this before touching 4.1)." },
+    "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics. Beat 4 recon: expo-local-authentication is NOT a dependency. Clean full defer (no partial path, unlike 4.1 -- app-lock genuinely can't do anything without it)." },
+    "4.3": {
+      "status": "in_progress",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- tie-order test asserted nothing about order; append-only claim enforced only by absent exports, no real guard; manage-models.downloadModel (live, shipped hard-rule caller) never wrote to the audit log; .vscode/settings.json stray diff"
+      ],
+      "checkpoint": "PENDING",
+      "notes": "entities/audit DONE and checkpointed (data layer only) -- PrivacyBanner/EgressLog widgets remain, deliberately left for a later beat as natural dependency sequencing within one compound plan line, not a missing-dependency dodge. Checker passed on re-review, independently verifying all three fixes by mutation (removed triggers -> exactly the 2 new tests failed; removed id DESC -> tie test failed with insertion order; removed the manage-models wiring -> the new test failed). Box for 4.3 in DEVELOPMENT_PLAN.md stays UNCHECKED -- only 1 of 3 named deliverables done. Sub-status tracked here: audit entity done; PrivacyBanner pending; EgressLog pending."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
