@@ -6,7 +6,7 @@
     "status": "running"
   },
   "cursor": {
-    "step": "3.3",
+    "step": "3.5",
     "phase": 3
   },
   "steps": {
@@ -48,7 +48,7 @@
       "failureSignatures": [
         "checker: fail -- step text says 'insert into ChatInput', nothing in the diff or repo wires startVoiceInput to any route/widget; doc comment overstated that {cancel,finish} 'maps onto' VoiceRecordButton's callbacks"
       ],
-      "checkpoint": "STAGED",
+      "checkpoint": "07fa8cf",
       "notes": "startVoiceInput(sttCtx) implemented in features/voice-input -- record->transcribe orchestration, 7 tests, checker validated internals as correct (uri-dependency ordering, error propagation, mockImplementation crash-avoidance). Route-level 'insert into ChatInput' wiring genuinely BLOCKED: no STT model management exists anywhere in the codebase (no entities/*-model equivalent, no download flow, no active-model concept -- unlike shared/llm's full 1.1-1.3 + LlmProvider story, independently verified by the checker via grep). startVoiceInput's sttCtx: WhisperContext cannot be obtained by any route today; faking it would be dead UI. Escalated to BLOCKED.md as a 3-option decision (real STT model mgmt steps / first-run download of one default model / other). Checker passed, and caught that my option (b) wording conflated first-run download (compliant) with in-binary bundling (explicitly forbidden by CLAUDE.md) -- fixed. Box stays unchecked; status blocked pending the user's decision, not merely native-unverified."
     },
     "3.4": {
