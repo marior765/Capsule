@@ -59,7 +59,7 @@
       "failureSignatures": [
         "checker: fail -- tie-order test asserted nothing about order; append-only claim enforced only by absent exports, no real guard; manage-models.downloadModel (live, shipped hard-rule caller) never wrote to the audit log; .vscode/settings.json stray diff"
       ],
-      "checkpoint": "PENDING",
+      "checkpoint": "ffe5d58",
       "notes": "entities/audit DONE and checkpointed (data layer only) -- PrivacyBanner/EgressLog widgets remain, deliberately left for a later beat as natural dependency sequencing within one compound plan line, not a missing-dependency dodge. Checker passed on re-review, independently verifying all three fixes by mutation (removed triggers -> exactly the 2 new tests failed; removed id DESC -> tie test failed with insertion order; removed the manage-models wiring -> the new test failed). Box for 4.3 in DEVELOPMENT_PLAN.md stays UNCHECKED -- only 1 of 3 named deliverables done. Sub-status tracked here: audit entity done; PrivacyBanner pending; EgressLog pending."
     },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
