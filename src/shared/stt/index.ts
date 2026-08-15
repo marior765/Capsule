@@ -1,4 +1,21 @@
 import { initWhisper as _initWhisper, WhisperContext } from "whisper.rn";
+import {
+  AudioModule,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  type NativeAudioModule,
+} from "expo-audio";
+
+// `AudioModule.AudioRecorder` type-checks fine under plain `tsc` — this
+// isn't for TypeScript. `eslint-plugin-import`'s `import/namespace` rule
+// does its own static analysis of expo-audio's re-exports and fails to
+// resolve `AudioRecorder` as a member of `AudioModule` directly, failing the
+// real `npx eslint src` gate. The local-variable indirection itself is what
+// dodges that static analysis; the `NativeAudioModule` type annotation is
+// added on top for real type safety, not because it's what fixes the lint
+// rule. Declared once at module scope, not inside `startRecording`, since
+// it's a static workaround for the import itself, not per-call state.
+const audioModule: NativeAudioModule = AudioModule;
 
 export type { WhisperContext };
 
@@ -149,4 +166,64 @@ export async function abortTranscription(
 export async function releaseStt(ctx: WhisperContext): Promise<void> {
   if (!ctx) return;
   await ctx.release();
+}
+
+/**
+ * Overrides for expo-audio's `RecordingPresets.HIGH_QUALITY` default. Only
+ * the scalar fields — not per-platform nested options — since nothing in
+ * this app needs finer control yet. Re-declared rather than re-exported so
+ * features never import an expo-audio type directly.
+ */
+export type RecordingOptions = {
+  sampleRate?: number;
+  numberOfChannels?: number;
+  bitRate?: number;
+  extension?: string;
+};
+
+/**
+ * A recording in progress. `stop` ends it and resolves with the local file
+ * it was written to — ready to hand straight to `transcribeAudio`.
+ */
+export type RecordingHandle = {
+  stop: () => Promise<{ uri: string }>;
+};
+
+/**
+ * Starts recording from the microphone.
+ *
+ * Unlike `initStt`/`transcribeAudio`'s synchronous guards, this check is
+ * async and can itself trigger the OS permission dialog on first call —
+ * `requestRecordingPermissionsAsync` only resolves once that's answered, so
+ * the `.granted` check below never sees an in-between "undetermined" state.
+ * Throws rather than letting a denial fail silently deep in the native
+ * layer. `HIGH_QUALITY` is the default: whisper.cpp resamples internally
+ * regardless of the input's sample rate or channel count, so there's no
+ * correctness reason to hand-tune a leaner preset, only a minor storage/
+ * processing cost this app doesn't optimise for yet.
+ */
+export async function startRecording(
+  options: RecordingOptions = {},
+): Promise<RecordingHandle> {
+  const permission = await requestRecordingPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error("Microphone permission was not granted");
+  }
+
+  const recorder = new audioModule.AudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    ...options,
+  });
+  await recorder.prepareToRecordAsync();
+  recorder.record();
+
+  return {
+    stop: async () => {
+      await recorder.stop();
+      if (!recorder.uri) {
+        throw new Error("Recording produced no file");
+      }
+      return { uri: recorder.uri };
+    },
+  };
 }

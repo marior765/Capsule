@@ -17,17 +17,25 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ## Needs a device / dev build
 
-### 3.1 — `shared/stt` whisper.rn wrapper (transcribe half)
-Implemented and green against a hand-written mock: `initStt`, `transcribeAudio`,
-`abortTranscription`, `releaseStt` (25 tests). **Nothing here has run against real
-whisper.cpp.** Box left unchecked.
+### 3.1 — `shared/stt` whisper.rn + expo-audio wrapper (now complete: init, record, transcribe, abort)
+Implemented and green against hand-written mocks: `initStt`, `startRecording`,
+`transcribeAudio`, `abortTranscription`, `releaseStt` (33 tests, transcribe +
+record). **Nothing here has run against a real microphone or whisper.cpp.**
+Box left unchecked — this was the last piece; the step is now feature-complete
+in code but entirely device-unverified.
 
 **Device check:** build a dev client (whisper.rn needs `expo prebuild` — see 3.2),
-put a `ggml-base.en.bin` on the device, transcribe a short local `.wav`, and confirm:
-1. `initStt` loads the model and `useGpu: true` actually engages Metal/OpenCL
+and confirm:
+1. `startRecording()` actually prompts for microphone permission on first use,
+   and denying it surfaces the thrown error sensibly in the UI rather than
+   crashing;
+2. a real recording produces a playable `.m4a` at `recorder.uri`, and
+   `stop()` resolves promptly (no hang waiting on the native `stop()` call);
+3. `initStt` loads the model and `useGpu: true` actually engages Metal/OpenCL
    (`ctx.gpu === true`, or `reasonNoGPU` explains why not);
-2. transcribed text is non-empty and roughly correct;
-3. **segment timestamps line up with the audio.** The ×10 → milliseconds
+4. feed a real recording straight into `transcribeAudio` — text is non-empty
+   and roughly correct;
+5. **segment timestamps line up with the audio.** The ×10 → milliseconds
    conversion was verified by reading whisper.cpp's `to_timestamp` (`msec = t * 10`),
    not by running it. If subtitles drift by 10×, this is the line to look at
    (`src/shared/stt/index.ts`, `WHISPER_TIME_UNIT_MS`).

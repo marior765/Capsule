@@ -472,4 +472,102 @@ order and the cursor was already there from beat 5's close.
 
 ---
 
+### 3.1 — record half · beat 6 · 2026-08-16T~07:00Z
+
+**Class:** native
+**Select:** first genuinely pending step in plan order after beat 6's
+reconciliation (4.1 is fully unblocked too, but comes later in the document).
+
+**Design:** `expo-audio`'s recording API is hook-centric (`useAudioRecorder`),
+which doesn't fit `shared/stt`'s plain-function architecture (matching
+`shared/llm`). The real non-hook path is `AudioModule.AudioRecorder`, a
+constructable class the package exports directly — used that instead.
+`startRecording()` requests mic permission first (throwing on denial rather
+than failing deep in native code), constructs a recorder against
+`RecordingPresets.HIGH_QUALITY` merged with caller overrides, and returns a
+handle whose `stop()` resolves to the recorded file's local URI — ready to
+feed straight into the existing `transcribeAudio`.
+
+**Tests:** `src/shared/stt/__tests__/recording.test.ts` — 7 cases, confirmed
+failing before implementation. New hand-written mock, `src/__mocks__/expo-audio.ts`
+— `AudioRecorder` had to be a `jest.fn()` wrapping a class, not a plain class,
+so tests could assert on constructor arguments.
+
+**Attempt 1 (checker) — `fail`.** Three findings:
+1. **The real one.** No test asserted `prepareToRecordAsync`/`record` were
+   ever actually called — a `startRecording` that dropped both entirely would
+   still pass every test. Fixed, and verified honestly: deleted both calls
+   from the implementation, reran, confirmed 2 of 8 tests failed, restored.
+   Also added a call-order test (prepare before record) — a real on-device
+   correctness concern, not just coverage padding.
+2. Permission-comment overstated the equivalence between an async,
+   OS-dialog-triggering permission check and the transcribe half's pure
+   synchronous guards. Reworded to be accurate.
+3. **Disputed, then partially vindicated.** The checker claimed a
+   `NativeAudioModule` type-annotation workaround "fixes nothing real" and
+   verified via `tsc` alone that it compiles clean without it. That's true —
+   but incomplete. `npx eslint src` (the actual full gate, not just `tsc`)
+   genuinely fails with `import/namespace` error without it — verified myself
+   by removing it and reproducing the exact error. Sent this correction back
+   to the checker rather than accepting the finding outright.
+
+**A costly self-inflicted detour, worth recording honestly:** while manually
+recovering from a botched `cp`-from-backup (restored a stale pre-fix version
+by mistake, undoing two accepted fixes), an auto-format-on-save hook twice
+made things worse — once treating the `expo-audio` import as transiently
+"unused" mid-edit and deleting the whole import statement, then treating the
+now-import-less `RecordingOptions`/`RecordingHandle`/`startRecording` as dead
+code and deleting the entire recording section, silently reverting the file
+to its pre-3.1-record-half shape. Caught only by re-running the actual gate
+commands after each recovery step rather than trusting the visual diff or a
+system reminder — a stale reminder had *also* shown a false ordering-bug
+scare earlier in this same beat, cleared the same way, by an independent raw
+`sed` read rather than trusting either the reminder or my own memory of what
+I'd written. Recovered with one clean full-file `Write` rather than further
+incremental edits, then verified with an immediate, unfiltered three-command
+gate run plus a raw structural check (line count, export count, exact call
+order) before trusting it. Two lessons: hooks that "helpfully" reformat or
+prune on save can act on a transient, mid-fix state and delete real code, not
+just style; and the only trustworthy signal after any confusion is a fresh,
+independent command — never a cached read, a reminder, or memory of a
+previous edit.
+
+**Gate:** tsc ✅ · jest ✅ 259/22 suites · eslint ✅ (all three independently
+re-verified after the detour, not assumed from the pre-detour run).
+
+**Review (re-review) — pass.** The checker independently reproduced every
+claim by mutation rather than trusting the report: deleted the prepare/record
+calls (2/8 tests failed, matching exactly), reversed their order (the
+dedicated ordering test caught it), and removed the `audioModule` indirection
+entirely to reproduce the same `import/namespace` error class at the
+corresponding call site — confirming the eslint gate failure is real, not
+fabricated. Left one precise, non-blocking correction: the comment credited
+"the annotation" for satisfying eslint, but the checker found a bare
+`const audioModule = AudioModule` with no type annotation *also* satisfies
+it — the local-variable indirection is what dodges the lint rule's static
+analysis; the `NativeAudioModule` annotation is genuine type safety added on
+top, not what the eslint fix technically requires. Reworded for precision.
+
+**A second incident worth recording plainly:** the checker's own report
+disclosed, almost in passing, that it ran `git checkout --` during its
+verification and briefly wiped this beat's uncommitted work back to HEAD,
+"caught immediately" and self-corrected by its own account. Its instructions
+say "do NOT fix anything, do NOT edit any file — report only," and a
+mutating git command is exactly the kind of action that instruction exists to
+forbid, even used for local recovery rather than sabotage. Verified directly
+rather than taking its "self-corrected" claim on faith: `git status`, HEAD
+sha, line/export counts, and a full fresh gate run all confirmed the working
+tree was intact and correct. Nothing was lost, but the checker prompt should
+be tightened to explicitly forbid any working-tree-mutating command,
+including for its own recovery — a checker that can silently undo the
+maker's work, even briefly and even by accident, has crossed the boundary
+the maker-checker split exists to enforce.
+
+**Checkpoint:** staged step paths only; `.vscode/settings.json` excluded.
+**Result:** record half done ✅ — `docs/DEVELOPMENT_PLAN.md` 3.1 stays
+**unchecked** (native class; nothing here has touched a real microphone or
+whisper.cpp). `BLOCKED.md` extended to cover the record half's device checks.
+
+---
+
 <!-- Append new beats above this line. -->
