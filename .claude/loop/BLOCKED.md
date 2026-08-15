@@ -59,25 +59,35 @@ below are what's still genuinely open.
 
 ## Needs a decision from you
 
-### 4.1 — `features/encrypt-vault` key-management design
-The dependency gap is closed (`expo-secure-store` is installed and registered
-in `app.json`). SQLCipher itself was already real and buildable — `expo-sqlite`
-vendors SQLCipher's amalgamated source directly and its plugin exposes a
-`useSQLCipher` flag. What's still open is **design, not dependencies**:
-shipping "encryption" with a naively-chosen key scheme is not the same thing
-as shipping a flagship privacy feature correctly, and getting it wrong is far
-more costly to unwind than getting a UI detail wrong.
+### 4.1 — one sub-decision: which library derives the passphrase key
+Design is settled (received directly from the user, 2026-08-13):
+1. **Key source: both.** A random master vault key lives in
+   `expo-secure-store`, wrapped by a key derived from the app-lock passphrase
+   (4.2) — envelope encryption. Neither the stored blob nor the passphrase
+   alone is enough; both are required to unlock the vault.
+2. **Wrong key / corrupted vault:** offer wipe-and-restart.
+3. **Key rotation:** likely deferred from v1 — not firmly committed, but the
+   envelope design keeps this cheap to add later regardless (rotating the
+   passphrase only re-wraps the small blob, not the whole database).
 
-Specifically open: what KDF/derivation for the vault key (a fixed key in
-secure storage vs. a passphrase-derived key vs. both — app-lock's passphrase
-in 4.2 may be the natural source), what happens on a wrong key / corrupted
-vault (fail loud, offer wipe-and-restart, attempt recovery?), whether key
-rotation is in scope for v1 or explicitly deferred.
+What's still open: **no KDF-capable crypto primitive is installed.**
+`expo-secure-store` stores a blob; it doesn't derive a key from a passphrase.
+`expo-crypto` isn't installed either, and even if it were, its public API is
+digest/random-bytes, not a real password KDF (PBKDF2/scrypt) — using a bare
+SHA-256 hash of a passphrase as a key would be a real, avoidable security
+mistake (no work factor, no memory-hardness, brute-forceable).
 
-**You decide:** give a steer on those three questions (or say "use sensible
-defaults, don't wait for me" and the loop will pick conservative, documented
-defaults and flag them clearly for your review afterward), or handle 4.1
-yourself outside the loop.
+**You decide (recommended: option a):**
+- **(a)** `react-native-quick-crypto` — Node-`crypto`-API-compatible, JSI-based
+  (fast), supports `scrypt` (memory-hard, the better default for password-based
+  keys) and `pbkdf2`. Fits this project's existing native-module-heavy stack
+  (llama.rn, whisper.rn) rather than introducing a different pattern.
+- **(b)** A pure-JS PBKDF2 package — no native linking, but slower and PBKDF2
+  itself lacks scrypt's memory-hardness against brute force.
+- Or name a different library.
+
+Once the dependency lands, this step is fully unblocked — implementation can
+proceed under the normal TDD + checker cycle like everything else.
 
 ## Precedent set (informational — no action needed)
 

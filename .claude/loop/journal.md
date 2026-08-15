@@ -429,4 +429,23 @@ again.
 
 ---
 
+### 4.1 design decision received · 2026-08-13T04:00Z
+
+User answered the three key-management questions posed in `BLOCKED.md` after
+beat 5 (received directly in conversation, not via a scheduled beat — recorded
+here immediately so it survives regardless of what happens next):
+1. Key source: **both** — read as envelope encryption: random master vault
+   key in `expo-secure-store`, wrapped by a passphrase-derived key.
+2. Wrong key / corrupted vault: **offer wipe-and-restart.**
+3. Key rotation: **likely deferred**, not firmly committed.
+
+This surfaces a new, narrower sub-decision rather than fully unblocking 4.1:
+no KDF-capable crypto primitive is installed, and `expo-crypto` (if it were
+installed) doesn't offer real PBKDF2/scrypt either — only digest/random-bytes.
+Recommended `react-native-quick-crypto` (fits the existing native-module-heavy
+stack) vs. a pure-JS PBKDF2 alternative, asked directly rather than picking
+one unattended, since this is still crypto-critical.
+
+---
+
 <!-- Append new beats above this line. -->
