@@ -1073,4 +1073,56 @@ rather than a second test run.
 
 ---
 
+## 2026-08-16 — A rejected test taught the codebase something about itself
+
+Step 3.3.1 needed a small, unglamorous piece: download one whisper model on
+first use, remember its path, don't re-download it. The implementation was
+routine. What was worth noticing came from the checker's review of the tests.
+
+An early version of one test asserted the returned file path contained
+`.bin` — a reasonable thing to check, since the model being downloaded is a
+`.bin` file. It failed. Not because the download logic was wrong, but
+because the project's shared `expo-file-system` mock — built earlier for the
+LLM model download, and reused here because reusing an established mock
+beats writing a new one — always synthesizes a filename ending in `.gguf`,
+regardless of what URL was actually requested. The honest fix wasn't to
+patch the mock or invent a workaround; it was to admit the assertion was
+testing the mock's fixed behavior, not the code's, and replace it with one
+that actually distinguishes correct from broken: does the returned path
+match what got persisted?
+
+The checker didn't take that explanation on faith either. It read the mock's
+source directly, confirmed the `.gguf` suffix really is hardcoded and
+URL-independent, and pointed out something sharper: the sibling LLM test
+(`manage-models.test.ts`) has the exact same latent gap — a `.gguf` assertion
+that would pass against any URL, correct or not — and nobody had ever
+noticed, because it happened to be checking for the extension the mock
+always produces anyway. The bug had been sitting there, silently
+unfalsifiable, since the mock was first written.
+
+The same review surfaced a second, unrelated thing worth keeping: this
+project's own architecture doc had, months earlier, written down the exact
+condition under which a `shared/fs` wrapper should be extracted — "when a
+second slice needs the filesystem" — and predicted `attachment` (a much
+later phase) as the example of when that would happen. It happened here
+first, quietly, because `manage-stt-model` needed the same `Directory`/
+`File`/`Paths` calls `manage-models` already had. The condition fired years
+of roadmap early. Nothing forced anyone to notice; the doc just happened to
+have already named the trigger, so recognizing it was a lookup, not a
+judgment call.
+
+**Article angle:** a shared test mock is a piece of infrastructure with its
+own behavior, and that behavior can quietly become the thing under test
+without anyone deciding that on purpose. The tell is a mock whose fixed
+output happens to satisfy an assertion by coincidence rather than by the
+code doing something right — and the way to catch it is the same discipline
+used everywhere else in this loop: ask whether an assertion would survive
+the implementation being wrong, not just whether it currently passes. The
+second lesson is smaller but just as practical: a "when X happens, do Y"
+note in a design doc is worth writing down not because you'll remember to
+check it, but because something else — a checker, a future contributor, a
+grep — can notice X happened even when no one was watching for it.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

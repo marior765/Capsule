@@ -664,4 +664,57 @@ rather than an open human decision.
 
 ---
 
+### 3.3.1 — STT model download (half) · beat 8 · 2026-08-16T~08:30Z
+
+**Class:** native
+**Select:** first genuinely pending step after the decision-recording turn.
+3.3.1 bundles two deliverables (download + `SttProvider`) — delivering the
+download half only this beat, same precedent as 4.3's entity-before-widgets
+split.
+
+**Design:** `features/manage-stt-model` mirrors `features/manage-models`'
+LLM download pattern closely: `Directory`/`File`/`Paths` from
+`expo-file-system`, a hardcoded single model spec (`DEFAULT_STT_MODEL` —
+`ggml-base.en.bin` from the canonical `ggerganov/whisper.cpp` HF repo, the
+same one whisper.rn's own README references), `shared/storage` (MMKV) for
+the one persisted path instead of a full SQL entity — deliberately leaner
+than `entities/model`, matching 3.3.1's "minimal, no multi-model selection"
+scope. Writes an audit entry only on an actual download, never on a
+cache-hit re-use of an existing path.
+
+**Tests:** `src/features/manage-stt-model/__tests__/manage-stt-model.test.ts`
+— 10 cases, confirmed failing before implementation.
+
+**Attempt 1 — one self-caught test bug, not an implementation bug.** A
+`.toContain(".bin")` assertion failed — not because the download logic was
+wrong, but because the shared `expo-file-system` mock (built earlier for the
+`.gguf` LLM case, reused here) hardcodes its synthesized filename regardless
+of the requested URL. Replaced with an assertion on what actually matters:
+the returned uri equals what got persisted. Gate green on this corrected
+version, first real attempt.
+
+**Checker — pass, first attempt, no fail cycle needed.** It didn't take the
+mock-limitation explanation on faith — read the mock's source directly,
+confirmed the `.gguf` hardcoding is real and URL-independent, and pointed out
+something sharper: the sibling LLM test has the exact same latent gap (a
+`.gguf` assertion trivially satisfied by any URL) that's been sitting there
+unnoticed since that mock was first written. Also flagged, non-blocking: a
+missing `createdAt` assertion on the audit-entry test (fixed — strengthened
+to `toBeGreaterThanOrEqual`), and something more structural — this project's
+own `docs/ARCHITECTURE.md` names its exact trigger for extracting a
+`shared/fs` wrapper ("when a second slice needs the filesystem"), and this
+step is that second slice, arriving earlier than the doc's own predicted
+example (`attachment`, Phase 6/8). Recorded as a follow-up in `BLOCKED.md`
+rather than executed mid-beat — low-risk, but touching two already-shipped,
+checker-approved modules is outside this step's own scope.
+
+**Gate:** tsc ✅ · jest ✅ 276/24 suites · eslint ✅
+
+**Checkpoint:** staged step paths only.
+**Result:** download half done ✅. `SttProvider` + route wiring still owed —
+`docs/DEVELOPMENT_PLAN.md` 3.3.1 stays unchecked (native class, partial
+delivery).
+
+---
+
 <!-- Append new beats above this line. -->

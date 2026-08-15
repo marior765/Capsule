@@ -99,6 +99,24 @@ registry). It ships a real config plugin (`app.plugin.js`, unlike whisper.rn/
 action from you needed — 4.1 proceeds under the normal TDD + checker cycle
 whenever step selection reaches it.
 
+## Follow-up (informational — low-risk, not blocking)
+
+### `shared/fs` extraction is now triggered, not yet done
+`docs/ARCHITECTURE.md` names its own condition for extracting a `shared/fs`
+wrapper: "when a second slice needs the filesystem... extract a `shared/fs`
+wrapper that owns all `expo-file-system` interaction — same principle as
+`shared/llm` owning llama.rn. Until then, YAGNI." `features/manage-stt-model`
+(3.3.1) is now that second slice — it duplicates `features/manage-models`'
+exact `Directory`/`File`/`Paths` usage. The doc names `attachment` (Phase 6/8)
+as the *expected* trigger, but the actual condition — a second real consumer
+— has already happened earlier than that.
+
+Deliberately not done as a side effect of 3.3.1's own review: it would mean
+refactoring two already-shipped, checker-approved modules mid-beat, which is
+outside this step's own scope even though the extraction itself is low-risk
+(both existing test suites would catch any regression directly). Left for a
+dedicated follow-up beat rather than folded in silently.
+
 ## Precedent set (informational — no action needed)
 
 ### Types-only devDependencies don't route through the dependency gate
