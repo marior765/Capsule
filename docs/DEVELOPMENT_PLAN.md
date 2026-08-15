@@ -108,6 +108,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 3.1 `shared/stt` — whisper.rn wrapper (init, record, transcribe, abort)
 - [ ] 3.2 whisper.rn Expo plugin config
 - [ ] 3.3 `features/voice-input` — hold-to-record → transcribe → insert into ChatInput
+- [ ] 3.3.1 First-run download of a single default STT model (e.g. `ggml-base.en.bin`, via CLAUDE.md's one allowed network action — never bundled in the binary) + a minimal `SttProvider` (no multi-model selection UI) so 3.3's route-level wiring becomes buildable. Chosen 2026-08-16 over full STT model management for now — see 9.5 (Phase 9, future releases).
 - [x] 3.4 `VoiceRecordButton` widget
 - [ ] 3.5 Local TTS for assistant responses (OS-level Speech API as baseline)
 
@@ -153,8 +154,12 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 8.8 Local reminders (on-device notifications)
 - [ ] 8.9 Accessibility pass
 
-### Phase 9 — Serverless sync (deferred)
+### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format
 - [ ] 9.2 LAN device discovery + E2E-encrypted transport, fully isolated behind a flag
 - [ ] 9.3 Conflict surfacing UI
 - [ ] 9.4 Sync settings screen (off by default)
+- [ ] 9.5 Full STT model management: `entities/stt-model` + download/selection UI
+      mirroring 1.1–1.3 (`entities/model`, download, active-model selection).
+      3.3.1's single-model first-run download is the chosen path for now (decided
+      2026-08-16) — revisit only if multi-model choice for STT becomes a real need.

@@ -53,43 +53,21 @@ whisper.rn autolinks on both platforms with no error about a missing/invalid
 config plugin. If it does need something, that's new information this
 investigation missed — reopen 3.2 with what you found.
 
-## Needs a decision from you
+## Resolved (2026-08-16) — 3.3's STT model gap
 
-### 3.3 — no STT model management exists; voice input has nowhere to plug in
-`features/voice-input`'s `startVoiceInput(sttCtx)` orchestration is implemented,
-tested (7 tests, checker-approved), and correct — but it's genuinely
-disconnected from any UI, and not just because nobody wrote the wiring yet.
+Decision: **option (b) now, option (a) deferred.** A minimal first-run
+download of a single default STT model (e.g. `ggml-base.en.bin`, via
+CLAUDE.md's one allowed network action) plus a minimal `SttProvider` (no
+multi-model selection) is the chosen path to unblock 3.3's route-level
+wiring — added to the plan as **3.3.1**. Full STT model management
+(`entities/stt-model` + download/selection UI mirroring 1.1–1.3) is real
+future work, not abandoned — moved to **Phase 9 (future releases), 9.5**,
+revisited only if multi-model choice for STT becomes an actual need.
 
-`shared/llm` has a full model lifecycle backing it: `entities/model`,
-download (1.2), selection, and `LlmProvider` supplying a loaded `LlamaContext`
-to any route via `useLlm()`. **Nothing equivalent exists for STT models.**
-No entity, no download flow, no "active STT model" concept — so
-`startVoiceInput`'s `sttCtx: WhisperContext` parameter cannot be obtained
-anywhere in the app today. Wiring `VoiceRecordButton` + `ChatInput` against a
-context nothing can produce would be dead UI — worse than leaving it
-unwired, since it would look finished and silently never work.
-
-This is a real gap in `docs/DEVELOPMENT_PLAN.md` itself: Phase 3 has steps for
-the whisper.rn wrapper, its plugin config, the feature, the button widget, and
-TTS — but no step for the STT-model equivalent of 1.1–1.3. It was never
-planned, not merely unbuilt.
-
-**You decide:**
-- **(a)** Add STT model management as its own step(s) — likely
-  `entities/stt-model` + a download/selection flow mirroring 1.1–1.3, before
-  3.3 can be genuinely wired into the UI; or
-- **(b)** A single small whisper model (e.g. `ggml-base.en.bin`) fetched via a
-  **first-run download** — CLAUDE.md's one allowed network action — sidestepping
-  a full selection UI. A smaller, faster path if multi-model choice for STT
-  isn't a priority. *Not* the same as bundling the model file in the app
-  binary — that's explicitly on CLAUDE.md's "What to Avoid" list ("Bundling
-  models in the app binary") and isn't actually on the table; or
-- **(c)** Something else.
-
-Until this is decided, 3.3's route-level wiring (the "insert into ChatInput"
-half of the step) cannot proceed — not because of an FSD layer-boundary
-technicality, but because the thing it would need to pass to `startVoiceInput`
-doesn't exist anywhere yet.
+3.3.1 is implementable under the normal TDD + checker cycle whenever step
+selection reaches it — no further decision needed. It should write an audit
+entry on download (`action: "model_download"`, matching how `manage-models`'
+LLM download already does — CLAUDE.md's hard rule applies here too).
 
 ## Resolved by installing dependencies (2026-08-13, beat 5)
 

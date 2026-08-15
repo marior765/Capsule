@@ -639,4 +639,29 @@ convention — was correct); fixed.
 
 ---
 
+### 3.3's STT-model-gap decision received · 2026-08-16T~08:00Z
+
+User answered the three-option question from `BLOCKED.md` after beat 7,
+directly in conversation — recorded here immediately, same discipline as the
+4.1 decision:
+
+**Chosen: option (b) now, option (a) deferred.** A minimal first-run download
+of a single default STT model (`ggml-base.en.bin` or similar) plus a minimal
+`SttProvider` (no multi-model selection) is the path to unblock 3.3 — added
+to the plan as **3.3.1**. Full STT model management (the original option (a),
+`entities/stt-model` + download/selection mirroring 1.1–1.3) isn't rejected,
+just deferred — moved to **Phase 9, 9.5** per the user's explicit follow-up
+request. Phase 9's header was renamed from "Serverless sync (deferred)" to
+"Future releases (deferred)" to fit both sync and this — a small liberty
+taken on the user's own phrasing ("phase 9, future releases"), worth
+double-checking wasn't just their shorthand for what Phase 9 already meant.
+
+`docs/DEVELOPMENT_PLAN.md`, `BLOCKED.md`, and `state.json` all updated:
+3.3.1 is a new `pending`/`native` step (needs an audit entry on download,
+matching `manage-models`' existing LLM precedent); 9.5 is `deferred`; 3.3's
+own entry now says its blocker is a concrete prerequisite (3.3.1 landing)
+rather than an open human decision.
+
+---
+
 <!-- Append new beats above this line. -->
