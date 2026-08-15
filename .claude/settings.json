@@ -10,6 +10,8 @@
       "Write(.claude/loop/**)",
       "Edit(.claude/loop/**)",
       "Read(.claude/loop/**)",
+      "Edit(.claude/loop/journal.md)",
+      "Write(.claude/loop/journal.md)",
 
       "Bash(npx tsc --noEmit)",
       "Bash(npx jest *)",

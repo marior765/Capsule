@@ -141,4 +141,43 @@ would silently disable all three gate commands — worth moving the gate into
 
 ---
 
+### 3.2 — whisper.rn Expo plugin config · beat 2 · 2026-08-13T00:35Z
+
+**Class:** native
+**Health check:** tree clean at `badf6ae` (only `.vscode/settings.json` and
+`.claude/audit.log` dirty, both expected — the latter is hook-appended on every
+tool call and will never be clean; worth excluding from the health-check diff).
+Gate green (tsc ✅ · jest ✅ 220/17 · eslint ✅).
+
+**Reconcile → the step's premise is false.** whisper.rn 0.6.0 has no
+`app.plugin.js`, no plugin export in `package.json`, and its README says only
+"you will need to prebuild." Contrast with llama.rn, whose real plugin
+(`node_modules/llama.rn/app.plugin.js` → `withLlamaRN`) wires the options already
+present in `app.json` (`enableEntitlements`, `forceCxx20`, `enableOpenCL`).
+Verified on both platforms:
+- iOS: podspec reads `RNWHISPER_DISABLE_COREML` / `RNWHISPER_DISABLE_METAL` /
+  `RNWHISPER_BUILD_FROM_SOURCE` as build-time env vars, not `app.json` config —
+  defaults are CoreML on, Metal on, prebuilt xcframework.
+- Android: manifest declares no permissions (confirms transcribe-only scope —
+  whisper.rn itself never touches the microphone); `build.gradle` is standard
+  autolinking with `abiFilters` matching RN architectures, nothing custom.
+
+**No code change.** There is nothing to add to `app.json` — adding a bare
+`"whisper.rn"` plugin entry would *break* `expo prebuild` ("does not contain a
+valid config plugin"), which would have been a worse outcome than leaving the
+step alone. Queued to `BLOCKED.md`: confirm on an actual `expo prebuild` that
+autolinking picks up whisper.rn with zero `app.json` changes. Box unchecked —
+nothing here has run through a real prebuild.
+
+**Result:** blocked 🚧 — no checkpoint (no diff to review or commit).
+
+**Note on beat mechanics:** this entry was written a beat late. The prior beat's
+Edit call for this exact text was declined; the user then had to reload session
+permissions before the write would go through, even though the covering allow
+rule (`Edit(.claude/loop/**)`) had already been committed in `badf6ae`. Worth
+remembering: a permission-allow edit isn't guaranteed to apply within the same
+running session that added it.
+
+---
+
 <!-- Append new beats above this line. -->
