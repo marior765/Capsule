@@ -45,69 +45,39 @@ whisper.rn autolinks on both platforms with no error about a missing/invalid
 config plugin. If it does need something, that's new information this
 investigation missed — reopen 3.2 with what you found.
 
+## Resolved by installing dependencies (2026-08-13, beat 5)
+
+You installed `expo-audio`, `@fugood/react-native-audio-pcm-stream`,
+`expo-clipboard`, `react-native-markdown-display`, `expo-local-authentication`,
+`expo-secure-store`, and `expo-speech` (verified present in `node_modules`),
+and added `expo-audio` + `expo-secure-store` to `app.json`'s plugins array.
+This resolves the dependency gap for: **3.1's record half, 3.3, 3.5, 1.6.1,
+4.2**, and the dependency (not the design) half of **4.1**. Each is unblocked
+in `.claude/loop/state.json` and will be picked up in plan order over the
+next several beats. No further action from you needed on these — the items
+below are what's still genuinely open.
+
 ## Needs a decision from you
 
-### 3.1 — the "record" half is NOT implemented
-The step text is "init, **record**, transcribe, abort", and `docs/ARCHITECTURE.md:109`
-assigns recording to `shared/stt` (`whisper.rn wrapper: init, record, transcribe`).
-Only init/transcribe/abort/release shipped.
+### 4.1 — `features/encrypt-vault` key-management design
+The dependency gap is closed (`expo-secure-store` is installed and registered
+in `app.json`). SQLCipher itself was already real and buildable — `expo-sqlite`
+vendors SQLCipher's amalgamated source directly and its plugin exposes a
+`useSQLCipher` flag. What's still open is **design, not dependencies**:
+shipping "encryption" with a naively-chosen key scheme is not the same thing
+as shipping a flagship privacy feature correctly, and getting it wrong is far
+more costly to unwind than getting a UI detail wrong.
 
-Recording needs an audio-capture dependency that this project does not have —
-neither `expo-audio` nor `expo-av` is in `package.json`, and whisper.rn's own
-`RealtimeTranscriber` needs `@fugood/react-native-audio-pcm-stream`. Adding a
-dependency unattended is exactly what the loop is forbidden to do, and amending
-the architecture doc to match what was built would be the loop grading its own
-homework.
+Specifically open: what KDF/derivation for the vault key (a fixed key in
+secure storage vs. a passphrase-derived key vs. both — app-lock's passphrase
+in 4.2 may be the natural source), what happens on a wrong key / corrupted
+vault (fail loud, offer wipe-and-restart, attempt recovery?), whether key
+rotation is in scope for v1 or explicitly deferred.
 
-**You decide:**
-- **(a)** Approve `expo-audio` — the loop then adds `recordAudio`/`stopRecording`
-  to `shared/stt` (record to a local `.wav`, feed it to the existing
-  `transcribeAudio`), and 3.1 is complete as specified; or
-- **(b)** Amend `docs/ARCHITECTURE.md:109` to move recording into
-  `features/voice-input`, making 3.1 complete as delivered and 3.3 own the capture.
-
-Until then 3.1 stays unchecked and 3.3 is blocked on the same choice.
-
-### 4.1 — `features/encrypt-vault` (SQLCipher + key in secure store)
-This one is different from the other dependency-gap items below. SQLCipher
-itself is real and buildable here — `expo-sqlite` vendors SQLCipher's
-amalgamated source directly (`node_modules/expo-sqlite/vendor/sqlcipher/`)
-and its config plugin exposes a `useSQLCipher` flag on both platforms. The
-gap is `expo-secure-store` (key storage) — not installed.
-
-Unlike 3.1's transcribe/record split, shipping "encryption" here with no real
-secure key storage isn't an honest partial deliverable: a vault that looks
-encrypted without a securely-stored key undermines the entire point of a
-flagship privacy feature, and could read as "done" when it fundamentally
-isn't safe. Key-management design (KDF choice, wrong-key error handling, key
-rotation) is exactly the kind of non-trivial, security-critical decision
-CLAUDE.md says to discuss before writing code — not something this loop
-should design unattended just because a plugin flag exists.
-**You decide:** approve `expo-secure-store` AND weigh in on the key-management
-design (or explicitly say "use sensible defaults, don't wait for me"), or
-handle 4.1 yourself outside the loop.
-
-### 4.2 — `features/app-lock` (biometric / passphrase gate)
-Needs `expo-local-authentication`, not installed. Unlike 4.1, there's no
-partial path — app-lock genuinely can't do anything without it.
-**You decide:** approve `expo-local-authentication`, or name a different
-approach.
-
-### 3.5 — Local TTS for assistant responses
-Step calls for "OS-level Speech API as baseline." Expo's canonical wrapper for
-that is `expo-speech`, and it is not a dependency — not in `package.json`, not
-in `node_modules`. Unlike 3.1 (whisper.rn was already installed, so a wrapper
-could be written and tested against its real API), there is nothing real here
-to design `shared/tts` against without first picking a library — designing the
-interface blind risks guessing wrong and a rewrite once the real package lands.
-**You decide:** approve `expo-speech` (and confirm the audit — it's OS-level,
-no network, should be a clean addition), or name a different TTS approach.
-
-### 1.6.1 — ChatBubble markdown rendering
-Requires adding `react-native-markdown-display` and `expo-clipboard`. Per
-`CLAUDE.md`, dependencies must be audited for outbound requests before adding —
-the loop will not install packages unattended.
-**You decide:** approve both deps (and confirm the audit), or keep 1.6.1 deferred.
+**You decide:** give a steer on those three questions (or say "use sensible
+defaults, don't wait for me" and the loop will pick conservative, documented
+defaults and flag them clearly for your review afterward), or handle 4.1
+yourself outside the loop.
 
 ## Failed verification
 

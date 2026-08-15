@@ -2,12 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 4,
+    "beat": 5,
     "status": "running"
   },
   "cursor": {
-    "step": "4.3",
-    "phase": 4
+    "step": "1.6.1",
+    "phase": 1
   },
   "steps": {
     "1.2": {
@@ -19,12 +19,12 @@
       "notes": "Box is ticked in the plan, but a real HuggingFace download is unverified on device. Confirm before trusting."
     },
     "1.6.1": {
-      "status": "deferred",
-      "class": "deferred",
+      "status": "pending",
+      "class": "ui",
       "attempts": 0,
       "failureSignatures": [],
       "checkpoint": null,
-      "notes": "Needs react-native-markdown-display + expo-clipboard. Installing a dependency is a decision — queued to BLOCKED.md."
+      "notes": "Beat 5 reconciliation: user installed react-native-markdown-display + expo-clipboard (verified in node_modules). No longer deferred -- selected this beat."
     },
     "3.1": {
       "status": "blocked",
@@ -35,10 +35,10 @@
         "checker: fail — releaseStt had no assertion it released anything; 'omits params' test could not fail; toBeDefined filler; record omission contradicts docs/ARCHITECTURE.md:109"
       ],
       "checkpoint": "f4cbf60",
-      "notes": "whisper.rn wrapper. Beat 1. Delivered init/transcribe/abort/release, 25 tests. 'record' NOT delivered — needs expo-audio (not a dependency) and ARCHITECTURE.md:109 assigns record to shared/stt, so the omission is queued to BLOCKED.md as a user decision rather than papered over by editing the spec. Box stays unchecked (class native + partial delivery). Checker passed on re-review with mutation evidence."
+      "notes": "whisper.rn wrapper. Beat 1. Delivered init/transcribe/abort/release, 25 tests. Beat 5 reconciliation: expo-audio now a real dependency (verified) and app.json's plugins array now includes it -- 'record' half is unblocked. Not picked up this beat (1.6.1 is earlier in plan order); next beat should resume 3.1 to add recordAudio/stopRecording."
     },
     "3.2": { "status": "blocked", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "whisper.rn 0.6.0 ships NO Expo config plugin (no app.plugin.js, unlike llama.rn's which wires real options). Autolinking + podspec env vars (RNWHISPER_DISABLE_COREML/METAL, RNWHISPER_BUILD_FROM_SOURCE) cover it; Android manifest is empty, no permissions, standard abiFilters. Step text's premise is false as written -- there is no plugin entry to add. No code change made. Queued to BLOCKED.md for a device prebuild to confirm autolinking succeeds unmodified; box stays unchecked until then." },
-    "3.3": { "status": "blocked", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "record -> transcribe -> insert. BLOCKED on the same audio-capture dependency decision as 3.1's 'record' half. See BLOCKED.md." },
+    "3.3": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "record -> transcribe -> insert. Beat 5 reconciliation: unblocked now that expo-audio is real -- was blocked on the same dependency gap as 3.1's record half. Depends on 3.1's record half landing first." },
     "3.4": {
       "status": "done",
       "class": "ui",
@@ -49,9 +49,9 @@
       "checkpoint": "3644aa4",
       "notes": "VoiceRecordButton widget. Beat 3. Pure controlled component (isRecording prop, onHoldStart/onHoldCommit/onHoldCancel callbacks) + extracted holdGesture.ts pure logic (mirrors ModelPicker/recommend.ts pattern -- no @testing-library/react-native in this repo, so .tsx stays untested like every other widget here). Zero whisper.rn/audio-capture code -- correctly deferred to blocked 3.3. Checker passed on re-review, verifying the disabled-mid-press fix by hand-tracing every branch and confirming the rewritten test has real mutation-catching teeth."
     },
-    "3.5": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Local TTS. Beat 4. expo-speech (Expo's canonical Speech API) is not a dependency and not in node_modules -- unlike 3.1 (whisper.rn already installed, so a wrapper could be written against its real, mockable API), there is no real interface here to wrap or test against without first choosing and installing a library, which is itself the decision being deferred. Speculatively designing a shared/tts interface with no real dependency to shape it against risks guessing wrong and a rewrite. Queued to BLOCKED.md." },
-    "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store. Beat 4 recon: SQLCipher itself is real and buildable -- expo-sqlite vendors SQLCipher's amalgamated source directly (node_modules/expo-sqlite/vendor/sqlcipher/sqlite3.c) and its plugin exposes a useSQLCipher flag (ios/android) unlike whisper.rn/expo-speech. BUT expo-secure-store (key storage) is NOT a dependency, and unlike 3.1's transcribe/record split, a 'vault' with encryption but no real secure key storage is not an honest partial deliverable for a flagship privacy feature -- it would look encrypted without being securely so. Deliberately NOT attempted this beat: security-critical key-management design (KDF choice, error handling on wrong key, rotation) deserves human design discussion per CLAUDE.md's 'discuss architecture before writing code for non-trivial features', not an autonomous guess. Needs a BLOCKED.md entry (not yet written -- do this before touching 4.1)." },
-    "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics. Beat 4 recon: expo-local-authentication is NOT a dependency. Clean full defer (no partial path, unlike 4.1 -- app-lock genuinely can't do anything without it)." },
+    "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Local TTS. Beat 5 reconciliation: expo-speech now a real dependency (verified in node_modules) -- unblocked. Not picked up this beat (1.6.1 is earlier in plan order)." },
+    "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store. Beat 4 recon: SQLCipher itself is real and buildable via expo-sqlite's vendored source + useSQLCipher plugin flag. Beat 5: user has now installed expo-secure-store AND added it to app.json's plugins array -- the dependency gap is closed. STILL NOT ATTEMPTING key-management DESIGN unattended (KDF choice, wrong-key handling, rotation) -- that decision was flagged as needing explicit human sign-off, not just a dependency approval, and installing the package doesn't by itself answer those design questions. Ask explicitly when this step is next selected, rather than guessing." },
+    "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics. Beat 5 reconciliation: expo-local-authentication now a real dependency (verified) -- unblocked, no design ambiguity like 4.1 (a biometric gate is a much more standard, lower-stakes pattern)." },
     "4.3": {
       "status": "in_progress",
       "class": "logic",

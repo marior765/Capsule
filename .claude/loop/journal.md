@@ -337,4 +337,31 @@ completely for everything currently real.
 
 ---
 
+### Reconciliation — beat 5 · 2026-08-13T02:40Z
+
+**Health check:** tree clean at `86446cd`, gate green (tsc ✅ · jest ✅ 240/19 ·
+eslint ✅). User installed 7 packages and registered 2 in `app.json`'s plugins
+array between beats — verified genuinely present in `node_modules` (not just
+listed in `package.json`) before trusting any of it:
+`expo-audio`, `@fugood/react-native-audio-pcm-stream`, `expo-clipboard`,
+`react-native-markdown-display`, `expo-local-authentication`,
+`expo-secure-store`, `expo-speech`. All seven confirmed installed. `app.json`
+gained `expo-audio` and `expo-secure-store` in its plugins array.
+
+This resolves every pure dependency-gap block from beats 1–4 in one move:
+3.1's record half, 3.3, 3.5, 1.6.1, 4.2, and the dependency (not design) half
+of 4.1. Flipped each in `state.json` from `blocked`/`deferred` to `pending`,
+with a note on what changed. Rewrote `BLOCKED.md` to drop the now-resolved
+"approve this dependency" items and keep only what's genuinely still open —
+which is exactly one thing: **4.1's key-management design**. Installing
+`expo-secure-store` answers "can we store a key securely," not "how should we
+derive/rotate/fail on this specific key" — that's still a real design
+question, not something the dependency itself settles, so 4.1 stays flagged
+rather than getting swept up with the rest.
+
+**Selection:** plan order puts 1.6.1 (Phase 1) ahead of everything else that
+unblocked (Phase 3/4). Picking it up this beat.
+
+---
+
 <!-- Append new beats above this line. -->
