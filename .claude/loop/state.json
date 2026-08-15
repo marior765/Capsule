@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 6,
+    "beat": 7,
     "status": "running"
   },
   "cursor": {
@@ -41,7 +41,16 @@
       "notes": "whisper.rn + expo-audio wrapper. Beat 6: record half added (startRecording via AudioModule.AudioRecorder -- expo-audio's recording API is hook-only otherwise, doesn't fit this plain-function module). 33 tests total. Checker fail->fix cycle: (1) missing assertions that prepareToRecordAsync/record were actually called -- fixed, verified by mutation; (2) permission-comment overstatement -- fixed; (3) checker claimed a NativeAudioModule type-workaround was unnecessary, verified true for tsc alone but FALSE for the full gate -- npx eslint src genuinely fails with import/namespace error without it, reproduced myself, sent correction back to checker. Also survived a self-inflicted detour: a botched backup-restore + an auto-format hook that deleted real code twice (treating transiently-unused code as dead code mid-fix). Recovered via one clean full-file Write + fresh unfiltered gate verification, not incremental patching. Re-review sent, awaiting verdict."
     },
     "3.2": { "status": "blocked", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "whisper.rn 0.6.0 ships NO Expo config plugin (no app.plugin.js, unlike llama.rn's which wires real options). Autolinking + podspec env vars (RNWHISPER_DISABLE_COREML/METAL, RNWHISPER_BUILD_FROM_SOURCE) cover it; Android manifest is empty, no permissions, standard abiFilters. Step text's premise is false as written -- there is no plugin entry to add. No code change made. Queued to BLOCKED.md for a device prebuild to confirm autolinking succeeds unmodified; box stays unchecked until then." },
-    "3.3": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "record -> transcribe -> insert. Beat 5 reconciliation: unblocked now that expo-audio is real -- was blocked on the same dependency gap as 3.1's record half. Depends on 3.1's record half landing first." },
+    "3.3": {
+      "status": "blocked",
+      "class": "native",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- step text says 'insert into ChatInput', nothing in the diff or repo wires startVoiceInput to any route/widget; doc comment overstated that {cancel,finish} 'maps onto' VoiceRecordButton's callbacks"
+      ],
+      "checkpoint": "STAGED",
+      "notes": "startVoiceInput(sttCtx) implemented in features/voice-input -- record->transcribe orchestration, 7 tests, checker validated internals as correct (uri-dependency ordering, error propagation, mockImplementation crash-avoidance). Route-level 'insert into ChatInput' wiring genuinely BLOCKED: no STT model management exists anywhere in the codebase (no entities/*-model equivalent, no download flow, no active-model concept -- unlike shared/llm's full 1.1-1.3 + LlmProvider story, independently verified by the checker via grep). startVoiceInput's sttCtx: WhisperContext cannot be obtained by any route today; faking it would be dead UI. Escalated to BLOCKED.md as a 3-option decision (real STT model mgmt steps / first-run download of one default model / other). Checker passed, and caught that my option (b) wording conflated first-run download (compliant) with in-binary bundling (explicitly forbidden by CLAUDE.md) -- fixed. Box stays unchecked; status blocked pending the user's decision, not merely native-unverified."
+    },
     "3.4": {
       "status": "done",
       "class": "ui",

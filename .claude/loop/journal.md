@@ -570,4 +570,73 @@ whisper.cpp). `BLOCKED.md` extended to cover the record half's device checks.
 
 ---
 
+### 3.3 — `features/voice-input` · beat 7 · 2026-08-16T~07:20Z
+
+**Class:** native
+**Select:** first pending step after 3.1's record half closed beat 6.
+
+**Design:** `startVoiceInput(sttCtx)` — plain function, no React, matching
+`features/send-message`'s established pattern (explicit dependency injection,
+testable without rendering). Returns `{cancel, finish}`: `cancel` stops and
+discards the recording, `finish` stops, transcribes, and returns the text.
+Tests mock the whole `@/shared/stt` module (`jest.mock`), matching
+`send-message.test.ts`'s precedent for this layer.
+
+**A real test-authoring bug caught before it mattered:** the "propagates a
+transcription failure" test originally built its rejected promise via
+`mockReturnValue(Promise.reject(...))` — evaluated eagerly, before
+`startVoiceInput` existed to ever consume it (TDD red state), which crashed
+the entire Jest process with an unhandled rejection rather than failing that
+one test cleanly. Fixed with `mockImplementation(() => ({...}))`, which
+constructs the rejection lazily, only when actually invoked.
+
+**Tests:** `src/features/voice-input/__tests__/voice-input.test.ts` — 7 cases,
+confirmed failing cleanly (no crash) before implementation.
+
+**Attempt 1 — gate green** (tsc/jest/eslint all clean on the first pass).
+
+**Attempt 1 (checker) — `fail`.** Two findings:
+1. **The real one.** The step text literally says "insert into ChatInput" —
+   nothing in the diff wired `startVoiceInput` to any route or widget. My own
+   doc comment had rationalized this as "features can't import widgets,"
+   which is true but incomplete as an excuse.
+2. That same comment overstated readiness, claiming the session shape "maps
+   onto" `VoiceRecordButton`'s callbacks when real glue code was still needed.
+
+**Investigating the fix surfaced something bigger than missing glue.**
+Checked `LlmProvider` — the established pattern for getting a loaded native
+context into a route — and it depends on a full model lifecycle:
+`entities/model`, download (1.2), selection. Checked for an STT equivalent:
+none exists. No entity, no download flow, no active-model concept anywhere.
+`startVoiceInput`'s context parameter genuinely cannot be obtained by any
+screen in this app today. Wiring the UI against it would mean either
+hardcoding a model path or inventing a stub provider — both are fabricating a
+decision that isn't mine to make, and would ship UI that looks finished and
+silently never works. Did neither. Fixed the doc comment to state this
+plainly, and escalated the actual gap — **Phase 3 has no step for the STT
+equivalent of 1.1–1.3; this was never planned, not merely unbuilt** — to
+`BLOCKED.md` as a three-option decision.
+
+**Gate:** tsc ✅ · jest ✅ 266/23 suites · eslint ✅
+
+**Review (re-review) — pass.** The checker didn't take the escalation on
+faith — independently grepped for any STT model entity or provider and
+confirmed none exists, and re-ran the full gate itself rather than trusting
+the report. It also caught something I got wrong in the BLOCKED.md writeup:
+option (b) ("bundle a single small whisper model... with the app or a
+first-run download") conflated first-run download (compliant — CLAUDE.md's
+one allowed network action) with bundling the model in the binary, which is
+explicitly on CLAUDE.md's "What to Avoid" list. Framing a forbidden option as
+an equal-weight choice was a real mistake in a document whose whole job is
+giving the user an honest set of options — fixed. Also flagged a state.json
+bookkeeping inconsistency (`in_progress` where `blocked` — matching 3.2's
+convention — was correct); fixed.
+
+**Checkpoint:** staged step paths only.
+**Result:** feature-layer orchestration done ✅ and tested; route wiring
+**blocked** on a genuine planning gap, not implementation debt.
+`docs/DEVELOPMENT_PLAN.md` 3.3 stays unchecked.
+
+---
+
 <!-- Append new beats above this line. -->
