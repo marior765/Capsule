@@ -6,7 +6,7 @@
     "status": "running"
   },
   "cursor": {
-    "step": "3.1",
+    "step": "3.3",
     "phase": 3
   },
   "steps": {
@@ -36,7 +36,7 @@
         "gate: TS2307 cannot find module 'whisper.rn' (package exports map has no '.' entry) + prettier formatting",
         "checker: fail — releaseStt had no assertion it released anything; 'omits params' test could not fail; toBeDefined filler; record omission contradicts docs/ARCHITECTURE.md:109"
       ],
-      "checkpoint": "PENDING",
+      "checkpoint": "b373c47",
       "attempts": 3,
       "notes": "whisper.rn + expo-audio wrapper. Beat 6: record half added (startRecording via AudioModule.AudioRecorder -- expo-audio's recording API is hook-only otherwise, doesn't fit this plain-function module). 33 tests total. Checker fail->fix cycle: (1) missing assertions that prepareToRecordAsync/record were actually called -- fixed, verified by mutation; (2) permission-comment overstatement -- fixed; (3) checker claimed a NativeAudioModule type-workaround was unnecessary, verified true for tsc alone but FALSE for the full gate -- npx eslint src genuinely fails with import/namespace error without it, reproduced myself, sent correction back to checker. Also survived a self-inflicted detour: a botched backup-restore + an auto-format hook that deleted real code twice (treating transiently-unused code as dead code mid-fix). Recovered via one clean full-file Write + fresh unfiltered gate verification, not incremental patching. Re-review sent, awaiting verdict."
     },
