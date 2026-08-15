@@ -25,7 +25,7 @@
       "failureSignatures": [
         "checker: fail -- testID used node.key, an app-wide global counter reassigned every render (unstable); privacy invariant (image rule override blocking fetches) was unasserted and depended on an implicit markdown-it default (html:false) that a future markdownit prop or dependency bump could silently flip; setStringAsync's result was discarded with no user feedback on success/failure"
       ],
-      "checkpoint": "PENDING",
+      "checkpoint": "c86fb8d",
       "notes": "ChatBubble renders via react-native-markdown-display + explicit createMarkdownParser (html:false set explicitly, not relied on as default) + image-rule override (privacy) + fence/code_block rule (CodeBlock component with copy-to-clipboard + 'Copied' feedback state). Fixed all three checker findings: (1) testID now derived from a per-render local index counter (message identity + document-order position), not the library's unstable global node.key; (2) added markdownParser.test.ts -- 4 tests against the REAL markdown-it engine proving raw HTML never tokenizes with html:false, pinning the exact invariant the privacy claim depends on; (3) CodeBlock is now a real component with useState-backed 'Copied' feedback and a try/catch around the awaited clipboard promise. New wrinkle: markdown-it ships no types and @types/markdown-it isn't installed -- authored a minimal local ambient markdown-it.d.ts covering only the used surface, rather than installing a devDependency unattended; sent to checker for judgment on whether that's the right call vs escalating to BLOCKED.md. Gate green (tsc/jest 251-21/eslint). Re-review sent, same checker (context intact)."
     },
     "3.1": {
