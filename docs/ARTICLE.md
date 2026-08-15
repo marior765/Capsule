@@ -1021,4 +1021,56 @@ the code is *doing its job* — and only a human gets to decide what the job was
 
 ---
 
+## 2026-08-13 — Catching a bug the test suite structurally cannot see
+
+Step 3.4 was a small widget — a hold-to-record button — and it surfaced a limit
+of the maker-checker setup worth naming: this project has no
+`@testing-library/react-native`, so no `.tsx` component has ever been rendered
+in a test here. The existing pattern (`ModelPicker.tsx` next to a pure,
+fully-tested `recommend.ts`) works around this by pulling the one piece of real
+logic out of the component and testing *that*. `VoiceRecordButton` followed
+suit: `holdGesture.ts` decides whether a press-and-release counts as an
+intentional hold, tested eight ways: happy path, an inclusive boundary, an
+origin-independence check, out-of-order timestamps, invalid config. The
+component itself stayed a thin thing wiring `Pressable` events to that
+function, with zero tests of its own — same as every widget before it.
+
+The checker's first pass failed the diff anyway, and the bug it found lived
+entirely in the untestable half. `handlePressOut` had an early return —
+`if (disabled || pressedAt === null) return;` — that looked like an
+obviously-correct guard. It wasn't. If a press starts while the button is
+enabled (`onHoldStart` fires, a ref records the timestamp) and something
+disables the button *before* release — a permission revoked, a model busy —
+that same guard now swallows the release event entirely. `onHoldStart` had
+already told the caller "a recording is starting." Nothing ever tells it the
+recording ended. The caller is left holding a hold that will never resolve, and
+no test in the eight-case suite could have caught it, because the suite tests
+`evaluateHold`, a pure function with no concept of `disabled` or of two
+sequential events sharing mutable state.
+
+The checker couldn't write a new test to prove the fix either — same missing
+tooling. What it did instead was hand-trace every reachable branch: confirmed
+`pressedAt !== null` only holds after `onHoldStart` already fired in the same
+closure, confirmed the ref is nulled before the `disabled` check so a
+duplicate event is idempotent, confirmed no path produces two resolutions or
+zero resolutions for one start. Asked directly whether an unverified-by-test
+fix should count as still failing, it declined the reflex: judged it as a
+limitation of the codebase's infrastructure, not a defect in the diff, since
+*every* prior `.tsx` change in this project shares the same gap and none of
+them had been held to a different standard.
+
+**Article angle:** "make it testable" is usually good advice, and it was
+followed here — the pure logic *was* tested, thoroughly. But the bug wasn't in
+the pure logic. It was in the exact seam that testing strategy had drawn around
+itself: the stateful glue connecting two events over time, which is precisely
+what a pure function can't model and precisely what a missing render-testing
+library leaves uncovered. A checker whose job is to refute, not to run a
+checklist, is what caught it — it didn't ask "did the tests pass," it asked
+"what could still be wrong that the tests don't reach," and then went and
+looked at the code that couldn't be tested. That's a different skill than
+grading test output, and it's the reason the checker exists as a second agent
+rather than a second test run.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

@@ -225,6 +225,21 @@ can only be verified by reading the corrected control flow — there is no way t
 render-test it in this repo. Sent for re-review with that limitation stated
 explicitly rather than silently.
 
+**Review (re-review) — pass.** The checker traced every reachable branch of the
+fixed `handlePressOut` by hand: `pressedAt !== null` only holds after
+`handlePressIn` already fired `onHoldStart` in the same closure, the ref is
+nulled before the `disabled` check (making a duplicate/late `onPressOut`
+idempotent), and no path produces either a double resolution or a stranded
+start. It also confirmed the rewritten negative-`minHoldMs` test has real
+teeth — a mutant that special-cases negative input into a cancel branch fails
+it immediately — and explicitly judged the unverifiable-`.tsx` limitation as
+codebase infrastructure, not a review failure: `ModelPicker.tsx`, the pattern
+being mirrored, has zero render tests today either.
+
+**Gate:** tsc ✅ · jest ✅ 228/18 suites · eslint ✅
+**Checkpoint:** staged step paths only (`.vscode/settings.json` excluded again).
+**Result:** done ✅ — `docs/DEVELOPMENT_PLAN.md` 3.4 ticked.
+
 ---
 
 <!-- Append new beats above this line. -->

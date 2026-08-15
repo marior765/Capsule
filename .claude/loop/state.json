@@ -6,7 +6,7 @@
     "status": "running"
   },
   "cursor": {
-    "step": "3.4",
+    "step": "3.5",
     "phase": 3
   },
   "steps": {
@@ -40,16 +40,16 @@
     "3.2": { "status": "blocked", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "whisper.rn 0.6.0 ships NO Expo config plugin (no app.plugin.js, unlike llama.rn's which wires real options). Autolinking + podspec env vars (RNWHISPER_DISABLE_COREML/METAL, RNWHISPER_BUILD_FROM_SOURCE) cover it; Android manifest is empty, no permissions, standard abiFilters. Step text's premise is false as written -- there is no plugin entry to add. No code change made. Queued to BLOCKED.md for a device prebuild to confirm autolinking succeeds unmodified; box stays unchecked until then." },
     "3.3": { "status": "blocked", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "record -> transcribe -> insert. BLOCKED on the same audio-capture dependency decision as 3.1's 'record' half. See BLOCKED.md." },
     "3.4": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
       "attempts": 1,
       "failureSignatures": [
         "checker: fail -- handlePressOut stranded an in-progress hold when disabled flips mid-press (onHoldStart fired, neither onHoldCommit nor onHoldCancel ever followed); negative-minHoldMs test asserted only not.toThrow(), never checked the actual return value against its own name"
       ],
-      "checkpoint": null,
-      "notes": "VoiceRecordButton widget. Beat 3. Pure controlled component (isRecording prop, onHoldStart/onHoldCommit/onHoldCancel callbacks) + extracted holdGesture.ts pure logic (mirrors ModelPicker/recommend.ts pattern -- no @testing-library/react-native in this repo, so .tsx stays untested like every other widget here). Zero whisper.rn/audio-capture code -- correctly deferred to blocked 3.3. Fixed both checker findings: handlePressOut now resolves any started hold even if disabled flips mid-press; negative-minHoldMs test renamed and corrected to assert the real 'treated as zero' behavior. Awaiting re-review verdict."
+      "checkpoint": "3644aa4",
+      "notes": "VoiceRecordButton widget. Beat 3. Pure controlled component (isRecording prop, onHoldStart/onHoldCommit/onHoldCancel callbacks) + extracted holdGesture.ts pure logic (mirrors ModelPicker/recommend.ts pattern -- no @testing-library/react-native in this repo, so .tsx stays untested like every other widget here). Zero whisper.rn/audio-capture code -- correctly deferred to blocked 3.3. Checker passed on re-review, verifying the disabled-mid-press fix by hand-tracing every branch and confirming the rewritten test has real mutation-catching teeth."
     },
-    "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "OS Speech API" },
+    "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "OS Speech API. Quick check done beat 3: expo-speech is NOT a dependency (grep confirmed). Next beat: full reconciliation still needed, but expect this needs the same 'adding a dependency is a decision' treatment as 1.6.1 and 3.1's record half -- queue to BLOCKED.md rather than installing unattended." },
     "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store; requires dev build" },
     "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics; requires device" },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
