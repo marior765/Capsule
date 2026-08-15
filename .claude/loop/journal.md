@@ -180,4 +180,51 @@ running session that added it.
 
 ---
 
+### 3.4 — `VoiceRecordButton` widget · beat 3 · 2026-08-13T01:05Z
+
+**Class:** ui
+**Health check:** tree clean at `3a856e1`, gate green (tsc ✅ · jest ✅ 220/17 ·
+eslint ✅). Caught up on the two beat-2 writes that had been blocked by a
+permission-reload gap (3.2's journal entry, plus stale "pre-existing uncommitted
+work" removed from `BLOCKED.md` — that was resolved before beat 1 even started).
+
+**Select/reconcile:** 3.1–3.3 all `blocked`. 3.4 is genuinely unstarted
+(`export {};` stub). No render-testing library in this repo
+(`@testing-library/react-native` absent), so `.tsx` widgets are untested here —
+confirmed by the one existing precedent, `ModelPicker.tsx` + its sibling pure-logic
+`recommend.ts` (only `recommend.ts` has a test file). Mirrored that pattern:
+extracted the one piece of genuine widget-layer logic — deciding whether a
+press-and-release counts as an intentional hold vs. an accidental tap — into a
+pure, framework-free `holdGesture.ts`; kept `VoiceRecordButton.tsx` as a thin,
+purely controlled shell (`isRecording` prop in, `onHoldStart`/`onHoldCommit`/
+`onHoldCancel` callbacks out). Zero whisper.rn or audio-capture code — correctly
+deferred to `features/voice-input` (3.3), which owns that per `shared/stt`'s
+exclusive-ownership rule.
+
+**Tests:** `src/widgets/VoiceRecordButton/__tests__/holdGesture.test.ts` — 8 cases
+(happy path, boundary, origin-independence, error handling), confirmed failing
+before implementation (module not found).
+
+**Attempt 1 — gate red, prettier only.** Autofixed.
+
+**Attempt 1 (checker) — `fail`.** Two findings, both accepted:
+1. `handlePressOut` stranded an in-progress hold if `disabled` flipped mid-press:
+   `onHoldStart` had already fired, but the early `if (disabled || pressedAt ===
+   null) return;` skipped resolution entirely — neither `onHoldCommit` nor
+   `onHoldCancel` ever followed, leaving the caller believing a recording was
+   still open with no way to close it. Fixed: `pressedAt === null` (no press in
+   progress) is now the only unconditional skip; a hold that already started
+   always resolves, calling `onHoldCancel()` if `disabled` is now true.
+2. The negative-`minHoldMs` test was named "cancels rather than throwing" but
+   only asserted `not.toThrow()` — never checked the return value, which is
+   actually `"committed"` (permissive clamp-to-zero, not a block). Test renamed
+   and fixed to assert the real, defensible behavior.
+
+**Known gap flagged to the checker rather than hidden:** the `handlePressOut` fix
+can only be verified by reading the corrected control flow — there is no way to
+render-test it in this repo. Sent for re-review with that limitation stated
+explicitly rather than silently.
+
+---
+
 <!-- Append new beats above this line. -->

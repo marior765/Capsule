@@ -108,7 +108,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 3.1 `shared/stt` — whisper.rn wrapper (init, record, transcribe, abort)
 - [ ] 3.2 whisper.rn Expo plugin config
 - [ ] 3.3 `features/voice-input` — hold-to-record → transcribe → insert into ChatInput
-- [ ] 3.4 `VoiceRecordButton` widget
+- [x] 3.4 `VoiceRecordButton` widget
 - [ ] 3.5 Local TTS for assistant responses (OS-level Speech API as baseline)
 
 ### Phase 4 — Privacy core ← key differentiators

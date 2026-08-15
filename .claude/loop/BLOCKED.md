@@ -32,6 +32,19 @@ put a `ggml-base.en.bin` on the device, transcribe a short local `.wav`, and con
    not by running it. If subtitles drift by 10×, this is the line to look at
    (`src/shared/stt/index.ts`, `WHISPER_TIME_UNIT_MS`).
 
+### 3.2 — whisper.rn Expo plugin config
+**No code change made** — whisper.rn 0.6.0 ships no Expo config plugin at all
+(no `app.plugin.js`, unlike llama.rn's real `withLlamaRN`). Verified by reading
+the package: iOS uses podspec env vars (`RNWHISPER_DISABLE_COREML`,
+`RNWHISPER_DISABLE_METAL`, `RNWHISPER_BUILD_FROM_SOURCE`, all optional —
+defaults are CoreML+Metal on, prebuilt xcframework); Android needs no manifest
+permissions and autolinks like any other native module.
+
+**Device check:** run `expo prebuild` with `app.json` unchanged and confirm
+whisper.rn autolinks on both platforms with no error about a missing/invalid
+config plugin. If it does need something, that's new information this
+investigation missed — reopen 3.2 with what you found.
+
 ## Needs a decision from you
 
 ### 3.1 — the "record" half is NOT implemented
@@ -60,13 +73,6 @@ Requires adding `react-native-markdown-display` and `expo-clipboard`. Per
 `CLAUDE.md`, dependencies must be audited for outbound requests before adding —
 the loop will not install packages unattended.
 **You decide:** approve both deps (and confirm the audit), or keep 1.6.1 deferred.
-
-### Pre-existing uncommitted work
-The working tree at bootstrap held a large staged change from earlier sessions
-spanning routes, settings screens, and several new slices. It predates the loop
-and was never reviewed or committed.
-**You decide:** review and commit it yourself, or let beat 1 gate it (tsc + jest +
-eslint + reviewer) and commit it as a single "pre-loop baseline" checkpoint.
 
 ## Failed verification
 
