@@ -717,4 +717,68 @@ delivery).
 
 ---
 
+### 3.3.1 — `SttProvider` (second half) · beat 9 · 2026-08-16T~08:50Z
+
+**Class:** native
+**Health check:** clean tree at `32f658b`, gate green. Caught a real spine
+bug while loading: `cursor.step` was stale at `3.5`, unchanged since beat
+7's close, despite beat 8's own commit message claiming it had been updated
+to `3.3.1` — the field was simply never written. Fixed before selecting
+anything.
+
+**Design decision worth recording:** `SttProvider` mirrors `LlmProvider`'s
+shape but is deliberately **lazy** — nothing downloads or loads on mount.
+`LlmProvider`'s eager-on-mount pattern only works because it's re-loading a
+model the user *already* downloaded in an earlier session; `ensureReady()`'s
+first-ever call may itself trigger a new network download, and CLAUDE.md
+requires model downloads to be user-initiated. Mounting the provider must
+never count as that initiation — only an actual voice-input attempt can.
+
+**Attempt 1 — gate green** (tsc/jest/eslint all clean first try; no test
+file, matching the established provider precedent — `LlmProvider` has none
+either).
+
+**Checker — pass, first attempt.** Verified the "user-initiated" claim
+itself rather than trusting it: grepped for every call site of `ensureReady`
+and confirmed none exists yet anywhere, so mounting the provider triggers
+nothing. Traced the concurrency dedupe logic by hand (no `await` before
+`pending.current` is set, so two calls in the same or later tick always
+share one in-flight load) and confirmed the deferred-route-wiring decision
+is a real, not invented, constraint — read `VoiceRecordButton.tsx` directly
+and confirmed `onHoldStart` really is a synchronous `() => void`.
+
+Two non-blocking findings, both fixed before checkpoint:
+1. My own comment claimed the unmount cleanup "mirrors `LlmProvider`'s
+   cleanup" — it didn't. `LlmProvider` closes the window where a load
+   resolves *after* unmount with a `cancelled` closure variable; my first
+   version only released an already-stored context, missing that case
+   entirely. Added the actual matching pattern.
+2. `downloadProgress` wasn't reset at the start of a retry, so a stale value
+   from a prior failed attempt could render briefly.
+
+**Re-verification, not re-approval on faith.** Sent both fixes back to the
+same checker rather than assuming my own trace of the fix was correct. It
+independently walked the exact microtask ordering around `initStt`'s
+`await` and confirmed no double-release and no interleaving window — cleanup
+either fires before the check (caught, released, never stored) or after
+(finds the stored context, releases it there) — never both. One forward
+note for whoever builds the route wiring next: the cancelled path now
+rejects `ensureReady()`'s promise with an "unmounted before loading
+finished" error distinct from a real STT init failure — nothing calls
+`ensureReady` yet, so this is inert today, but the eventual caller needs to
+not mistake that rejection for a genuine model error.
+
+**Still not done, deliberately:** the actual `VoiceRecordButton` + `ChatInput`
+route wiring. Real race condition identified and checker-confirmed:
+`onHoldStart` is synchronous, session creation is async, so a fast tap could
+fire `onHoldCommit` before a session exists. Needs its own design pass.
+
+**Gate:** tsc ✅ · jest ✅ 276/24 suites · eslint ✅
+
+**Checkpoint:** staged step paths only.
+**Result:** `SttProvider` done ✅. Route wiring is 3.3.1's last remaining
+piece — `docs/DEVELOPMENT_PLAN.md` 3.3.1 stays unchecked.
+
+---
+
 <!-- Append new beats above this line. -->

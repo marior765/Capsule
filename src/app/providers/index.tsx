@@ -12,6 +12,7 @@ import { messagesMigration, messagesParentMigration } from "@/entities/message";
 import { personasMigration } from "@/entities/persona";
 import { auditMigration } from "@/entities/audit";
 import { LlmProvider } from "./LlmProvider";
+import { SttProvider } from "./SttProvider";
 
 const migrations = [
   modelsMigration,
@@ -32,8 +33,13 @@ export function Providers({ children }: PropsWithChildren) {
     return null;
   });
 
-  return <LlmProvider>{children}</LlmProvider>;
+  return (
+    <LlmProvider>
+      <SttProvider>{children}</SttProvider>
+    </LlmProvider>
+  );
 }
 
 export { useLlm } from "./LlmProvider";
+export { useStt } from "./SttProvider";
 export { useDb } from "./useDb";
