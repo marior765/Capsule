@@ -106,7 +106,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 
 ### Phase 3 — Voice
 - [ ] 3.1 `shared/stt` — whisper.rn wrapper (init, record, transcribe, abort)
-- [ ] 3.2 whisper.rn Expo plugin config
+- [x] 3.2 whisper.rn Expo plugin config (no plugin needed — confirmed via `expo prebuild`: `ios/Podfile.lock` shows `whisper-rn (0.6.0)` correctly linked; Android's command-based autolinking has no static per-package evidence to check but errored on nothing)
 - [ ] 3.3 `features/voice-input` — hold-to-record → transcribe → insert into ChatInput
 - [ ] 3.3.1 First-run download of a single default STT model (e.g. `ggml-base.en.bin`, via CLAUDE.md's one allowed network action — never bundled in the binary) + a minimal `SttProvider` (no multi-model selection UI) so 3.3's route-level wiring becomes buildable. Chosen 2026-08-16 over full STT model management for now — see 9.5 (Phase 9, future releases).
 - [x] 3.4 `VoiceRecordButton` widget

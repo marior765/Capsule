@@ -781,4 +781,32 @@ piece — `docs/DEVELOPMENT_PLAN.md` 3.3.1 stays unchecked.
 
 ---
 
+### 3.2 device-verified · 2026-08-16T~09:10Z
+
+User ran `npx expo prebuild` directly and asked whether it resolved a
+blocker. It did — verified against `BLOCKED.md`'s exact stated criterion
+("no error about a missing/invalid config plugin"), not just eyeballing
+the output as generically successful:
+
+- Output: clean finish, only unrelated `enableOpenCL` deprecation warnings
+  (llama.rn's plugin, not whisper.rn) and one ios asset-duplication note.
+- Went further than "no error" to check for **positive** evidence, since
+  the native project files now genuinely exist: `ios/Podfile.lock` shows
+  `whisper-rn (0.6.0)` correctly resolved and linked against
+  `../node_modules/whisper.rn` — real proof, not an absence.
+- Android's `grep` for "whisper" came back empty — checked *why* before
+  treating that as concerning: `android/settings.gradle` uses
+  `autolinkLibrariesFromCommand()`, a command-based autolinking mechanism
+  that discovers native modules dynamically at build time rather than
+  writing static per-package Gradle entries. An empty grep there is
+  expected, not a gap.
+
+Ticked `docs/DEVELOPMENT_PLAN.md` 3.2. Removed the resolved item from
+`BLOCKED.md` per its own clearance rule ("Passes → tick the box, delete the
+item here"), added a note to 3.1's still-open entry that prebuild succeeding
+proves the native project *builds*, not that recording/transcription work at
+runtime — that still needs the app actually running on a simulator/device.
+
+---
+
 <!-- Append new beats above this line. -->

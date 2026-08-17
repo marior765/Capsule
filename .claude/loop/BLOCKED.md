@@ -24,8 +24,14 @@ record). **Nothing here has run against a real microphone or whisper.cpp.**
 Box left unchecked — this was the last piece; the step is now feature-complete
 in code but entirely device-unverified.
 
-**Device check:** build a dev client (whisper.rn needs `expo prebuild` — see 3.2),
-and confirm:
+`expo prebuild` (3.2's own check) has now been run successfully — `ios/`
+and `android/` exist, `whisper-rn` is correctly linked per `Podfile.lock`.
+What's still needed is actually *running* the app on a simulator/device
+(`expo run:ios` / `expo run:android`) and exercising the checks below —
+prebuild succeeding proves the native project is buildable, not that
+recording/transcription work at runtime.
+
+**Device check:**
 1. `startRecording()` actually prompts for microphone permission on first use,
    and denying it surfaces the thrown error sensibly in the UI rather than
    crashing;
@@ -40,18 +46,16 @@ and confirm:
    not by running it. If subtitles drift by 10×, this is the line to look at
    (`src/shared/stt/index.ts`, `WHISPER_TIME_UNIT_MS`).
 
-### 3.2 — whisper.rn Expo plugin config
-**No code change made** — whisper.rn 0.6.0 ships no Expo config plugin at all
-(no `app.plugin.js`, unlike llama.rn's real `withLlamaRN`). Verified by reading
-the package: iOS uses podspec env vars (`RNWHISPER_DISABLE_COREML`,
-`RNWHISPER_DISABLE_METAL`, `RNWHISPER_BUILD_FROM_SOURCE`, all optional —
-defaults are CoreML+Metal on, prebuilt xcframework); Android needs no manifest
-permissions and autolinks like any other native module.
+## Resolved (2026-08-16) — 3.2 whisper.rn Expo plugin config
 
-**Device check:** run `expo prebuild` with `app.json` unchanged and confirm
-whisper.rn autolinks on both platforms with no error about a missing/invalid
-config plugin. If it does need something, that's new information this
-investigation missed — reopen 3.2 with what you found.
+`expo prebuild` run by the user, clean: `✔ Finished prebuild`, no error about
+a missing/invalid config plugin. `ios/Podfile.lock` confirms `whisper-rn
+(0.6.0)` genuinely linked, pointing at `../node_modules/whisper.rn` — real
+evidence, not just an absent error message. Android's autolinking is
+command-based (`autolinkLibrariesFromCommand` in `settings.gradle`), so it
+leaves no static per-package fingerprint to grep for — that's expected, not
+a gap. Matches the original investigation: whisper.rn genuinely needs no
+config plugin. `docs/DEVELOPMENT_PLAN.md` 3.2 ticked.
 
 ## Resolved (2026-08-16) — 3.3's STT model gap
 
