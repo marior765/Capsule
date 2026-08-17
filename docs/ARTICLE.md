@@ -1280,4 +1280,47 @@ and going looking for the counter-example already sitting in the same repo.
 
 ---
 
+## 2026-08-17 — Silencing a lint warning is not the same as fixing what it warned about
+
+Step 4.3 (the privacy egress indicator) produced a small, precise example
+of a mistake worth naming on its own: `PrivacyBanner` needed to subscribe
+to a tiny external store (`shared/egress`, tracking whether a network call
+is in flight) and re-render when it changed. The first version read the
+initial value with `useState(isEgressActive())` and subscribed inside
+`useEffect`. ESLint's `react-hooks` rule immediately flagged a version of
+this that also called `setState` synchronously inside the effect, as a
+performance anti-pattern. The fix applied was to just remove that call —
+the warning went away, the tests still passed, the diff looked clean.
+
+It was also wrong. `useEffect` runs *after* React commits and paints, not
+synchronously after the value was read during render. In the gap between
+those two moments — render, then commit, then finally the effect
+subscribing — an external transition can happen and nobody is listening
+for it yet. It's a real, if narrow, window: not "eventually consistent
+with a delay," but "silently wrong until the next unrelated change happens
+to correct it, or forever, if the store settles back to a value that
+matches the stale initial read." The checker didn't accept "the lint
+warning is gone" as evidence the code was right — it re-derived what
+`useEffect`'s actual timing guarantees are and found the specific gap.
+
+The fix wasn't a cleverer version of the same pattern — it was recognizing
+that this is a solved problem with its own purpose-built API.
+`useSyncExternalStore` exists precisely for "subscribe to something outside
+React without tearing or missing an update," and using it closes the gap
+structurally (React re-reads the snapshot itself around the subscription)
+instead of via a hand-rolled resync that a linter would immediately flag
+right back.
+
+**Article angle:** a lint rule firing is a symptom, and removing the code
+that triggered it treats the symptom, not necessarily the cause. The
+useful question when a warning appears isn't "how do I make this stop
+complaining" — it's "what is this warning actually protecting against, and
+does my code still need that protection after I change it." Here the
+warning was protecting against exactly the bug that reappeared once the
+protection was removed; the real fix was recognizing the situation as a
+known, named problem with a purpose-built solution, not patching around a
+linter's complaint.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

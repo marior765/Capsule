@@ -1149,4 +1149,76 @@ and `EgressLog` are the two remaining named deliverables.
 
 ---
 
+## Beat 13 — 2026-08-17
+
+**Step:** 4.3 — `entities/audit` + `PrivacyBanner` egress indicator + `EgressLog`
+viewer (the two remaining deliverables — `entities/audit` shipped earlier)
+
+Designed a small, generic `shared/egress` module first — begin/end
+network-activity tracking with subscribe, no domain knowledge, same
+subscribe/notify shape as 4.2's `createAppLock`. Wired it into
+`manage-models`' `downloadModel` (the app's one real network call site)
+with `try/finally`, specifically so a failed download can't leave the
+indicator stuck showing "active" forever. TDD throughout: 10 tests for
+`shared/egress`, 4 more for the wiring (including one proving egress is
+active *while* the download is genuinely in flight, checked before
+awaiting the promise — proving the tracking is actually live, not just
+before/after markers).
+
+Built `PrivacyBanner` (subscribes, renders nothing while offline) and
+`EgressLog` (props-driven viewer + an extracted `formatAuditEntry.ts` with
+an exhaustive switch over `AuditAction`'s closed union — verified this
+genuinely fails `tsc` if a case is dropped, not just asserted in a
+comment). Added a new `accent` theme color token (both palettes) since
+`danger` would misrepresent expected, user-initiated network activity as
+an error. Wired both into `settings/privacy.tsx`, previously a bare stub.
+
+**Checker: FAIL on two counts, one procedural and one real.** The plan
+checkbox wasn't ticked yet — fair, that's a real gap in what I sent, even
+though ticking happens after checker approval in my own process; fixed by
+ticking ahead of the final pass. The substantive one: `PrivacyBanner`'s
+original `useState` + `useEffect` subscription has a genuine, if narrow,
+stale-state race — `useEffect` runs *after* commit, not synchronously
+after the render-phase `useState(isEgressActive())` read, so a full
+begin/end transition landing in that gap is silently lost (nobody's
+subscribed yet when it fires, and the eventual correction only happens on
+the *next* transition, if one ever comes). I'd removed a manual resync
+specifically to satisfy an eslint rule flagging "setState synchronously in
+an effect" — which was papering over the real fix rather than making the
+lint warning go away for the right reason.
+
+Verified the race myself by re-tracing React's actual commit/effect
+timing before accepting it, then fixed it properly: rewrote `PrivacyBanner`
+using `useSyncExternalStore` — the hook React ships specifically to solve
+"subscribe to an external mutable store without tearing/staleness," which
+closes the gap structurally (React re-reads `getSnapshot` around the
+subscription itself) rather than via a manual, lint-fighting resync.
+
+**Checker round 2: pass**, independently re-verified the hook usage on
+every axis asked (argument order, real unsubscribe returned, the adapter
+correctly discards the listener's passed value in favor of `getSnapshot`
+as the single source of truth, no infinite-loop risk from a primitive
+snapshot never failing `Object.is`).
+
+**Gate:** tsc ✅ · jest ✅ 374/374, 31 suites · eslint ✅.
+**Checkpoint:** `3b9f25d`.
+**Result:** 4.3 done ✅ — **not native-classed**, so `docs/DEVELOPMENT_PLAN.md`
+4.3 is genuinely ticked, the first non-native completion in several beats.
+
+One thing explicitly flagged, not silently assumed: `settings/privacy.tsx`
+now renders real content, but that is *not* the same as 4.4 ("Settings →
+privacy screen") being done — a real privacy screen also needs app-lock
+enable/disable controls (4.2 shipped logic only, zero UI, by design) and
+wipe-data controls (4.5, not started at all). Added explicit `4.4`/`4.5`
+entries to `state.json` with this dependency spelled out, so the next beat
+reconciles honestly instead of assuming the route file's existing content
+already satisfies 4.4.
+
+Cursor advances to **4.4**. Whoever picks it up: read the state.json note
+before assuming this is a quick step — it may turn out to be blocked on
+4.5, or need scoping down (e.g., wire app-lock's controls now, leave wipe
+for later) the same way 3.3.1 and 4.3 itself were legitimately sequenced.
+
+---
+
 <!-- Append new beats above this line. -->
