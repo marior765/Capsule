@@ -1232,4 +1232,52 @@ because it looks reviewed — someone already wrote down a reason.
 
 ---
 
+## 2026-08-17 — A real architecture rule, used to justify the wrong conclusion
+
+Step 4.2 (biometric/passphrase app lock) produced the cleanest example yet
+of a pattern worth naming: an argument can be entirely factually correct and
+still be wrong, because it proves less than it's being used to prove.
+
+The reasoning was: `features/app-lock` needs a passphrase fallback, the
+passphrase check lives in `features/encrypt-vault`, and FSD forbids one
+feature importing another (true — verified, and actually lint-enforced at
+error severity, not just written down as a convention). Conclusion: the
+passphrase fallback, and the actual lock-state logic around it, belongs
+somewhere else entirely — a future provider — so this beat shipped only a
+bare biometric-check wrapper with nothing built on top of it.
+
+The rule was real. The conclusion didn't follow from it. "Can't import that
+feature directly" and "therefore none of the composition logic belongs
+here" are two different claims, and the gap between them was papered over
+by a doc comment rather than examined. The checker didn't just say "this
+seems thin" — it went and found the specific place this exact problem had
+already been solved in this same codebase: `features/voice-input` needs
+`shared/stt`'s context but can't assume when it'll be ready, so it takes
+`getSttContext` as an injected function instead of importing the thing that
+produces it. The same move — inject the concrete dependency instead of
+importing the module that owns it — dissolves the "can't import" problem
+without touching the layering rule at all, and leaves the actual gate logic
+(lock state, which unlock method to try, when to notify) sitting in the
+feature layer where CLAUDE.md says business logic belongs, testable without
+any UI.
+
+It also compounded a second problem worth naming on its own: the doc
+comment justifying the narrow scope said "see BLOCKED.md" for the deferred
+work. BLOCKED.md hadn't been touched. That's a smaller version of the same
+underlying failure — writing down that something is handled somewhere else
+is not the same as it being handled somewhere else, and the gap between
+those two is exactly the kind of thing that's invisible from inside the
+change and a one-command `git diff --stat` away from outside it.
+
+**Article angle:** the most dangerous wrong scope decisions aren't the ones
+with no justification — they're the ones with a *correct* justification
+attached to the wrong conclusion. "This import is forbidden" is true and
+irrelevant to "therefore skip the logic" once there's a known pattern
+(dependency injection) for getting the behavior without the import. Good
+review here didn't mean disputing the architecture rule — it meant checking
+whether the rule actually forced the outcome it was being used to justify,
+and going looking for the counter-example already sitting in the same repo.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
