@@ -17,6 +17,59 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ## Needs a device / dev build
 
+### 4.2 — `features/app-lock` biometric / passphrase gate — logic done, wiring is not
+Implemented and green against hand-written mocks: `isBiometricAvailable`,
+`authenticateWithBiometrics` (wrapping `expo-local-authentication`), and
+`createAppLock` — a real lock/unlock state machine (starts `"locked"`,
+`unlockWithBiometrics`/`unlockWithPassphrase`/`lock`/`subscribe`, notifies
+subscribers only on an actual state transition). 23 tests. **Nothing here
+has run against a real fingerprint/face sensor, and nothing here is wired
+into the running app yet — no provider, no lock screen, no `AppState`
+listener exists.**
+
+**Why passphrase verification is injected rather than called directly:**
+`features/app-lock` cannot import `features/encrypt-vault` — FSD forbids
+same-layer cross-slice imports (confirmed: no feature in this repo imports
+another feature's `index.ts`). So `createAppLock({ authenticateWithPassphrase
+})` takes the actual `unlockVault` call as a parameter, mirroring
+`features/voice-input`'s existing `getSttContext` injection pattern. The
+real gate/state-machine logic lives in `features/app-lock`, fully testable;
+only the concrete wiring is left for a provider.
+
+**This is a real, load-bearing prerequisite for 4.1, not independent
+follow-up work — read together with 4.1's own entry above.** 4.1's
+`shared/db`'s `openDb({key})` is a documented no-op until `Providers`' own
+`openDb()` call is gated behind vault unlock. That gate is exactly what
+this step's `createAppLock` is for. What's still needed, all in one future
+integration step (likely its own beat — genuinely UI + native + provider
+work, not something to rush into this one):
+1. A provider (e.g. `AppLockProvider`) that constructs `createAppLock` with
+   `authenticateWithPassphrase` wired to `encrypt-vault`'s `unlockVault`
+   (catching `VaultUnlockError` and mapping it to `{success:false,error}`),
+   and mounts *before* `Providers`' own `openDb()` call — meaning `openDb`
+   itself needs to move from an unconditional `useState` initializer to
+   something gated on `getState() === "unlocked"`.
+2. An `AppState` subscription calling `lock()` on background (and, per the
+   plan step's "on resume" wording, likely re-checking on foreground rather
+   than assuming background alone is enough — a real UX decision: lock
+   immediately on background, or allow a grace period? Not decided here).
+3. A lock-screen UI: passphrase input + a biometric-prompt button (using
+   `isBiometricAvailable` to decide whether to show it at all), rendered
+   whenever `getState() === "locked"`.
+4. First-run handling: `isVaultConfigured()` (from `encrypt-vault`) being
+   `false` means there's no passphrase to check yet — the UI needs a distinct
+   "set up your lock" flow, not just a lock screen with nothing to unlock.
+
+**Device check, once the wiring above exists:**
+1. Biometric prompt actually appears and a real fingerprint/face genuinely
+   unlocks — not just that `authenticateAsync` resolves in a simulator.
+2. Backgrounding the app and returning re-locks it (confirms the `AppState`
+   wiring, not just `lock()`'s unit-tested logic).
+3. Wrong passphrase is rejected with a real, visible error — not a silent
+   failure or a crash.
+4. Biometric button is absent/disabled on a device with no enrolled
+   biometrics, rather than showing a prompt that can only fail.
+
 ### 4.1 — `features/encrypt-vault` at-rest encryption (SQLCipher via expo-sqlite)
 Implemented and green against hand-written mocks: `shared/crypto` (AES-256-GCM
 + scrypt over react-native-quick-crypto — jest mock delegates to Node's real
