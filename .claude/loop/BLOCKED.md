@@ -46,6 +46,36 @@ recording/transcription work at runtime.
    not by running it. If subtitles drift by 10×, this is the line to look at
    (`src/shared/stt/index.ts`, `WHISPER_TIME_UNIT_MS`).
 
+### 3.3 / 3.3.1 — voice input end-to-end (record → transcribe → insert into ChatInput)
+`features/voice-input`'s `createVoiceInputController`, `SttProvider`, and the
+route wiring into `chat/[id].tsx` + `chat/ephemeral.tsx` are all implemented,
+tested, and checker-approved (multiple rounds — see `journal.md`). Nothing
+here has run on a real device.
+
+**The one thing most worth checking first:** the specific bug this took two
+checker rounds to catch and fix — on a genuinely first-ever use (no model
+downloaded yet), does the microphone actually start capturing *immediately*
+on press, before the model finishes downloading? The fix (`startRecording()`
+no longer waits on `ensureReady()`) is verified correct in isolation via
+mutation testing, but only a real first-run download, on a real device, with
+a real hold-and-speak, proves it end-to-end.
+
+**Device check:**
+1. Fresh install (or clear the app's storage) so no STT model is downloaded
+   yet. Hold `VoiceRecordButton`, speak immediately, release before the
+   download could plausibly finish. Confirm the recording captured your
+   speech — not silence — once transcription completes.
+2. Denying microphone permission surfaces sensibly (not a crash) via
+   `voiceError`.
+3. A normal hold-to-record → release → transcribe cycle inserts the
+   transcribed text into `ChatInput` correctly on both routes.
+4. Editing a message: confirm `VoiceRecordButton` is visibly unresponsive
+   while editing (note: checker flagged it currently gives **no visual
+   feedback** when `disabled` — `VoiceRecordButton.tsx`'s own styling, not
+   this beat's files — worth a small polish pass separately, not blocking).
+5. A quick tap-and-release (below `minHoldMs`) correctly cancels rather than
+   commits, and discards the recording without transcribing it.
+
 ## Resolved (2026-08-16) — 3.2 whisper.rn Expo plugin config
 
 `expo prebuild` run by the user, clean: `✔ Finished prebuild`, no error about
@@ -120,6 +150,25 @@ refactoring two already-shipped, checker-approved modules mid-beat, which is
 outside this step's own scope even though the extraction itself is low-risk
 (both existing test suites would catch any regression directly). Left for a
 dedicated follow-up beat rather than folded in silently.
+
+### `src/app/` routes have no testID coverage at all
+CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
+always via the component's `testIDs` object, never a hardcoded string
+inline." Confirmed via `grep -rln "createComponentTestIDs" src/app/` →
+empty. Every route file's inline `Pressable`s (dismiss buttons, "tap to
+manage models," "tap to cancel editing," and now this beat's voice-error
+dismiss) have no testID at all — not a hardcoded string standing in for
+one, genuinely nothing.
+
+Not fixed as a side effect of 3.3's own review: retrofitting this properly
+means establishing a testID convention for *routes* specifically (they're
+FSD pages, not widgets — `createComponentTestIDs` has no established
+precedent for that layer anywhere in this codebase yet) and applying it
+consistently across every route file, not just the one Pressable this beat
+happened to add. Fixing only the new one would leave the file internally
+inconsistent (some elements covered, most not) while the rest of `src/app/`
+stays exactly as uncovered as before — cosmetic, not a real fix. Needs its
+own pass across the whole `app/` layer.
 
 ## Precedent set (informational — no action needed)
 

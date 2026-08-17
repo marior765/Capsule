@@ -38,19 +38,21 @@ beforeEach(() => {
 });
 
 describe("startVoiceInput — happy path", () => {
-  it("begins recording immediately", async () => {
+  it("begins recording immediately, without needing an STT context", async () => {
     fakeRecording();
     fakeTranscription();
-    await startVoiceInput(sttCtx);
+    // No sttCtx passed anywhere — startRecording needs none. Only
+    // finish(sttCtx) does, further down.
+    await startVoiceInput();
     expect(mockStartRecording).toHaveBeenCalled();
   });
 
-  it("finish() stops the recording and transcribes the resulting file", async () => {
+  it("finish(sttCtx) stops the recording and transcribes the resulting file", async () => {
     const { stop } = fakeRecording("file:///mock/note.m4a");
     fakeTranscription("insert this text");
 
-    const session = await startVoiceInput(sttCtx);
-    const { text } = await session.finish();
+    const session = await startVoiceInput();
+    const { text } = await session.finish(sttCtx);
 
     expect(stop).toHaveBeenCalled();
     expect(mockTranscribeAudio).toHaveBeenCalledWith(
@@ -64,7 +66,7 @@ describe("startVoiceInput — happy path", () => {
     const { stop } = fakeRecording();
     fakeTranscription();
 
-    const session = await startVoiceInput(sttCtx);
+    const session = await startVoiceInput();
     await session.cancel();
 
     expect(stop).toHaveBeenCalled();
@@ -77,8 +79,8 @@ describe("startVoiceInput — edge cases", () => {
     fakeRecording();
     fakeTranscription("");
 
-    const session = await startVoiceInput(sttCtx);
-    const { text } = await session.finish();
+    const session = await startVoiceInput();
+    const { text } = await session.finish(sttCtx);
 
     expect(text).toBe("");
   });
@@ -90,12 +92,12 @@ describe("startVoiceInput — error handling", () => {
       new Error("Microphone permission was not granted"),
     );
 
-    await expect(startVoiceInput(sttCtx)).rejects.toThrow(
+    await expect(startVoiceInput()).rejects.toThrow(
       "Microphone permission was not granted",
     );
   });
 
-  it("propagates a transcription failure from finish()", async () => {
+  it("propagates a transcription failure from finish(sttCtx)", async () => {
     fakeRecording();
     // Lazily constructed via mockImplementation rather than
     // mockReturnValue(Promise.reject(...)): the latter builds the rejected
@@ -107,16 +109,16 @@ describe("startVoiceInput — error handling", () => {
       result: Promise.reject(new Error("whisper failed")),
     }));
 
-    const session = await startVoiceInput(sttCtx);
-    await expect(session.finish()).rejects.toThrow("whisper failed");
+    const session = await startVoiceInput();
+    await expect(session.finish(sttCtx)).rejects.toThrow("whisper failed");
   });
 
-  it("propagates a stop() failure from finish() without calling transcribeAudio", async () => {
+  it("propagates a stop() failure from finish(sttCtx) without calling transcribeAudio", async () => {
     fakeRecording(null);
     fakeTranscription();
 
-    const session = await startVoiceInput(sttCtx);
-    await expect(session.finish()).rejects.toThrow(
+    const session = await startVoiceInput();
+    await expect(session.finish(sttCtx)).rejects.toThrow(
       "Recording produced no file",
     );
     expect(mockTranscribeAudio).not.toHaveBeenCalled();

@@ -809,4 +809,100 @@ runtime — that still needs the app actually running on a simulator/device.
 
 ---
 
+### 3.3.1 — route wiring (final piece) · beat 9→10 · 2026-08-16T~09:00-09:40Z
+
+**Class:** native
+**Select:** the deferred piece from beat 9 — `createVoiceInputController` +
+actually wiring `VoiceRecordButton`/`ChatInput` into `chat/[id].tsx` and
+`chat/ephemeral.tsx`. (This beat spanned the tail of beat 9 and beat 10 as
+the same continuous session — a 3.2 device-verification tangent, initiated
+by the user directly, landed in between and was committed separately;
+recorded above under its own entry.)
+
+**Design:** `createVoiceInputController(getSttContext)` returns
+synchronously (satisfying `onHoldStart`'s `() => void` constraint) and
+internally races nothing — `commit`/`cancel` each await whatever's still in
+flight before acting, so calling either a millisecond after construction is
+as correct as calling it a minute later.
+
+**Tests:** `controller.test.ts` — 8 cases, confirmed failing before
+implementation.
+
+**Attempt 1 — gate green** (tsc/jest/eslint clean on the first pass — but
+green tests didn't mean correct design, as the checker found).
+
+**Attempt 1 (checker) — `fail`, five findings, the first genuinely severe:**
+
+1. **Recording gated behind context readiness.** My first `createVoiceInputController`
+   awaited `getSttContext()` *before* calling `startVoiceInput` (which is
+   what calls `startRecording()`). On the exact first-run-download scenario
+   3.3.1 exists for, this meant the microphone didn't start capturing until
+   the download finished — a user could hold, speak, release, and nothing
+   would have been recorded, while `isRecording` showed true the entire
+   time. This is precisely the class of bug the deferred design pass from
+   beat 9 was meant to prevent, and I built it anyway.
+
+   Root-caused rather than patched: `startRecording()` needs no context at
+   all, only transcription does. Changed `startVoiceInput`'s own public
+   signature — a real, deliberate breaking change to code shipped and
+   checker-approved two beats ago — so `finish(sttCtx)` takes the context
+   as its own parameter instead of requiring it up front. Recording and
+   context-acquisition now start in the same synchronous stretch, genuinely
+   independent. Verified honestly: reintroduced the exact original bug via
+   a temporary mutation, reran, confirmed 3 of 8 tests failed (including the
+   new timing assertion below), restored the fix, reconfirmed 15/15 green.
+
+2. Added the missing test the bug exposed: "starts recording immediately,
+   before the STT context resolves" — a synchronous assertion, no `await`
+   at all, with the context never released in that test.
+
+   **Found a related bug myself while fixing this, not flagged by the
+   checker:** since `context` is now started eagerly and independently, and
+   `cancel()` deliberately never touches it (discarding a recording
+   shouldn't care whether the model loaded), a rejected `getSttContext()`
+   with only `cancel()` ever called leaves that rejection completely
+   unconsumed — a genuine unhandled-promise-rejection risk in *production*,
+   not just a test artifact (the same crash class from beat 7's test-authoring
+   bug, but this time a real one). Fixed with an unconditional
+   `context.catch(() => {})` at construction, verified not to mask the real
+   rejection from `commit()`'s `Promise.all`. Also corrected a test of my
+   own that had encoded the wrong semantics (`cancel()` propagating a
+   context failure — it shouldn't, and now doesn't).
+
+3. Missing testIDs on new route Pressables — confirmed via grep this is
+   systemic (zero route files anywhere use `createComponentTestIDs`, not
+   something this beat introduced). Not fixed piecemeal — recorded as its
+   own follow-up in `BLOCKED.md`, since covering only the one new element
+   while the rest of `src/app/` stays exactly as uncovered would be
+   cosmetic, not a real fix, and there's no established route-testID
+   convention here yet to even follow.
+
+4. "Insert into ChatInput" replaces rather than appends (`ChatInput` has no
+   way to expose its live text to a parent) — checker judged this an honest,
+   defensible reading, not silently degraded UX. No change needed.
+
+5. **Editing + voice key collision.** While editing a message,
+   `editing?.content ?? voiceText ?? ""` never falls through to `voiceText`
+   (a string is never null/undefined), so a mid-edit voice capture was
+   silently discarded — and canceling that edit afterward could resurface a
+   *stale* `voiceText` from a completely unrelated earlier recording. Fixed
+   by disabling `VoiceRecordButton` while editing (sidesteps the ambiguity
+   entirely rather than inventing new "voice wins over edit" semantics
+   nobody asked for) and routing every `setEditing` call through a
+   `beginEditing()` that clears `voiceText` first.
+
+6. Inconsistent error-state handling between the two routes — `[id].tsx`
+   reused the LLM-generation `error` state for voice failures too, silently
+   dismissing an unrelated unread error the instant recording started;
+   `ephemeral.tsx` already used a separate `voiceError`. Unified on the
+   correct approach: `[id].tsx` now has its own `voiceError`.
+
+**Gate after all fixes:** tsc ✅ · jest ✅ 284/25 suites · eslint ✅
+
+**Re-review sent** to the same checker with all six points addressed,
+explicitly asking it not to trust my trace of the concurrency fix and to
+reproduce the mutation-catching itself. Awaiting verdict.
+
+---
+
 <!-- Append new beats above this line. -->

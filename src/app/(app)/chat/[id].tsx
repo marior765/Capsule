@@ -1,8 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb, useLlm } from "@/app/providers";
+import { useDb, useLlm, useStt } from "@/app/providers";
 import { getConversationById } from "@/entities/conversation";
 import { getChildren, getMessagePath, type Message } from "@/entities/message";
 import {
@@ -11,9 +11,14 @@ import {
 } from "@/features/branch-conversation";
 import { getInferenceSettings } from "@/features/configure-inference";
 import { sendMessage } from "@/features/send-message";
+import {
+  createVoiceInputController,
+  type VoiceInputController,
+} from "@/features/voice-input";
 import { ChatInput } from "@/widgets/ChatInput";
 import { ChatThread, type BranchPosition } from "@/widgets/ChatThread";
 import { InferenceStats } from "@/widgets/InferenceStats";
+import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
 
 const STATUS_MESSAGE: Record<string, string> = {
   "no-model": "Download a model to start chatting.",
@@ -26,6 +31,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useDb();
   const { ctx, status } = useLlm();
+  const { ensureReady } = useStt();
 
   /**
    * Render the *active branch*, not every message in the conversation — an
@@ -45,7 +51,77 @@ export default function ChatScreen() {
   const [editing, setEditing] = useState<Message | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Recording state and the pending controller are separate: `isRecording`
+  // is what VoiceRecordButton renders, `voiceControllerRef` is the in-flight
+  // session it's driving. `createVoiceInputController` is what makes
+  // `handleVoiceHoldStart` safe to be synchronous (see its own doc comment)
+  // — this ref just holds what it returns, not any async work itself.
+  //
+  // `voiceError` is deliberately its OWN state, separate from `error`
+  // (LLM generation failures): sharing one would mean starting to record
+  // silently dismisses an unrelated, unread generation error, and vice
+  // versa — two different failure modes with nothing to do with each other.
+  const [isRecording, setIsRecording] = useState(false);
+  const voiceControllerRef = useRef<VoiceInputController | null>(null);
+  const [voiceText, setVoiceText] = useState<string | null>(null);
+  const [voiceInsertKey, setVoiceInsertKey] = useState(0);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+
   const refresh = useCallback(() => setMessages(readPath()), [readPath]);
+
+  // The only way `editing` ever changes to a non-null value — routes
+  // through here rather than `setEditing` directly so a stale `voiceText`
+  // from an earlier, unrelated recording can never resurface if the user
+  // starts, then cancels, an edit. The button is also disabled while
+  // editing (below), so this is about the *next* time it's used, not this one.
+  const beginEditing = (message: Message) => {
+    setVoiceText(null);
+    setEditing(message);
+  };
+
+  const handleVoiceHoldStart = () => {
+    setVoiceError(null);
+    setIsRecording(true);
+    voiceControllerRef.current = createVoiceInputController(ensureReady);
+  };
+
+  const handleVoiceHoldCommit = async () => {
+    const controller = voiceControllerRef.current;
+    voiceControllerRef.current = null;
+    setIsRecording(false);
+    if (!controller) return;
+
+    try {
+      const { text } = await controller.commit();
+      if (text.trim()) {
+        // Remounts ChatInput with the transcribed text — the same
+        // key-remount mechanism `editing` already uses below to re-seed it.
+        // This replaces whatever was typed rather than appending to it;
+        // ChatInput doesn't expose its live text to the parent, and this
+        // matches how the edit flow already reseeds it wholesale.
+        setVoiceText(text);
+        setVoiceInsertKey((k) => k + 1);
+      }
+    } catch (e) {
+      setVoiceError(
+        e instanceof Error ? e.message : "Voice input failed to transcribe.",
+      );
+    }
+  };
+
+  const handleVoiceHoldCancel = async () => {
+    const controller = voiceControllerRef.current;
+    voiceControllerRef.current = null;
+    setIsRecording(false);
+    if (!controller) return;
+
+    try {
+      await controller.cancel();
+    } catch {
+      // The user explicitly discarded this recording — a failure while
+      // tearing it down isn't worth surfacing as an error.
+    }
+  };
 
   // Sibling counts for the messages on the visible path, so the thread can
   // offer `‹ 2/3 ›` wherever an edit created alternatives.
@@ -123,7 +199,7 @@ export default function ChatScreen() {
       <ChatThread
         messages={messages}
         streamingText={streaming}
-        onEdit={canChat ? setEditing : undefined}
+        onEdit={canChat ? beginEditing : undefined}
         branches={branches}
         onSwitchBranch={handleSwitchBranch}
       />
@@ -139,13 +215,34 @@ export default function ChatScreen() {
           <Text style={styles.error}>{error} Tap to dismiss.</Text>
         </Pressable>
       )}
+      {voiceError && (
+        <Pressable onPress={() => setVoiceError(null)}>
+          <Text style={styles.error}>{voiceError} Tap to dismiss.</Text>
+        </Pressable>
+      )}
       {canChat ? (
-        <ChatInput
-          key={editing?.id ?? "new"}
-          initialText={editing?.content ?? ""}
-          sendLabel={editing ? "Resend" : "Send"}
-          onSend={handleSend}
-        />
+        <View style={styles.inputRow}>
+          <VoiceRecordButton
+            isRecording={isRecording}
+            // Voice input while editing is deliberately not supported —
+            // `initialText` below always shows `editing.content` while
+            // editing is active, so a transcription captured mid-edit would
+            // be silently discarded on the very next render. Disabling the
+            // button avoids that trap rather than papering over it.
+            disabled={!!editing}
+            onHoldStart={handleVoiceHoldStart}
+            onHoldCommit={handleVoiceHoldCommit}
+            onHoldCancel={handleVoiceHoldCancel}
+          />
+          <View style={styles.inputFlex}>
+            <ChatInput
+              key={`${editing?.id ?? "new"}-${voiceInsertKey}`}
+              initialText={editing?.content ?? voiceText ?? ""}
+              sendLabel={editing ? "Resend" : "Send"}
+              onSend={handleSend}
+            />
+          </View>
+        </View>
       ) : status === "loading" ? (
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
@@ -163,6 +260,18 @@ const styles = StyleSheet.create((theme) => ({
   root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  // ChatInput already applies its own `padding: theme.spacing.three` on all
+  // sides — this row only adds space for VoiceRecordButton, which sits
+  // outside that padded box, not a second layer of padding around it.
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingLeft: theme.spacing.three,
+    backgroundColor: theme.colors.background,
+  },
+  inputFlex: {
+    flex: 1,
   },
   status: {
     padding: theme.spacing.three,
