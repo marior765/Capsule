@@ -9,6 +9,7 @@ import {
   type Model,
 } from "@/entities/model";
 import { insertAuditEntry } from "@/entities/audit";
+import { beginEgress } from "@/shared/egress";
 import type { ParameterSize, Quantization } from "@/shared/config";
 import { generateId } from "@/shared/lib";
 
@@ -25,6 +26,23 @@ export type ModelDownloadSpec = {
  * user-initiated, isolated to this function.
  */
 export async function downloadModel(
+  db: SQLiteDatabase,
+  spec: ModelDownloadSpec,
+  onProgress?: (fraction: number) => void,
+): Promise<Model> {
+  // Marks the one real network call this app makes as "in flight" so
+  // widgets/PrivacyBanner can show a live signal — must run before the
+  // first await and end unconditionally (success or failure), or a failed
+  // download would leave the indicator stuck showing "active" forever.
+  const endEgress = beginEgress();
+  try {
+    return await downloadModelInternal(db, spec, onProgress);
+  } finally {
+    endEgress();
+  }
+}
+
+async function downloadModelInternal(
   db: SQLiteDatabase,
   spec: ModelDownloadSpec,
   onProgress?: (fraction: number) => void,

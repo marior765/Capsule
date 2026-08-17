@@ -13,6 +13,8 @@ const REQUIRED_COLOR_TOKENS = [
   "backgroundElement",
   "backgroundSelected",
   "textSecondary",
+  "danger",
+  "accent",
 ] as const;
 
 const REQUIRED_SPACING_TOKENS = [

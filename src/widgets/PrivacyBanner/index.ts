@@ -1,1 +1,1 @@
-export {};
+export { PrivacyBanner } from "./PrivacyBanner";

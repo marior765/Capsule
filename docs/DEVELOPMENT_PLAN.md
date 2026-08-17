@@ -115,7 +115,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 ### Phase 4 — Privacy core ← key differentiators
 - [ ] 4.1 `features/encrypt-vault` — at-rest encryption (SQLCipher) + key in secure store
 - [ ] 4.2 `features/app-lock` — biometric / passphrase gate on launch & resume
-- [ ] 4.3 `entities/audit` + `PrivacyBanner` egress indicator + `EgressLog` viewer
+- [x] 4.3 `entities/audit` + `PrivacyBanner` egress indicator + `EgressLog` viewer
 - [ ] 4.4 Settings → privacy screen
 - [ ] 4.5 `features/wipe-data` — secure full wipe (models, chats, capsules, settings)
 

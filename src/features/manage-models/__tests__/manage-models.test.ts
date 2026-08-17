@@ -1,10 +1,17 @@
 // Tests for step 1.2 — written before implementation (TDD)
+// The "downloadModel — egress tracking" block below is for step 4.3, also
+// TDD (written before that wiring existed).
 import { modelsMigration } from "@/entities/model";
 import { auditMigration, getAllAuditEntries } from "@/entities/audit";
 import { _resetDbForTesting, openDb, runMigrations } from "@/shared/db";
 import { File } from "expo-file-system";
 import { __deletedUris, __resetFsMock } from "@/__mocks__/expo-file-system";
 import type { SQLiteDatabase } from "expo-sqlite";
+import {
+  isEgressActive,
+  subscribeToEgress,
+  _resetEgressForTesting,
+} from "@/shared/egress";
 import {
   deleteModelById,
   downloadModel,
@@ -28,6 +35,7 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   __resetFsMock();
+  _resetEgressForTesting();
   jest.clearAllMocks();
   db = openDb();
   runMigrations(db, [modelsMigration, auditMigration]);
@@ -68,6 +76,38 @@ describe("downloadModel — happy path", () => {
     expect(entry.action).toBe("model_download");
     expect(entry.detail).toBe("Llama 3.2 3B");
     expect(entry.createdAt).toBe(model.downloadedAt);
+  });
+});
+
+describe("downloadModel — egress tracking", () => {
+  it("is active while the download is in flight", async () => {
+    const promise = downloadModel(db, spec());
+    // downloadModel is async and hasn't awaited anything yet at this point
+    // in the microtask queue — if beginEgress() runs synchronously before
+    // the first await (File.downloadFileAsync), this is already true.
+    expect(isEgressActive()).toBe(true);
+    await promise;
+  });
+
+  it("is inactive again once the download completes", async () => {
+    await downloadModel(db, spec());
+    expect(isEgressActive()).toBe(false);
+  });
+
+  it("ends egress even when the download fails — no stuck 'active' state", async () => {
+    (File.downloadFileAsync as jest.Mock).mockRejectedValueOnce(
+      new Error("network failure"),
+    );
+    await expect(downloadModel(db, spec())).rejects.toThrow();
+    expect(isEgressActive()).toBe(false);
+  });
+
+  it("notifies subscribers that egress started and then ended", async () => {
+    const listener = jest.fn();
+    subscribeToEgress(listener);
+    await downloadModel(db, spec());
+    expect(listener).toHaveBeenCalledWith(true);
+    expect(listener).toHaveBeenCalledWith(false);
   });
 });
 
