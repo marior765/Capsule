@@ -6,7 +6,7 @@
     "status": "running"
   },
   "cursor": {
-    "step": "3.3.1",
+    "step": "3.5",
     "phase": 3
   },
   "steps": {
@@ -42,15 +42,16 @@
     },
     "3.2": { "status": "done", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "DONE 2026-08-16 -- user ran expo prebuild directly. Clean finish, no config-plugin error. ios/Podfile.lock confirms whisper-rn (0.6.0) genuinely linked (real evidence, not absence-of-error). Android autolinking is command-based (autolinkLibrariesFromCommand), no static per-package evidence expected there -- confirmed by reading android/settings.gradle before treating the empty grep as concerning. No code change was ever needed (whisper.rn ships no config plugin, confirmed by two independent investigations now). docs/DEVELOPMENT_PLAN.md 3.2 ticked. No checkpoint sha -- no code changed, only docs/spine." },
     "3.3": {
-      "status": "blocked",
+      "status": "done",
       "class": "native",
-      "attempts": 1,
+      "attempts": 2,
       "failureSignatures": [
         "checker: fail -- step text says 'insert into ChatInput', nothing in the diff or repo wires startVoiceInput to any route/widget; doc comment overstated that {cancel,finish} 'maps onto' VoiceRecordButton's callbacks",
-        "RESOLVED 2026-08-16: user chose option (b) -- 3.3.1 (first-run download of one default STT model + minimal SttProvider) is the path; full STT model management (was option a) deferred to 9.5. 3.3's route wiring now depends on 3.3.1 landing first, not on a human decision."
+        "RESOLVED 2026-08-16: user chose option (b) -- 3.3.1 is the path forward, unblocking route wiring",
+        "checker: fail (route wiring attempt) -- createVoiceInputController gated recording behind context readiness; editing+voice key collision; inconsistent error state; see 3.3.1's failureSignatures for full detail"
       ],
-      "checkpoint": "07fa8cf",
-      "notes": "startVoiceInput(sttCtx) implemented in features/voice-input -- record->transcribe orchestration, 7 tests, checker validated internals as correct (uri-dependency ordering, error propagation, mockImplementation crash-avoidance). Route-level 'insert into ChatInput' wiring genuinely BLOCKED: no STT model management exists anywhere in the codebase (no entities/*-model equivalent, no download flow, no active-model concept -- unlike shared/llm's full 1.1-1.3 + LlmProvider story, independently verified by the checker via grep). startVoiceInput's sttCtx: WhisperContext cannot be obtained by any route today; faking it would be dead UI. Escalated to BLOCKED.md as a 3-option decision (real STT model mgmt steps / first-run download of one default model / other). Checker passed, and caught that my option (b) wording conflated first-run download (compliant) with in-binary bundling (explicitly forbidden by CLAUDE.md) -- fixed. Box stays unchecked; status blocked pending the user's decision, not merely native-unverified."
+      "checkpoint": "59dbbee",
+      "notes": "DONE -- record->transcribe->insert into ChatInput fully wired into chat/[id].tsx and chat/ephemeral.tsx via createVoiceInputController + SttProvider. Checker passed on re-review, independently reproduced in a scratch sandbox. Box stays unchecked -- native class, entirely device-unverified. See 3.3.1's notes for the full history (recording-gated-behind-download bug, the fix, and the editing/error-state fixes)."
     },
     "3.4": {
       "status": "done",
@@ -63,14 +64,14 @@
       "notes": "VoiceRecordButton widget. Beat 3. Pure controlled component (isRecording prop, onHoldStart/onHoldCommit/onHoldCancel callbacks) + extracted holdGesture.ts pure logic (mirrors ModelPicker/recommend.ts pattern -- no @testing-library/react-native in this repo, so .tsx stays untested like every other widget here). Zero whisper.rn/audio-capture code -- correctly deferred to blocked 3.3. Checker passed on re-review, verifying the disabled-mid-press fix by hand-tracing every branch and confirming the rewritten test has real mutation-catching teeth."
     },
     "3.3.1": {
-      "status": "in_progress",
+      "status": "done",
       "class": "native",
       "attempts": 2,
       "failureSignatures": [
         "checker: fail -- createVoiceInputController gated startRecording() behind ensureReady(), so first-run model download silently delayed/prevented actual recording while isRecording UI showed true; no test pinned that recording starts independent of context readiness; editing+voice key collision in chat/[id].tsx silently discarded or resurrected text; [id].tsx and ephemeral.tsx handled voice-vs-LLM errors inconsistently; missing testIDs on new Pressables (systemic, not just new code)"
       ],
-      "checkpoint": "PENDING",
-      "notes": "Beat 9 continued into beat 10 (same session): built createVoiceInputController + wired VoiceRecordButton/ChatInput into chat/[id].tsx and chat/ephemeral.tsx. Checker failed the first pass HARD -- the severe finding: recording was gated behind context readiness, reproducing on the exact first-run-download scenario 3.3.1 exists for (silently captures nothing while UI lies about it). Root-caused and fixed: changed startVoiceInput's OWN signature (breaking change to already-shipped, prior-beat-approved code) so finish(sttCtx) takes the context instead of startVoiceInput requiring it up front -- startRecording needs no context at all. Verified the fix catches the original bug by temporarily reintroducing it via mutation (3/8 tests failed) before restoring. Also found and fixed a related bug MYSELF (not flagged by checker): eager independent context-fetch + cancel() never touching it = real unhandled-rejection leak in production if download fails and user only cancels; fixed with an unconditional context.catch(()=>{}) that doesn't mask commit()'s real rejection. Fixed editing/voice key collision (disabled button while editing, beginEditing() clears stale voiceText). Unified error state across both routes (separate voiceError, not shared with LLM error). Recorded the systemic app-wide testID gap as a BLOCKED.md follow-up rather than fixing piecemeal. Re-review sent to same checker, awaiting verdict. Also independently detected AND resolved during this beat: 3.2's device-check blocker (user ran expo prebuild, verified against real evidence -- ios/Podfile.lock -- not just absence of error), committed separately as 7a1cf37."
+      "checkpoint": "59dbbee",
+      "notes": "DONE, checker pass on re-review (independently reproduced via scratch-sandbox mutation, not trusted). Beat 9 continued into beat 10 (same session): built createVoiceInputController + wired VoiceRecordButton/ChatInput into chat/[id].tsx and chat/ephemeral.tsx. Checker failed the first pass HARD -- the severe finding: recording was gated behind context readiness, reproducing on the exact first-run-download scenario 3.3.1 exists for (silently captures nothing while UI lies about it). Root-caused and fixed: changed startVoiceInput's OWN signature (breaking change to already-shipped, prior-beat-approved code) so finish(sttCtx) takes the context instead of startVoiceInput requiring it up front -- startRecording needs no context at all. Verified the fix catches the original bug by temporarily reintroducing it via mutation (3/8 tests failed) before restoring. Also found and fixed a related bug MYSELF (not flagged by checker): eager independent context-fetch + cancel() never touching it = real unhandled-rejection leak in production if download fails and user only cancels; fixed with an unconditional context.catch(()=>{}) that doesn't mask commit()'s real rejection. Fixed editing/voice key collision (disabled button while editing, beginEditing() clears stale voiceText). Unified error state across both routes (separate voiceError, not shared with LLM error). Recorded the systemic app-wide testID gap as a BLOCKED.md follow-up rather than fixing piecemeal. Re-review sent to same checker, awaiting verdict. Also independently detected AND resolved during this beat: 3.2's device-check blocker (user ran expo prebuild, verified against real evidence -- ios/Podfile.lock -- not just absence of error), committed separately as 7a1cf37."
     },
     "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Local TTS. Beat 5 reconciliation: expo-speech now a real dependency (verified in node_modules) -- unblocked. Not picked up this beat (1.6.1 is earlier in plan order)." },
     "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store. FULLY UNBLOCKED as of beat 6. Design (user, 2026-08-13): envelope encryption -- random master vault key in expo-secure-store, wrapped by a key derived from the app-lock passphrase (both required to unlock). Wrong key/corrupted vault: offer wipe-and-restart. Key rotation: likely deferred from v1. Dependency (user installed, beat 6): react-native-quick-crypto for scrypt/pbkdf2 -- ships a real config plugin (app.plugin.js), registered in app.json with no options. Ready for normal TDD + checker cycle whenever selection reaches it -- not picked up this beat (3.1's record half is earlier in plan order)." },

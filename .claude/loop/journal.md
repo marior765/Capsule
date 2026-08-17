@@ -903,6 +903,27 @@ green tests didn't mean correct design, as the checker found).
 explicitly asking it not to trust my trace of the concurrency fix and to
 reproduce the mutation-catching itself. Awaiting verdict.
 
+**Review (re-review) — pass.** The checker didn't trust the report on any
+point: copied the tree into a scratch sandbox (never touching the real
+repo), reproduced the exact original bug via mutation, confirmed 3 of 15
+tests fail against it — matching my own report exactly — then deleted the
+scratch copy. Independently verified `context.catch(() => {})` doesn't mask
+real errors from `commit()` with its own small Node repro, and traced all
+three editing/voice orderings (edit-then-voice-attempt, voice-then-edit,
+voice-then-edit-then-cancel) by hand, confirming each resolves correctly.
+Left one minor, genuinely out-of-scope note: `VoiceRecordButton` gives no
+visual feedback when `disabled` (this beat is its first real caller with
+`disabled={true}`) — that's `VoiceRecordButton.tsx`'s own styling from an
+earlier beat, not something to fix here. Added it to the device-check entry
+in `BLOCKED.md` as a small follow-up rather than silently dropping it.
+
+**Gate:** tsc ✅ · jest ✅ 284/25 suites · eslint ✅
+**Checkpoint:** staged step paths only.
+**Result:** 3.3 and 3.3.1 both done ✅ in code — entirely device-unverified,
+`docs/DEVELOPMENT_PLAN.md` boxes stay unchecked (native class). Full device
+check added to `BLOCKED.md`, leading with the specific first-run-download
+scenario that took two checker rounds to get right.
+
 ---
 
 <!-- Append new beats above this line. -->
