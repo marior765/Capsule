@@ -52,7 +52,12 @@
           "enableOpenCL": true
         }
       ],
-      "expo-sqlite",
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
       "expo-audio",
       "expo-secure-store",
       "react-native-quick-crypto"

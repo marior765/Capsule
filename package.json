@@ -81,7 +81,9 @@
       "^expo-file-system$": "<rootDir>/src/__mocks__/expo-file-system.ts",
       "^whisper.rn$": "<rootDir>/src/__mocks__/whisper.rn.ts",
       "^expo-audio$": "<rootDir>/src/__mocks__/expo-audio.ts",
-      "^expo-speech$": "<rootDir>/src/__mocks__/expo-speech.ts"
+      "^expo-speech$": "<rootDir>/src/__mocks__/expo-speech.ts",
+      "^expo-secure-store$": "<rootDir>/src/__mocks__/expo-secure-store.ts",
+      "^react-native-quick-crypto$": "<rootDir>/src/__mocks__/react-native-quick-crypto.ts"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|drizzle-orm|react-native-mmkv|llama.rn|whisper.rn|react-native-unistyles|react-native-reanimated|react-native-nitro-modules)"
