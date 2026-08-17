@@ -1176,4 +1176,60 @@ with a two-line throwaway probe.
 
 ---
 
+## 2026-08-17 — When a comment explaining *why not* is the bug
+
+Step 4.1 (at-rest encryption via SQLCipher) started with a question the plan
+step's own wording didn't answer: is "SQLCipher via expo-sqlite" — sitting
+right there in CLAUDE.md's stack table — something the actually-installed
+package can do, or an aspirational line nobody had checked yet? expo-sqlite's
+runtime API (`SQLiteOpenOptions`) has no cipher option at all, which looked
+at first glance like a real, hard blocker — SQLCipher usually means
+compiling a forked SQLite. The answer turned out to be sitting one directory
+deeper than the runtime types: the package's own config-plugin source
+(`plugin/build/withSQLite.js`) has a first-class, already-shipped
+`useSQLCipher` build-property flag for both platforms. The feature was real;
+it just wasn't visible from the layer that felt like the obvious place to
+look. The lesson generalizes past this one library: "does X support Y" is
+sometimes a config-plugin question, not a runtime-API question, and checking
+only one of those two layers can produce a false "not possible."
+
+The sharper moment came from the checker, on a piece of code that was
+*trying* to do the right thing. `resetVault` (the wipe-and-restart recovery
+path) didn't write an audit entry, and the code carried a comment explaining
+why: "there is no live audit entity available to write into" before the
+vault is even unlocked. That's a real constraint — for *unlock*, it's true.
+The checker didn't accept the comment as a boundary and move on; it traced
+the actual call graph and found `Providers` already opens the database
+unconditionally, unkeyed, at app boot, running every migration including the
+audit table's, before any vault gate exists to prevent it. The justification
+was reasoning about an app that doesn't exist yet (one where the vault
+gates the database open) rather than the one actually shipping. A
+self-documented reason for skipping a hard rule is not evidence the rule
+doesn't apply — it's a claim about the code's own control flow, and claims
+about control flow are exactly the kind of thing that's cheap to verify and
+expensive to assume.
+
+Fixing it surfaced a second, genuinely unresolved tension worth being
+honest about rather than papering over: the fix — log the wipe, then
+delete the database — means the log entry gets deleted along with
+everything else it was supposed to be a durable record of. A "wipe" audit
+entry that only survives if the process crashes mid-wipe isn't nothing (it
+catches partial failures), but it isn't the tamper-evident trail the rule
+seems to promise either. Rather than quietly inventing a second, wipe-proof
+audit sink to make the problem look solved, that gap got written down as an
+open question — one that will resurface identically when 4.5's full
+wipe-data feature gets built, and is better decided once, deliberately, than
+patched twice by accident.
+
+**Article angle:** the two most valuable findings this beat weren't "this
+code is wrong" — they were "this code's explanation for itself is wrong."
+A missing feature can be found by reading the right file one layer deeper
+than expected. A missing safeguard hiding behind a comment that explains
+why the safeguard doesn't apply here needs the comment's *claim* verified
+against the code's actual behavior, not just the code's behavior verified
+against the comment. The second kind of bug is more dangerous precisely
+because it looks reviewed — someone already wrote down a reason.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

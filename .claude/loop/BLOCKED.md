@@ -17,6 +17,70 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ## Needs a device / dev build
 
+### 4.1 — `features/encrypt-vault` at-rest encryption (SQLCipher via expo-sqlite)
+Implemented and green against hand-written mocks: `shared/crypto` (AES-256-GCM
++ scrypt over react-native-quick-crypto — jest mock delegates to Node's real
+`crypto`, so encryption/decryption in tests is genuine, not faked) and
+`features/encrypt-vault` (`setUpVault`/`unlockVault`/`resetVault`/
+`isVaultConfigured`, envelope encryption per the design decided 2026-08-13).
+Checker-approved on the second round (first round genuinely failed — see
+`journal.md` beat 11 for the full history). **Nothing here has run against a
+real SQLCipher-compiled SQLite.**
+
+**Before anything else, a decision, not just a check:** `app.json`'s
+`expo-sqlite` plugin now sets `useSQLCipher: true`. This requires a fresh
+`expo prebuild` to take effect — the existing `ios/`/`android/` native
+projects were generated *before* this flag existed and do not have it. If
+you run `expo prebuild` again, confirm it doesn't clobber anything you've
+hand-edited natively (nothing is currently expected to conflict, but this is
+the first native-config-affecting change since the last successful prebuild).
+
+**This step's own code has one real landmine that MUST be resolved before
+any of this can actually take effect** — documented in
+`src/shared/db/index.ts`'s `OpenDbOptions.key` doc comment: `Providers`
+(`src/app/providers/index.tsx`), `LlmProvider`, and `SttProvider` all call
+`openDb()` unconditionally and unkeyed today. `shared/db`'s connection is a
+process-wide singleton — first open wins. Until `Providers`' own `openDb()`
+call is gated behind a vault-unlock screen (a later integration step, not
+yet built — 4.2's app-lock is the natural place this wiring belongs), a
+future `openDb({ key })` call from anywhere else will silently no-op: no
+error, no encryption, the key is just ignored. **4.1 as it stands today does
+not encrypt anything at runtime** — it's the primitives and the vault-state
+management, correctly scoped and tested, but genuinely inert until that
+wiring exists. Not a bug to fix in this step (it needs 4.2's app-lock gate
+to exist first) — flagged here so it isn't mistaken for "done, just
+unverified" when it's closer to "correctly built, not yet connected."
+
+**A related open design question, not decided here:** `resetVault()` (the
+wipe-and-restart recovery path) writes a `"wipe"` audit entry before
+deleting the database — but `deleteDb()` then deletes that very entry along
+with everything else, so a *successful* reset leaves no durable trace of
+itself anywhere (the write only has value if the process crashes between
+insert and delete). Whether wipe-adjacent audit entries need a home outside
+the store being wiped (e.g. `shared/storage`/MMKV) is a real question that
+also applies to 4.5's future full wipe-data feature. Documented in
+`features/encrypt-vault/index.ts`'s doc comments; not decided unilaterally.
+
+**Device check, once the wiring above exists (do not attempt to verify
+prematurely — there is nothing to verify until `Providers` is gated):**
+1. On a build with `useSQLCipher: true` actually compiled in, confirm a
+   `PRAGMA key` opened with the correct hex key can read/write normally, and
+   that a wrong key genuinely fails to open the database (not silently
+   returns empty results — SQLCipher should error on a bad key, not degrade
+   gracefully).
+2. Inspect the raw `.db` file on disk (e.g. `file capsule.db`, or attempt to
+   open it with a plain, non-SQLCipher `sqlite3` CLI) — it should NOT be
+   recognizable as a valid SQLite file without the key. This is the actual
+   proof "at-rest encryption" is real, not just that the app behaves
+   correctly.
+3. `setUpVault` → app relaunch → `unlockVault` with the same passphrase →
+   confirms data written before relaunch is still readable.
+4. Wrong passphrase after relaunch → `VaultUnlockError`, and the app offers
+   wipe-and-restart rather than crashing or hanging.
+5. scrypt's actual timing on real hardware — confirm key derivation doesn't
+   make the unlock screen feel broken (multi-second stalls) on a real,
+   possibly older, device; tune scrypt's cost parameters if so.
+
 ### 3.1 — `shared/stt` whisper.rn + expo-audio wrapper (now complete: init, record, transcribe, abort)
 Implemented and green against hand-written mocks: `initStt`, `startRecording`,
 `transcribeAudio`, `abortTranscription`, `releaseStt` (33 tests, transcribe +

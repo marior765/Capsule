@@ -979,4 +979,104 @@ for the normal TDD + checker cycle with no further decision needed.
 
 ---
 
+## Beat 11 — 2026-08-17
+
+**Step:** 4.1 — `features/encrypt-vault` — at-rest encryption (SQLCipher) + key
+in secure store
+
+Before writing anything, investigated whether "SQLCipher via expo-sqlite" (as
+CLAUDE.md's stack section and the plan step both name it) is actually
+achievable with what's installed — expo-sqlite's own runtime API
+(`SQLiteOpenOptions`) has no cipher/key option at all, which looked at first
+like a real, hard blocker (SQLCipher normally means a custom native SQLite
+build). Reading expo-sqlite's own README and its bundled config-plugin
+source (`node_modules/expo-sqlite/plugin/build/withSQLite.js`) resolved
+it: `useSQLCipher: true` is a real, first-class, already-shipped config-plugin
+option for both iOS and Android (`expo.sqlite.useSQLCipher` build property),
+and the runtime API is a plain `PRAGMA key = "x'<hex>'";` executed as the
+first statement on a fresh connection — standard SQLCipher, not an
+unsupported feature. Added it to `app.json`.
+
+Built three pieces:
+- `shared/crypto` — generic AES-256-GCM + scrypt primitives (no domain
+  knowledge, matches ARCHITECTURE.md's stated layering), wrapping
+  react-native-quick-crypto. Hard-depth TDD (12 tests): round-trip
+  correctness, key sensitivity to passphrase/salt, fresh-IV-per-call, and
+  three separate tamper/wrong-key detection tests. The jest mock for
+  react-native-quick-crypto delegates straight to Node's own real `crypto`
+  module rather than faking behavior — its API is intentionally
+  Node-crypto-compatible, so this gives genuine AES-GCM auth-tag failures on
+  wrong-key/tampered input in tests, not an approximation of one.
+- `features/encrypt-vault` — `setUpVault`/`unlockVault`/`resetVault`/
+  `isVaultConfigured`, implementing the envelope-encryption design decided
+  2026-08-13 (random master key, wrapped by a passphrase-derived key, only
+  the wrapped form ever persisted, via expo-secure-store). 12 tests (hard
+  depth), including one that pins wrong-passphrase actually failing — caught
+  by mutation-testing myself before ever sending to the checker (hardcoded
+  the wrapping-key derivation to ignore the passphrase argument, confirmed
+  the "wrong passphrase" test goes red, restored).
+- `shared/db` — `openDb({ key })` issues the PRAGMA before any other
+  statement on first open (order verified by mutation: swapped it after the
+  migrations-table statement, confirmed the ordering test catches it,
+  restored); new `deleteDb()` for the wipe-and-restart path. Existing no-arg
+  callers (LlmProvider, SttProvider, Providers) are unaffected — key only
+  applies on first open of the singleton.
+
+**Checker round 1: FAIL**, and a genuinely important one. `resetVault`
+performs a wipe (per `AuditAction`'s closed union) and wrote no audit entry,
+violating CLAUDE.md's hard rule outright. My own code comment had claimed
+"there is no live audit entity available to write into" — the checker didn't
+just take that at face value, it traced `src/app/providers/index.tsx` and
+found `Providers` calls `openDb()` unconditionally and unkeyed at boot,
+running `auditMigration` before any child (let alone a future vault gate)
+ever mounts. So a writable, audit-capable db handle genuinely *is* available
+whenever `resetVault` could run — my justification was simply wrong about
+this codebase's own control flow, not a defensible design call. Verified
+this myself by reading the same file before accepting the finding.
+
+Fixed by having `resetVault` call `insertAuditEntry(openDb(), {action:
+"wipe", ...})` before deleting anything — but went one step further than the
+checker's own suggested fix: `deleteDb()` immediately afterward deletes the
+entire database file, *including the audit table the entry was just written
+into*. A successful reset therefore leaves no durable trace of itself
+anywhere; the entry only has value if the process crashes mid-reset. Rather
+than silently deciding whether wipe-adjacent audit entries need a home
+outside the store being wiped (e.g. MMKV), documented it as an open question
+that also applies to 4.5's future full wipe-data feature. Also fixed two
+secondary findings from the same round: no hex validation before splicing
+the key into the `PRAGMA key` string (latent injection risk, even though
+today's sole caller is always internally-generated hex — fixed with an
+explicit `/^[0-9a-f]+$/i` check), and an undocumented landmine — since
+`openDb()` is already called unconditionally elsewhere, a future
+`openDb({key})` call will silently no-op until `Providers` itself is gated
+behind vault unlock (4.2's natural territory, not yet built).
+
+**Checker round 2: pass**, independently re-verified — including running its
+*own* mutation test on the audit-logging fix (removed the `insertAuditEntry`
+call, confirmed the two new tests go red, restored, diffed back to a clean
+match).
+
+**Gate:** tsc ✅ · jest ✅ 327/327, 28 suites · eslint ✅ (one prettier-only
+pass via `--fix`).
+**Checkpoint:** `600ee3f`.
+**Result:** 4.1 done ✅ in code — native class, box stays unchecked. Critically,
+this step is honestly self-documented as **not yet functionally active**:
+encryption can't take effect until (a) a fresh `expo prebuild` picks up
+`useSQLCipher: true` (the existing native projects predate this flag), and
+(b) `Providers`' own `openDb()` call is gated behind a vault-unlock screen,
+which doesn't exist yet. Full device-check plus both prerequisites recorded
+in `BLOCKED.md`, explicitly framed as "correctly built, not yet connected"
+rather than "done, just unverified" — a meaningfully different state a
+future beat or the user needs to know about before assuming 4.1 protects
+anything today.
+
+Cursor advances to **4.2** (`features/app-lock`) — the next pending,
+in-scope step in phase order. Its own dependency (`expo-local-authentication`)
+was already confirmed installed back in beat 5, with no design ambiguity like
+4.1 had. Note for whoever picks up 4.2: it is the natural place to wire the
+vault-unlock gate in front of `Providers`' `openDb()` call that 4.1's
+BLOCKED.md entry now depends on.
+
+---
+
 <!-- Append new beats above this line. -->

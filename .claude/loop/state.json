@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 10,
+    "beat": 11,
     "status": "running"
   },
   "cursor": {
-    "step": "4.1",
+    "step": "4.2",
     "phase": 4
   },
   "steps": {
@@ -81,7 +81,16 @@
       "checkpoint": "24b1e7b",
       "notes": "DONE -- shared/tts wrapper over expo-speech (speak/stopSpeaking/isSpeaking). Promise-wraps expo-speech's callback API (onDone/onStopped -> resolve, onError -> reject), skips empty/whitespace text, omits caller-unset options rather than sending explicit undefined. 12 tests, TDD (confirmed failing -- Cannot find module '../index' -- before implementation). Checker passed first pass, no findings: independently diffed the hand-written mock against expo-speech's real .d.ts (exact match), empirically proved via a probe test that Jest's toHaveProperty(key) returns true even for an explicit undefined value -- so the option-filtering test is genuinely load-bearing, not decorative. Gate green (tsc/294 tests-26 suites/eslint, after an eslint --fix pass for prettier formatting only). Native class: box stays unchecked, device-check entry added to BLOCKED.md (real audio output, stop-mid-speech resolves not rejects, isSpeaking reflects real state, options actually honored by OS engine, OS-level error surfaces as rejection). Not wired to any route yet -- shared/tts wrapper only, per step's own scope; UI trigger on assistant responses is separate follow-on work."
     },
-    "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store. FULLY UNBLOCKED as of beat 6. Design (user, 2026-08-13): envelope encryption -- random master vault key in expo-secure-store, wrapped by a key derived from the app-lock passphrase (both required to unlock). Wrong key/corrupted vault: offer wipe-and-restart. Key rotation: likely deferred from v1. Dependency (user installed, beat 6): react-native-quick-crypto for scrypt/pbkdf2 -- ships a real config plugin (app.plugin.js), registered in app.json with no options. Ready for normal TDD + checker cycle whenever selection reaches it -- not picked up this beat (3.1's record half is earlier in plan order)." },
+    "4.1": {
+      "status": "done",
+      "class": "native",
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- resetVault performed a wipe with no audit-log entry; module's own justification comment was factually wrong about this codebase's control flow (Providers already opens the db unconditionally, unkeyed, before any vault gate exists -- so a writable audit-capable handle IS available); also flagged missing hex validation on the PRAGMA key string and an undocumented 'first-open-wins singleton silently swallows a later key' landmine"
+      ],
+      "checkpoint": "600ee3f",
+      "notes": "DONE -- shared/crypto (generic AES-256-GCM + scrypt over react-native-quick-crypto) + features/encrypt-vault (setUpVault/unlockVault/resetVault/isVaultConfigured, envelope encryption per the 2026-08-13 design) + shared/db's openDb({key})/deleteDb + app.json's useSQLCipher:true (a real, discovered-not-assumed config-plugin option -- confirmed by reading node_modules/expo-sqlite/plugin/build/withSQLite.js; CLAUDE.md's 'SQLCipher via expo-sqlite' stack claim is genuinely achievable). 26 tests (12 crypto, 14 vault) + 2 new shared/db tests, all hard-depth per CLAUDE.md's crypto guidance. jest mock for react-native-quick-crypto delegates to Node's real crypto module (genuine encryption in tests, not a fake). Checker failed the first pass HARD on a real gap: resetVault (a 'wipe' per AuditAction's closed union) wrote no audit entry, and my own code comment claiming 'no live audit entity available' was actually FALSE for this codebase -- verified myself by reading src/app/providers/index.tsx, which calls openDb() unconditionally+unkeyed at boot, before any vault gate exists, so a writable audit-capable handle genuinely is available whenever resetVault could run. Fixed: resetVault now logs via that handle before deleteDb() runs, but I went further than the checker's own suggested fix by also documenting a gap the checker itself didn't catch -- deleteDb() destroys the very audit table the entry was just written into, so a *successful* reset leaves no durable trace; flagged as an open design question shared with 4.5, not decided unilaterally. Also fixed two secondary findings: hex validation on the PRAGMA key string before interpolation (was a latent injection risk), and explicit documentation of a real landmine -- Providers/LlmProvider/SttProvider already call openDb() unconditionally unkeyed, so a future openDb({key}) call will silently no-op until Providers itself is gated behind vault unlock (4.2's natural territory). Mutation-tested myself before AND after the checker round: PRAGMA-key statement ordering, wrong-passphrase-must-fail, and the new audit-logging fix -- all confirmed to have real teeth by temporarily reintroducing each bug and watching the right tests go red, then restoring. Re-review: pass, independently reproduced (checker ran its own mutation test on the audit-logging fix). Native class: box stays unchecked. Critically, this step's own code is honestly self-documented as NOT YET FUNCTIONALLY ACTIVE -- encryption cannot take effect until (a) a fresh expo prebuild picks up useSQLCipher:true, and (b) Providers' own openDb() call is gated behind vault unlock, which doesn't exist yet. Full device-check + the prebuild/wiring prerequisites recorded in BLOCKED.md."
+    },
     "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics. Beat 5 reconciliation: expo-local-authentication now a real dependency (verified) -- unblocked, no design ambiguity like 4.1 (a biometric gate is a much more standard, lower-stakes pattern)." },
     "4.3": {
       "status": "in_progress",
@@ -106,7 +115,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-17T00:00:00Z",
-    "head": "24b1e7b",
-    "note": "26 suites, 294 tests passing after 3.5 (shared/tts)"
+    "head": "600ee3f",
+    "note": "28 suites, 327 tests passing after 4.1 (encrypt-vault)"
   }
 }
