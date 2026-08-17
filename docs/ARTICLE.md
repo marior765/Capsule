@@ -1125,4 +1125,55 @@ grep — can notice X happened even when no one was watching for it.
 
 ---
 
+## 2026-08-17 — A false negative hiding in a Jest matcher, not in the code
+
+Step 3.5 (local TTS, `shared/tts` over `expo-speech`) was a small, quiet step
+after several rounds of genuinely hard bugs — which made it a good place for
+the checker to demonstrate a different, less dramatic kind of rigor: not
+"is this logic wrong" but "would this test actually catch it being wrong."
+
+The implementation filters which options it forwards to `expo-speech.speak`
+— if the caller didn't set `pitch`, the code should not send
+`{ pitch: undefined }`, it should send nothing at all. One test pinned
+this: `expect(options).not.toHaveProperty("pitch")`. That reads like a
+solid assertion. It is not, on its own — because `toHaveProperty` in Jest
+returns `true` for a key that exists with the value `undefined`. A test
+author's natural intuition ("this key isn't there, so `toHaveProperty`
+should say no") is simply wrong about how the matcher works. Written the
+naive way, the test would pass whether the implementation filtered the key
+out or just set it to `undefined` explicitly — silently proving nothing
+about the exact behavior it claimed to check.
+
+The checker didn't take the test's intent on faith. It wrote a two-line
+standalone probe — `expect({ x: undefined }).toHaveProperty("x")` — ran it,
+watched it come back `true`, and only then decided the real test (which
+does the filtering correctly, so the key is genuinely absent, not merely
+`undefined`) is load-bearing after all. Same discipline as every other beat
+in this loop, applied to a much smaller, easier-to-miss target: a matcher's
+actual semantics, not just the code's.
+
+The same review also traced *where* a piece of logic actually lives when a
+production module and its test mock split responsibility for a callback
+API. `expo-speech.speak()` is callback-based; `shared/tts`'s job is to wrap
+it in a promise, and specifically to decide that `onStopped` means
+*resolve*, not reject — a deliberate design choice (the user asked to stop;
+that's not a failure). The mock's job is only to decide *which* callback to
+invoke, based on a test-set outcome. It would be easy to accidentally build
+a mock that also encodes the resolve/reject decision itself, which would
+make the tests pass regardless of whether the real module's `onStopped`
+handler was ever written correctly. The checker explicitly confirmed the
+mapping lived only in `shared/tts/index.ts` before trusting the tests meant
+anything about it.
+
+**Article angle:** not every finding worth having is a logic bug in the
+implementation. Some of the most valuable checker passes are checks on the
+*test's* own instrument — does the matcher actually mean what its name
+suggests, and does the mock quietly do the job the code under test was
+supposed to do. A test suite that's green for the wrong reason is worse
+than an obviously red one, because nothing about running it tells you it's
+lying — you have to go looking, on purpose, the way the checker did here
+with a two-line throwaway probe.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

@@ -2,12 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 9,
+    "beat": 10,
     "status": "running"
   },
   "cursor": {
-    "step": "3.5",
-    "phase": 3
+    "step": "4.1",
+    "phase": 4
   },
   "steps": {
     "1.2": {
@@ -73,7 +73,14 @@
       "checkpoint": "59dbbee",
       "notes": "DONE, checker pass on re-review (independently reproduced via scratch-sandbox mutation, not trusted). Beat 9 continued into beat 10 (same session): built createVoiceInputController + wired VoiceRecordButton/ChatInput into chat/[id].tsx and chat/ephemeral.tsx. Checker failed the first pass HARD -- the severe finding: recording was gated behind context readiness, reproducing on the exact first-run-download scenario 3.3.1 exists for (silently captures nothing while UI lies about it). Root-caused and fixed: changed startVoiceInput's OWN signature (breaking change to already-shipped, prior-beat-approved code) so finish(sttCtx) takes the context instead of startVoiceInput requiring it up front -- startRecording needs no context at all. Verified the fix catches the original bug by temporarily reintroducing it via mutation (3/8 tests failed) before restoring. Also found and fixed a related bug MYSELF (not flagged by checker): eager independent context-fetch + cancel() never touching it = real unhandled-rejection leak in production if download fails and user only cancels; fixed with an unconditional context.catch(()=>{}) that doesn't mask commit()'s real rejection. Fixed editing/voice key collision (disabled button while editing, beginEditing() clears stale voiceText). Unified error state across both routes (separate voiceError, not shared with LLM error). Recorded the systemic app-wide testID gap as a BLOCKED.md follow-up rather than fixing piecemeal. Re-review sent to same checker, awaiting verdict. Also independently detected AND resolved during this beat: 3.2's device-check blocker (user ran expo prebuild, verified against real evidence -- ios/Podfile.lock -- not just absence of error), committed separately as 7a1cf37."
     },
-    "3.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Local TTS. Beat 5 reconciliation: expo-speech now a real dependency (verified in node_modules) -- unblocked. Not picked up this beat (1.6.1 is earlier in plan order)." },
+    "3.5": {
+      "status": "done",
+      "class": "native",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "24b1e7b",
+      "notes": "DONE -- shared/tts wrapper over expo-speech (speak/stopSpeaking/isSpeaking). Promise-wraps expo-speech's callback API (onDone/onStopped -> resolve, onError -> reject), skips empty/whitespace text, omits caller-unset options rather than sending explicit undefined. 12 tests, TDD (confirmed failing -- Cannot find module '../index' -- before implementation). Checker passed first pass, no findings: independently diffed the hand-written mock against expo-speech's real .d.ts (exact match), empirically proved via a probe test that Jest's toHaveProperty(key) returns true even for an explicit undefined value -- so the option-filtering test is genuinely load-bearing, not decorative. Gate green (tsc/294 tests-26 suites/eslint, after an eslint --fix pass for prettier formatting only). Native class: box stays unchecked, device-check entry added to BLOCKED.md (real audio output, stop-mid-speech resolves not rejects, isSpeaking reflects real state, options actually honored by OS engine, OS-level error surfaces as rejection). Not wired to any route yet -- shared/tts wrapper only, per step's own scope; UI trigger on assistant responses is separate follow-on work."
+    },
     "4.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "SQLCipher + secure-store. FULLY UNBLOCKED as of beat 6. Design (user, 2026-08-13): envelope encryption -- random master vault key in expo-secure-store, wrapped by a key derived from the app-lock passphrase (both required to unlock). Wrong key/corrupted vault: offer wipe-and-restart. Key rotation: likely deferred from v1. Dependency (user installed, beat 6): react-native-quick-crypto for scrypt/pbkdf2 -- ships a real config plugin (app.plugin.js), registered in app.json with no options. Ready for normal TDD + checker cycle whenever selection reaches it -- not picked up this beat (3.1's record half is earlier in plan order)." },
     "4.2": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Biometrics. Beat 5 reconciliation: expo-local-authentication now a real dependency (verified) -- unblocked, no design ambiguity like 4.1 (a biometric gate is a much more standard, lower-stakes pattern)." },
     "4.3": {
@@ -98,8 +105,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-12T21:47:20Z",
-    "head": "e0020342eb2c6f53f7054ccd069046fdea5270e9",
-    "note": "16 suites, 195 tests passing at bootstrap"
+    "at": "2026-08-17T00:00:00Z",
+    "head": "24b1e7b",
+    "note": "26 suites, 294 tests passing after 3.5 (shared/tts)"
   }
 }

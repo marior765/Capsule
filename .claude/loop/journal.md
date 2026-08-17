@@ -924,6 +924,59 @@ in `BLOCKED.md` as a small follow-up rather than silently dropping it.
 check added to `BLOCKED.md`, leading with the specific first-run-download
 scenario that took two checker rounds to get right.
 
+## Beat 10 — 2026-08-17
+
+**Step:** 3.5 — Local TTS for assistant responses (OS-level Speech API baseline)
+
+Picked up per plan order (next unchecked, non-done/blocked/deferred step after
+3.5 itself in `state.json` — reconciled first: confirmed no `shared/tts` code
+existed anywhere in `src/`, and `expo-speech` is genuinely installed).
+
+Read `expo-speech`'s `.d.ts` directly rather than guessing its shape:
+`speak(text, options?)` is fire-and-forget with callback-style completion
+(`onStart`/`onDone`/`onStopped`/`onError`), not promise-based — unlike
+whisper.rn, it resolves cleanly via `require.resolve`, no exports-map gap.
+
+Wrote 12 tests first (`speak` happy path incl. option forwarding, empty/
+whitespace short-circuit, option-omission, error rejection, plus
+`stopSpeaking`/`isSpeaking`) against a hand-written mock, confirmed genuinely
+failing (`Cannot find module '../index'`) before writing any implementation.
+
+Implemented `shared/tts/index.ts`: wraps `expo-speech`'s callback API in a
+promise (`onDone`/`onStopped` → resolve — a user-requested stop is not a
+failure — `onError` → reject), skips empty/whitespace text before ever
+calling into the OS, and forwards only the options the caller actually set
+(matches `shared/stt`'s established `if (x !== undefined)` idiom rather than
+an unconditional spread that would send explicit `undefined`s).
+
+**Gate:** tsc ✅ · jest ✅ 294/294, 26 suites · eslint ✅ (one prettier-only
+pass via `--fix`, re-verified after).
+
+**Checker:** pass, first attempt, no findings — and did real verification,
+not just reading: ran the full gate itself, diffed the hand-written mock
+against `expo-speech`'s actual `.d.ts` (exact match, no drift), and wrote a
+standalone probe proving Jest's `toHaveProperty` returns `true` even for a
+key present with an explicit `undefined` value — meaning the "omits unset
+options" test is genuinely load-bearing, not decorative. Also traced that
+the resolve/reject *mapping* logic lives entirely in `index.ts`, not the
+mock, so a broken implementation would actually fail its tests.
+
+**Checkpoint:** `24b1e7b`.
+**Result:** 3.5 done ✅ in code — native class, entirely device-unverified
+(no real OS speech engine has produced audible output yet). Box stays
+unchecked. Device-check entry added to `BLOCKED.md`: real audible output,
+stop-mid-speech resolves not rejects, `isSpeaking` reflects real state,
+options are actually honored by the OS engine (not silently ignored), and a
+real OS synthesis error surfaces as a rejection. Also noted explicitly:
+`shared/tts` has no caller yet — no route/feature triggers `speak()` on an
+assistant response — that wiring is separate, out of this step's own scope.
+
+Cursor advances to **4.1** (`features/encrypt-vault`) — the next pending,
+in-scope step in phase order; 3.1 stays `blocked`, 3.3/3.3.1 already `done`.
+Design and dependency for 4.1 were both already resolved and unblocked as of
+beat 6 (envelope encryption, `react-native-quick-crypto` installed) — ready
+for the normal TDD + checker cycle with no further decision needed.
+
 ---
 
 <!-- Append new beats above this line. -->

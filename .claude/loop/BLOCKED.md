@@ -76,6 +76,33 @@ a real hold-and-speak, proves it end-to-end.
 5. A quick tap-and-release (below `minHoldMs`) correctly cancels rather than
    commits, and discards the recording without transcribing it.
 
+### 3.5 — `shared/tts` local TTS (OS-level Speech API baseline)
+Implemented and green against a hand-written expo-speech mock: `speak`,
+`stopSpeaking`, `isSpeaking` (12 tests). Checker-approved — independently
+diffed the mock against expo-speech's real `.d.ts` and empirically proved
+the option-filtering test is load-bearing. **Nothing here has run against
+a real OS speech engine.**
+
+**Device check:**
+1. `speak("some text")` actually produces audible speech on a real
+   iOS/Android device (simulators can be silent by default — verify sound,
+   not just "no error").
+2. `stopSpeaking()` interrupts speech already in progress promptly, and the
+   in-flight `speak()` promise resolves (not rejects) when stopped this way
+   — mirrors the "stopped is not a failure" contract in `shared/tts/index.ts`.
+3. `isSpeaking()` reflects the real synthesis state while an utterance is
+   actually playing, not just immediately after `speak()` is called.
+4. `language`/`pitch`/`rate`/`volume` options are actually honored by the
+   OS engine (e.g. a non-default `language` genuinely changes the voice/
+   accent, not silently falls back to system default).
+5. An OS-level synthesis error (e.g. unsupported language/voice unavailable)
+   surfaces as a real rejection rather than a silent no-op.
+
+Not yet wired into any route/feature — this step is the `shared/tts`
+wrapper only, no UI trigger exists yet to call `speak()` on an assistant
+response. That wiring is separate follow-on work, not part of 3.5 as
+scoped.
+
 ## Resolved (2026-08-16) — 3.2 whisper.rn Expo plugin config
 
 `expo prebuild` run by the user, clean: `✔ Finished prebuild`, no error about
