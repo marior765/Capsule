@@ -6,6 +6,7 @@ import { useDb } from "@/app/providers";
 import { getAllAuditEntries, type AuditEntry } from "@/entities/audit";
 import { PrivacyBanner } from "@/widgets/PrivacyBanner";
 import { EgressLog } from "@/widgets/EgressLog";
+import { AppLockSettings } from "@/widgets/AppLockSettings";
 
 export default function PrivacyScreen() {
   const db = useDb();
@@ -20,6 +21,8 @@ export default function PrivacyScreen() {
   return (
     <View style={styles.root}>
       <PrivacyBanner />
+      <Text style={styles.heading}>App lock</Text>
+      <AppLockSettings db={db} />
       <Text style={styles.heading}>Activity log</Text>
       <Text style={styles.meta}>
         Every export, vault unlock, wipe, and model download this app has ever

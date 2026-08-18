@@ -17,6 +17,66 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ## Needs a device / dev build
 
+### 4.4 — `widgets/AppLockSettings` — passphrase setup form on the privacy screen
+Implemented and green: a "set up a passphrase" form (two `TextInput`s,
+validated via extracted+tested `validatePassphraseSetup.ts`, calls
+`encrypt-vault`'s `setUpVault`), wired into `settings/privacy.tsx` alongside
+the already-shipped `PrivacyBanner`/`EgressLog`. Exercises real
+`expo-secure-store`/`react-native-quick-crypto` (via `setUpVault`) from
+actual UI for the first time. **Nothing here has run on a real device.**
+
+**Device check:**
+1. Enter a passphrase, confirm, tap "Enable app lock" — `setUpVault` runs
+   scrypt for real; confirm the UI doesn't feel frozen/unresponsive while
+   it's deriving the key (the `busy` state should visibly disable the
+   button and inputs during this).
+2. After success, confirm `expo-secure-store` genuinely persisted the
+   wrapped key — force-quit and relaunch the app, revisit this screen, and
+   confirm it now shows "App lock is configured" rather than the form again
+   (i.e. `isVaultConfigured()` reads real, durable Keychain/Keystore state,
+   not something that resets on process restart).
+3. The screen's own warning ("this does not yet encrypt anything") should
+   still be true at this point — confirm the on-disk `capsule.db` is still
+   plain SQLite (`file capsule.db`), since `Providers`' `openDb()` call is
+   still unconditional and unkeyed until the launch-gate integration below
+   exists.
+
+**Two scope decisions made here, deliberately, not unattended:**
+
+1. **No "disable app lock" control.** The only way to remove a configured
+   vault today is `encrypt-vault`'s `resetVault()`, which calls `deleteDb()`
+   and destroys the *entire* database — every conversation, capsule, and
+   model, not just the lock. Wiring that to a casual "turn off my lock"
+   button would be a real, surprising data-loss trap for a user who
+   reasonably expects that action to be non-destructive. A real "remove the
+   lock but keep my data" flow (re-encrypt the vault with no passphrase, or
+   an equivalent) does not exist yet. If you want this sooner rather than
+   as part of a future dedicated pass, say so — otherwise it stays absent
+   rather than fake or dangerous.
+
+2. **Vault *setup* is logged as `action: "decrypt"`.** `entities/audit`'s
+   `AuditAction` is a closed 4-value union (`export | decrypt | wipe |
+   model_download`) mirroring CLAUDE.md's exact hard-rule wording — there's
+   no "setup"/"vault_created" category, and creating a brand-new vault key
+   doesn't actually decrypt anything. `"decrypt"` was chosen as the closest
+   fit ("the same class of privacy-sensitive key-management event") rather
+   than inventing a fifth category unilaterally or leaving vault setup
+   unlogged entirely. This is a real semantic stretch, not a clean fit —
+   flagging it here for a decision: keep it as `"decrypt"`, add a genuine
+   fifth `AuditAction` value (e.g. `"vault_setup"`), or decide setup events
+   shouldn't be logged at all since CLAUDE.md's rule literally says
+   "decrypt," not "setup."
+
+**Still not part of this diff, and not this diff's job:** the actual
+launch-time unlock gate (a provider wiring `features/app-lock`'s
+`createAppLock` with `authenticateWithPassphrase` set to `encrypt-vault`'s
+`unlockVault`, an `AppState` listener, a lock screen, and moving
+`Providers`' `openDb()` call behind it) — see the existing 4.2 entry below,
+which this diff does not change or complete. This settings form and that
+gate are genuinely separate concerns: one lets a user configure a
+passphrase, the other enforces it. Read together, not confused for one
+piece of work.
+
 ### 4.2 — `features/app-lock` biometric / passphrase gate — logic done, wiring is not
 Implemented and green against hand-written mocks: `isBiometricAvailable`,
 `authenticateWithBiometrics` (wrapping `expo-local-authentication`), and
