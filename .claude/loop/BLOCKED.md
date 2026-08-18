@@ -351,6 +351,47 @@ wrapper only, no UI trigger exists yet to call `speak()` on an assistant
 response. That wiring is separate follow-on work, not part of 3.5 as
 scoped.
 
+## Needs external verification (not a device check)
+
+### 5.4 — `features/migrate-import` — ChatGPT export parser's schema is unverified
+Implemented and green against a hand-constructed fixture: `parseChatGptExport`
+(pure parsing) + `importChatGptExport` (parses + inserts as new conversations,
+fresh ids, same "treat as new data" semantics as `features/import-export`'s
+own import functions). Handles the branching `mapping` tree structure
+(node id → `{message, parent, children}`), skips the synthetic null-message
+root, skips unsupported roles (e.g. `"tool"`) and non-text content types
+rather than crashing or fabricating content, converts `create_time`/
+`update_time` from seconds to this app's millisecond convention, and
+resolves `current_node` to the correct `activeLeafId`.
+
+**This is genuinely different from every other item in this file** — it's
+not unverified because it needs a device, it's unverified because the
+parser's field names and structure (`mapping`, `current_node`, `content.
+content_type`, `message.author.role`, etc.) were implemented from
+training-time knowledge of OpenAI's ChatGPT export format, not checked
+against a real, current export file. OpenAI could have changed field
+names or added/removed structure since. The parser is written
+defensively specifically because of this uncertainty (unrecognized
+shapes are skipped, never crash the whole import or fabricate placeholder
+content) — but "written defensively" is not the same as "verified correct."
+
+**What to do:** export your own ChatGPT conversation history (ChatGPT
+Settings → Data controls → Export data → you'll receive a `conversations.json`
+inside a zip) and run `importChatGptExport` against a real file. Confirm:
+1. Titles, timestamps, and message content come through correctly (spot-check
+   a few conversations, especially ones with edited/regenerated replies —
+   this is where the branching-tree logic actually gets exercised).
+2. Nothing silently gets dropped that shouldn't be (compare a conversation's
+   message count in the ChatGPT UI against what gets imported).
+3. No real export shape actually breaks the parser (throws) — if it does,
+   that's this parser's field-name assumptions being wrong, not a fixable
+   "device" issue; it needs the real schema, not another guess.
+
+Only 1 of `docs/DEVELOPMENT_PLAN.md` 5.4's five named formats (ChatGPT
+export) is implemented — Claude export, CSV, generic JSON, and Markdown
+are genuinely unstarted, not silently dropped. `docs/DEVELOPMENT_PLAN.md`'s
+5.4 line is annotated with this status rather than ticked.
+
 ## Resolved (2026-08-16) — 3.2 whisper.rn Expo plugin config
 
 `expo prebuild` run by the user, clean: `✔ Finished prebuild`, no error about
