@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 27,
+    "beat": 28,
     "status": "running"
   },
   "cursor": {
-    "step": "6.4",
+    "step": "6.7",
     "phase": 6
   },
   "steps": {
@@ -190,6 +190,14 @@
       "checkpoint": "4e286d6",
       "notes": "IN PROGRESS -- CapsuleList + CapsuleCard + capsules/index.tsx DONE. CapsuleCard: presentational, no db access, root testID appends capsule.id (ChatBubble's own established list-uniqueness pattern), 'Unknown type' fallback on a dangling capsuleTypeId. CapsuleList: capsules + a caller-fetched capsuleTypesById map, FlatList of CapsuleCard or empty state. index.tsx: fetches both getAllCapsules/getAllCapsuleTypes, shows a notice when no types exist. REAL STRUCTURAL GAP found and verified, not assumed: there is currently NO way anywhere in this codebase to create a CapsuleType (features/manage-schema, 6.7, is a bare stub; insertCapsuleType/insertCapsule both have zero callers outside their own entities -- checker independently verified this via search). This means capsules/new.tsx, [id].tsx, and [id]/edit.tsx (3 of 4 named route files) are ALL genuinely blocked -- not just new.tsx as I'd originally articulated; the checker caught that the same missing link (no type -> no capsule -> nothing to view/edit) transitively blocks the other two as well, a clarification worth carrying forward. docs/DEVELOPMENT_PLAN.md 6.3 stays UNCHECKED (only 1 of 4 route files exists, no partial-tick convention in that file). Checker passed on first attempt with real independent verification of the deferral claim (grepped for callers, not assumed). SEQUENCING DECISION for the next beat: the rest of Phase 6 (6.3's remaining routes, 6.4's UI wiring, 6.5, 6.6 in practice) is downstream of 6.7 existing -- but 6.4's FEATURE layer (create-capsule/edit-capsule/delete-capsule, already-scaffolded stub dirs) does NOT need a real type-picker UI to exist, only the ROUTE wiring does (matches every other 'build the logic layer before its UI' precedent this whole session: entities before CapsuleEditor, audit entity before widgets, etc.) -- so cursor advances to 6.4 next, not 6.7, since 6.4's feature layer is genuinely unblocked right now."
     },
+    "6.4": {
+      "status": "in_progress",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "e13df1b",
+      "notes": "IN PROGRESS -- feature layer done (create-capsule/edit-capsule/delete-capsule), UI/route wiring not started (capsules/new.tsx, [id]/edit.tsx still bare stubs). createCapsule (inserts capsule + initial values in one call), renameCapsule + setCapsuleFieldValue (the latter ALSO bumps the capsule's own updatedAt, not just the value's -- verified via a real test, since entities/capsule's own upsertCapsuleValue never touches the capsules row), deleteCapsule (cascades to values, mirrors manage-conversations' deleteConversation, correctly aliases the entity's own deleteCapsule as deleteCapsuleRecord to avoid self-recursion -- checker specifically verified this, a real bug category). All three explicitly modeled on manage-conversations' precedent. 18 tests. Mutation-tested the delete cascade myself (removed values cleanup, confirmed orphaned-values test catches it, restored). Checker passed on first attempt: independently re-verified the 'no real CapsuleType exists anywhere, feature layer doesn't need one to function' premise, traced the cross-entity updatedAt bump against the real code, and specifically checked the delete-capsule aliasing for self-recursion. docs/DEVELOPMENT_PLAN.md 6.4 stays UNCHECKED -- no UI exists yet, checker explicitly agreed ticking now would be premature. UI wiring remains blocked on 6.7 the same way 6.3's remaining routes are."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -203,7 +211,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "4e286d6",
-    "note": "42 suites, 517 tests passing after 6.3's CapsuleList/CapsuleCard/index route"
+    "head": "e13df1b",
+    "note": "45 suites, 535 tests passing after 6.4's feature layer"
   }
 }

@@ -2040,4 +2040,60 @@ stay blocked until 6.7 exists.
 
 ---
 
+## Beat 28 — 2026-08-18
+
+**Step:** 6.4 — Create/edit/delete capsule flows. Built the feature layer
+only (`create-capsule`/`edit-capsule`/`delete-capsule`, three separate
+slices matching `docs/ARCHITECTURE.md`'s own pre-scaffolded structure),
+deliberately not the UI — verified first, not assumed, that the same
+6.7-shaped blocker from last beat still applies (grepped again for any
+real `CapsuleType`-creating caller; still none).
+
+All three modeled directly on `manage-conversations`' existing
+create/rename/delete pattern rather than inventing a new shape:
+`createCapsule` composes an insert + any initial field values in one
+call; `deleteCapsule` cascades to the capsule's values first, aliasing
+the entity's own `deleteCapsule` as `deleteCapsuleRecord` (mirroring
+`manage-conversations`' identical aliasing) to avoid a same-name
+self-recursion bug.
+
+The one genuinely new piece: `setCapsuleFieldValue` bumps the capsule's
+own `updatedAt`, not just the value row's. `entities/capsule`'s
+`upsertCapsuleValue` only ever touches `capsule_values` — without this
+composed on top, editing a field wouldn't move the capsule to the top of
+a recency-ordered list even though it obviously just changed. Wrote a
+real test proving the capsule's own timestamp moves from a value-only
+edit, not just that the value itself changed.
+
+Mutation-tested the delete cascade myself before sending anywhere:
+removed the values cleanup, confirmed the cross-capsule-safety test
+immediately catches the orphaned rows, restored.
+
+**Checker: pass on the first attempt**, and specifically went looking for
+the self-recursion category of bug in the `deleteCapsule` aliasing rather
+than trusting that TypeScript would have caught a subtly wrong alias —
+traced the actual import and call site to confirm it calls the entity
+function, not itself.
+
+**Gate:** tsc ✅ · jest ✅ 535/535, 45 suites · eslint ✅.
+**Checkpoint:** `e13df1b`.
+**Result:** 6.4 `in_progress` — feature layer done, UI genuinely blocked
+on 6.7 the same way 6.3's remaining routes are. `docs/DEVELOPMENT_PLAN.md`'s
+box stays unchecked, and the checker explicitly agreed ticking now would
+be premature.
+
+**Cursor decision, made deliberately against the plan's own numbering:**
+6.5 and 6.6 come next in the written order, but both are, in practice,
+downstream of the same 6.7 gap already named twice now — nothing to
+search/filter/sort or tag if nothing can be created through real UI yet.
+6.7 (`SchemaBuilder` + `manage-schema`) is the step that actually unblocks
+the rest of Phase 6's user-facing surface — not a preference, a
+consequence of the dependency graph this run has now traced twice.
+Cursor advances to **6.7** directly, the same "check the actual
+dependency, not just the written order" discipline logged in the last
+beat's article entry, applied a second time rather than left as a one-off
+observation.
+
+---
+
 <!-- Append new beats above this line. -->
