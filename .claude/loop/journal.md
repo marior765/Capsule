@@ -1549,4 +1549,57 @@ counterpart this beat's own design deliberately deferred to it.
 
 ---
 
+## Beat 19 — 2026-08-18
+
+**Step:** self-caught fix to 5.2 (`features/import-export`), discovered while
+reconciling for 5.3.
+
+Before starting 5.3's design work, re-read 5.2's own shipped code as part
+of understanding what backup-restore would need to interact with — and
+noticed `exportConversation`/`exportAllConversations` write no audit
+entries at all, despite CLAUDE.md's hard rule literally naming "export" as
+one of four privacy-sensitive actions that must write to
+`entities/audit`. Neither the original checker nor I caught this during
+5.2's own review round last beat — a real gap that shipped and was
+checker-approved anyway.
+
+Fixed via the normal TDD cycle: added failing tests first (writes an
+export entry; does *not* write one on a failed export — ordering
+matters), then wired `insertAuditEntry` into both export functions,
+placed strictly after success. Deliberately left the import functions
+untouched — reasoned through *why* import isn't covered by the rule's own
+wording (only "export, decrypt, wipe, model download" are named, no
+"import"), and cross-checked that reasoning against the actual precedent
+already in the codebase rather than trusting my own logic alone: every
+existing `AuditAction` use (`wipe`, `decrypt`, `model_download`) is either
+boundary-crossing (data leaves/enters via network) or destructive/
+irreversible — import is neither, it's a purely local, always-reversible
+addition.
+
+Mutation-tested the write-only-on-success ordering myself: moved the
+audit write before the existence check, confirmed the failure test
+catches it, restored.
+
+**Checker: pass on the first attempt.** Independently traced
+`entities/audit`'s `AuditAction` union back to when it was first defined
+(beat/commit `ffe5d58`, several commits before 5.2 even existed) to
+confirm the "export only" interpretation wasn't invented after the fact to
+avoid extra work — it's consistent with a design decision that predates
+this fix entirely. Also confirmed the fix is purely additive:
+`restoreConversation` (the previously-approved id-remapping logic) is
+completely untouched.
+
+**Gate:** tsc ✅ · jest ✅ 421/421, 36 suites · eslint ✅.
+**Checkpoint:** `8fad2bd`.
+**Result:** a real hard-rule gap in already-shipped, already-approved code,
+caught and fixed one beat later — worth recording as evidence that
+"checker-approved" isn't the same as "permanently correct," and that
+re-reading one's own prior work with fresh eyes before building on top of
+it is worth the time it costs.
+
+Cursor stays on **5.3** (`features/backup-restore`) — not yet started;
+this beat's entire budget went to the self-caught fix above instead.
+
+---
+
 <!-- Append new beats above this line. -->
