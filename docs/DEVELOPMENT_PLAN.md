@@ -122,7 +122,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 ### Phase 5 — Portability ← key differentiator
 - [x] 5.1 `shared/format` — versioned portable format spec + serializers
 - [ ] 5.2 `features/import-export` (single conversation, single capsule, whole vault) — conversation + whole-vault scope done; capsule scope blocked on Phase 6 (`entities/capsule` doesn't exist yet)
-- [ ] 5.3 `features/backup-restore`
+- [x] 5.3 `features/backup-restore` — conversations scope done; capsules N/A (Phase 6 unbuilt), settings not yet covered
 - [ ] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown)
 
 ### Phase 6 — Capsule data core
