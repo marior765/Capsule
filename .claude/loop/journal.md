@@ -1602,4 +1602,62 @@ this beat's entire budget went to the self-caught fix above instead.
 
 ---
 
+## Beat 20 — 2026-08-18
+
+**Step:** 5.3 — `features/backup-restore`, the id-preserving counterpart
+5.2 deliberately deferred here two beats ago.
+
+Built `createBackup`/`restoreBackup` as a genuinely separate module from
+`import-export`, not shared code with a flag: import treats data as new
+(fresh ids, safe to repeat, never collides); backup/restore treats a
+restore as "replace everything with exactly this snapshot" (original ids
+preserved, existing conversations/messages deleted first). Verified this
+distinction is real, not just asserted, by confirming neither function
+calls `generateId()` for any conversation/message id.
+
+Deliberate security exclusion, stated plainly rather than left implicit:
+the encryption vault key never gets backed up alongside a portable JSON
+file — doing so would mean anyone who obtained the backup file could
+decrypt the vault. No import of `features/encrypt-vault`, `expo-secure-store`,
+or `shared/storage` anywhere.
+
+**Caught and fixed my own bug before the checker ever saw it.** Wrote a
+doc comment claiming the "wipe" audit entry is "written only after the
+corresponding action actually succeeds, never on a failure" — then noticed,
+re-reading my own code, that I'd placed the `insertAuditEntry` call
+*before* the destructive delete-and-restore loop, not after. The comment
+and the code disagreed. Fixed by moving the write to the end of the
+function, matching what I'd actually claimed. This is exactly the kind of
+self-inconsistency the checker has caught in others' — well, my own —
+work all session; catching it myself this time, before spending a review
+round on it, felt like the discipline finally generalizing rather than
+only firing when someone else is watching.
+
+TDD'd 13 tests at "hard" depth (destructive operation). Mutation-tested
+the single most important property — restore replaces rather than merges
+— by removing the pre-restore delete loop and confirming 8 of 13 tests
+immediately go red, then restoring.
+
+**Checker: pass on the first attempt.** Independently confirmed
+id-preservation is real (grepped for `generateId()`, found none for entity
+ids, explicitly compared against `import-export`'s genuinely different
+`idMap`-based approach rather than assuming the doc comment's claim), the
+replace-not-merge, validate-before-destroy, and audit-ordering properties
+by tracing code paths rather than trusting test names, idempotency across
+repeated restores, and the zero-references-to-the-vault claim.
+
+**Gate:** tsc ✅ · jest ✅ 434/434, 37 suites · eslint ✅.
+**Checkpoint:** `d9541d0`.
+**Result:** 5.3 done ✅ — `docs/DEVELOPMENT_PLAN.md` box ticked (unlike
+5.2, this step's plan text names no sub-deliverables, so the module's own
+conversations-scoped work is genuinely complete on its own terms; capsules
+N/A per Phase 6, settings an honest, acknowledged gap).
+
+Cursor advances to **5.4** (Migration importers — ChatGPT export, Claude
+export, CSV, JSON, Markdown) — the last step of Phase 5, and a
+meaningfully different kind of work: parsing *other* tools' export
+formats rather than round-tripping this app's own.
+
+---
+
 <!-- Append new beats above this line. -->

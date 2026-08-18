@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 19,
+    "beat": 20,
     "status": "running"
   },
   "cursor": {
-    "step": "5.3",
+    "step": "5.4",
     "phase": 5
   },
   "steps": {
@@ -148,6 +148,14 @@
       "checkpoint": "8fad2bd",
       "notes": "DONE for its achievable scope -- exportConversation/importConversation (single conversation + full message tree, every branch not just active leaf) + exportAllConversations/importAllConversations (whole-vault scope, minus capsules). Import always generates fresh ids, remapping message.conversationId/parentId + conversation.activeLeafId via a per-call id map -- 'always new data' semantics, safe to run twice, never collides. An id-preserving restore is deliberately 5.3's job (features/backup-restore), not this step's. Capsule scope genuinely blocked -- entities/capsule is still export{} (Phase 6 unbuilt), verified before writing the deferral claim. docs/DEVELOPMENT_PLAN.md 5.2's box stays UNCHECKED (3 named deliverables, only 2 done, mirrors 4.3's own precedent) but annotated inline with the real status -- treating this as effectively complete-for-now rather than 'in_progress' since capsule support can't meaningfully be picked up again until Phase 6 (a whole separate, not-yet-started phase) exists; no point re-selecting this step every beat with nothing new to do. 13 tests, TDD, mutation-tested the parentId remapping myself (the single most safety-critical property -- a bug would silently corrupt conversation trees) before sending to the checker. Checker passed on first attempt: independently verified id-remap correctness including no cross-conversation leakage in a multi-conversation whole-vault import, full-tree export, re-import safety, and PortableFormatError propagation. Two minor non-blocking notes (no transaction wrapping -- matches existing codebase convention; a hypothetical silent re-root on corrupted/out-of-set parentId data, not reachable via normal app flow) left as-is. SELF-CAUGHT FIX (checkpoint 8fad2bd, next beat): exportConversation/exportAllConversations were missing audit logging entirely, despite CLAUDE.md's hard rule literally naming 'export' -- not flagged by the original checker, caught by ME while reconciling 5.3. Fixed: both now write an 'export' AuditEntry, only after success (mutation-tested the ordering). import functions deliberately still write nothing -- verified against entities/audit's own AuditAction union (defined independently, back in 4.3) and every other existing caller's precedent (wipe/decrypt/model_download all boundary-crossing or irreversible; import is neither). Checker passed this fix on first attempt too, independently tracing the AuditAction union's git history to confirm the interpretation wasn't invented to dodge work."
     },
+    "5.3": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "d9541d0",
+      "notes": "DONE -- createBackup/restoreBackup, id-preserving (unlike 5.2's import which regenerates ids). restoreBackup validates before destroying anything, then replaces (deletes existing + reinserts backup's own) conversations/messages under original ids -- idempotent, no PK collision on repeat restores. createBackup writes 'export' audit entry; restoreBackup writes 'wipe' after the full delete+restore succeeds (moved from before to after myself, mid-implementation, after noticing my own doc comment claimed 'only after success' while the code did the opposite -- fixed before the checker ever saw it). Deliberately separate module from import-export, not shared code -- verified no generateId() calls for entity ids anywhere, confirming genuinely different logic. Scope: models excluded (re-downloadable binaries), settings genuinely deferred (honest gap), the encryption vault key deliberately NEVER touched (backing it up alongside a portable file would let anyone with the file decrypt the vault -- verified zero references to encrypt-vault/secure-store/MMKV outside doc comments), capsules N/A (Phase 6 unbuilt, same as 5.2). No transaction wrapping -- matches this codebase's existing style everywhere, flagged explicitly rather than silently accepted. 13 tests, hard depth. Mutation-tested the 'replace not merge' property myself (removed the pre-restore delete loop, 8/13 tests immediately caught it, restored). Checker passed on first attempt: independently confirmed id-preservation is real (grepped for generateId, compared directly against import-export's genuinely different idMap approach), replace-not-merge correctness, validate-before-destroy ordering, audit-ordering, idempotency, zero vault/secure-store references. docs/DEVELOPMENT_PLAN.md 5.3 ticked -- plan text names no sub-deliverables (unlike 5.2's parenthetical), so the module's own scope is genuinely complete on its own terms."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -161,7 +169,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "8fad2bd",
-    "note": "36 suites, 421 tests passing after 5.2's audit-logging fix"
+    "head": "d9541d0",
+    "note": "37 suites, 434 tests passing after 5.3 (backup-restore)"
   }
 }

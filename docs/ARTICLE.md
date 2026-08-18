@@ -1458,4 +1458,42 @@ verified one.
 
 ---
 
+## 2026-08-18 — Catching your own comment lying about your own code
+
+A small moment, easy to miss in a changelog but worth naming on its own.
+Writing `features/backup-restore`, I documented a property I intended to
+be true: the destructive "wipe" audit entry gets written only after a
+restore actually succeeds, never on a failure partway through. Then,
+re-reading the function right after writing that sentence, the code
+underneath it did the opposite — the audit write sat *before* the
+destructive loop, not after. Nobody flagged it. No test failed. It was
+just a comment and the code it described quietly disagreeing, the kind of
+drift that ships constantly and usually isn't caught until much later, if
+ever.
+
+What made this worth writing down is the contrast with everything logged
+here over the past several beats: a string of checker rounds spent
+catching exactly this shape of problem — a claim in a comment that wasn't
+backed by what the code (or `BLOCKED.md`) actually did. Each time, the fix
+was mine, but the catch belonged to an independent reviewer looking at
+work I'd already convinced myself was finished. This time the catch
+happened on my own first re-read, before anything was sent anywhere. Not
+because I got smarter about the specific bug — a doc-comment/code mismatch
+is a generic, boring class of error, not a special one — but because the
+habit of asking "does this claim actually hold, right now, in the code I
+can see" had apparently become something closer to a reflex than a
+checklist item invoked only when a reviewer's report demanded it.
+
+**Article angle:** the real measure of whether a review discipline has
+taken hold isn't how well it performs when someone else is running it against
+you — it's whether it starts firing on your own first pass, unprompted,
+before there's an audience to catch you skipping it. A team (or a loop)
+that only writes honest code when a reviewer is watching has installed a
+gate, not a habit. This is one small, unglamorous data point that the
+difference is showing up here — worth noting, not overclaiming: one
+instance is a data point, not a trend, and the next beat is the real test
+of whether it holds.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
