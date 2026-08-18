@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 23,
+    "beat": 24,
     "status": "running"
   },
   "cursor": {
-    "step": "6.1",
+    "step": "6.2",
     "phase": 6
   },
   "steps": {
@@ -167,12 +167,12 @@
       "notes": "DONE for its achievable scope this beat -- ChatGPT export only (Claude export, CSV, generic JSON, Markdown genuinely unstarted, each needs its own schema/design decision -- CSV/Markdown/generic-JSON have no fixed schema at all). parseChatGptExport (pure) + importChatGptExport (parses + inserts as new conversations, fresh ids, same semantics as 5.2's import). Handles ChatGPT's branching mapping tree, skips synthetic root/unsupported roles/non-text content defensively, converts seconds->milliseconds. 18 tests. Checker failed round 1 on a REAL algorithmic bug, independent of the (honestly disclosed) schema-uncertainty caveat: single-pass parentIndex resolution depended on JS object key iteration order, which JSON never guarantees to be parent-first -- verified myself two ways before fixing (empirically confirmed JSON.parse preserves literal source key order; reproduced the exact bug by reverting to old logic and watching a new regression test go red exactly as predicted). Fixed with a proper two-pass approach (collect all importable nodes+indices first, resolve every parentIndex only after the id map is fully populated) -- checker confirmed on re-review this is structurally immune to ordering for arbitrary-depth reversed chains, not just patched for the one tested case. Wrote the BLOCKED.md '5.4' entry (schema-uncertainty caveat, concrete next steps: get a real ChatGPT export, verify against it) BEFORE the code comment that cites it, per the loop's own rule. docs/DEVELOPMENT_PLAN.md 5.4 stays UNCHECKED, annotated with real status (1 of 5 formats, unverified against a real export file)."
     },
     "6.1": {
-      "status": "in_progress",
+      "status": "done",
       "class": "logic",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "50f664e",
-      "notes": "IN PROGRESS -- entities/capsule-type AND entities/field DONE and checkpointed. capsule-type: CapsuleType (id/name/description-nullable/createdAt/updatedAt), full CRUD, migration v9, 11 tests. field: CapsuleField (id/capsuleTypeId/name/fieldType-9-member-union/config-opaque-nullable-JSON/sortOrder/required/createdAt/updatedAt), migration v10, getFieldsByCapsuleType ordered by sort_order ASC (deliberate deviation from the updated_at DESC convention -- display order, not recency), required follows entities/model's isActive/is_active boolean-storage convention exactly, no SQL FK on capsule_type_id (matches this app's graceful-degradation convention, no FK constraints anywhere in this codebase), updateCapsuleField's patch type excludes both id and capsuleTypeId (type-enforced, verified via a checker-run @ts-expect-error probe, not just conventionally avoided). 16 tests including all 9 field types round-tripped and cross-capsule-type scoping isolation. entities/capsule remains genuinely unstarted -- the last of the three named entities. Both checker rounds passed on first attempt with real independent verification (migration-version-collision checks, boolean-convention correctness on both read/write paths, ordering justification, FSD boundaries). Design note carried forward for entities/capsule: capsule field VALUES (CapsuleValue in CLAUDE.md's domain model, not its own named plan step) planned as an EAV-style capsule_values table living inside entities/capsule itself, kept minimal for CRUD-only scope now, typed columns deferred until 6.5 (search/filter/sort) actually needs them (YAGNI). docs/DEVELOPMENT_PLAN.md 6.1 stays UNCHECKED -- 2 of 3 named entities done."
+      "checkpoint": "110b7a8",
+      "notes": "DONE -- all three named entities complete. capsule-type: CapsuleType, full CRUD, migration v9. field: CapsuleField (9-member FieldType union, opaque config, sort_order ASC display ordering, isActive-style boolean convention, no FK), migration v10. capsule: Capsule (id/capsuleTypeId/title/createdAt/updatedAt, full CRUD, no FK) + CapsuleValue EAV table (capsule_id+field_id UNIQUE, value: string|null), migrations v11+v12. upsertCapsuleValue is this codebase's FIRST real SQL upsert (INSERT...ON CONFLICT...DO UPDATE) -- DO UPDATE SET deliberately touches only value/updated_at, preserving the existing row's id/created_at even when the caller generates a fresh id/createdAt on every call. Mutation-tested myself: broke the identity-preservation (added id/created_at to DO UPDATE SET, 1 test caught it), broke the UNIQUE constraint (removed it, 7 tests immediately failed with a real SQL error) -- both restored after confirming. 59 tests total across the three entities. All three checker rounds passed on first attempt with real independent verification each time (migration-version-collision checks across all 5 new versions, boolean-convention correctness, ordering justification, FSD boundaries, upsert regression scenario re-run independently, UNIQUE constraint genuinely exercised, cross-capsule-type/cross-capsule scoping isolation, null-value round-tripping). Checker explicitly confirmed 6.1 as a whole is complete against its own plan text. docs/DEVELOPMENT_PLAN.md 6.1 TICKED. Design note for whoever builds 6.2+ (CapsuleEditor/FieldRenderer): CapsuleValue's config-per-fieldType shapes (select options, relation target, etc.) still need their concrete definitions -- deferred to 6.8 (relation/attachment) and 6.10 (validation) per this phase's own sequencing, not decided here."
     },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -187,7 +187,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "50f664e",
-    "note": "40 suites, 479 tests passing after 6.1's entities/field"
+    "head": "110b7a8",
+    "note": "41 suites, 500 tests passing after 6.1 complete (all three entities)"
   }
 }

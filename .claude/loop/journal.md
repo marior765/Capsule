@@ -1832,4 +1832,56 @@ the natural final piece.
 
 ---
 
+## Beat 24 — 2026-08-18
+
+**Step:** 6.1's third and final piece — `entities/capsule` (the `Capsule`
+instance entity + `CapsuleValue`, the EAV table holding per-field values).
+Completes step 6.1.
+
+Built `Capsule` (id, capsuleTypeId, title, timestamps) matching the
+established CRUD pattern exactly, then `CapsuleValue`: one row per
+(capsule, field) pair, `UNIQUE(capsule_id, field_id)` enforcing that
+invariant at the DB level, `value: string | null` (a field can be
+explicitly unset while still having a row).
+
+`upsertCapsuleValue` is this codebase's first real SQL upsert — no prior
+entity needed one. The genuinely safety-critical property: when a caller
+sets a field's value a second time, the existing row's `id`/`created_at`
+must survive untouched, even though the most natural calling pattern
+("build a fresh `CapsuleValue` object every time, let upsert sort out
+whether it's actually new") would hand upsert a brand-new id and
+timestamp on every call. Got the `DO UPDATE SET` clause right the first
+time (touches only `value`/`updated_at`), but didn't trust that —
+mutation-tested it myself before sending anywhere: added `id`/`created_at`
+to the update clause, watched the identity-preservation test catch it
+immediately, restored. Did the same for the `UNIQUE` constraint itself
+(removed it, watched 7 tests fail with a genuine SQL error, restored) —
+confirming the constraint the whole upsert depends on is load-bearing,
+not decorative DDL nobody's actually testing.
+
+**Checker: pass on the first attempt**, and re-ran the exact same upsert
+regression scenario independently rather than trusting the test's
+existence — reconstructed the "fresh id/createdAt on every call" pattern
+by hand and confirmed the row's identity survives. Also explicitly
+confirmed, unprompted, that step 6.1 as a whole (all three entities
+combined) is now genuinely complete against the plan's own wording, and
+flagged that the checkbox should be ticked as part of checkpointing.
+
+**Gate:** tsc ✅ · jest ✅ 500/500, 41 suites · eslint ✅.
+**Checkpoint:** `110b7a8`.
+**Result:** 6.1 done ✅ — `docs/DEVELOPMENT_PLAN.md` box ticked. Three
+beats, three checker rounds, all first-attempt passes, zero quarantines.
+
+Left a design note for whoever builds 6.2 onward: `CapsuleValue.config`'s
+concrete per-field-type shapes (select options, a relation's target
+capsule type, etc.) still need their own definitions — genuinely 6.8's
+(relation/attachment field types) and 6.10's (field validation) job, not
+decided ahead of time here.
+
+Cursor advances to **6.2** (`CapsuleEditor` + `FieldRenderer` for base
+field types) — the first UI work in Phase 6, and the first thing that will
+actually exercise `entities/capsule`'s data layer end-to-end.
+
+---
+
 <!-- Append new beats above this line. -->
