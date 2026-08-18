@@ -2,10 +2,12 @@
 
 let downloadCounter = 0;
 export const __deletedUris: string[] = [];
+export const __deletedDirectoryUris: string[] = [];
 
 export function __resetFsMock(): void {
   downloadCounter = 0;
   __deletedUris.length = 0;
+  __deletedDirectoryUris.length = 0;
 }
 
 type UriPart = string | { uri: string };
@@ -19,6 +21,9 @@ export class Directory {
     this.uri = join(...parts);
   }
   create(): void {}
+  delete(): void {
+    __deletedDirectoryUris.push(this.uri);
+  }
 }
 
 export class File {

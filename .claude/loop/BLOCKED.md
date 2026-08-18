@@ -17,6 +17,49 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ## Needs a device / dev build
 
+### 4.5 — `features/wipe-data` — secure full wipe (models, chats, settings)
+Implemented and green: `wipeAllData(db)` deletes the on-disk models
+directory, writes a "wipe" audit entry (before deleting anything else —
+mirrors `encrypt-vault`'s `resetVault` ordering, mutation-tested), clears
+all MMKV settings, then calls `shared/db`'s `deleteDb()`. Capsules
+(`entities/capsule`) don't exist yet (Phase 6 unbuilt) — nothing to wipe
+there today. **Not wired to any button or screen** — this is the module
+only, deliberately left unwired for a follow-up beat (mirrors 4.3's own
+entity-before-widgets sequencing). **Nothing here has run on a real
+device.**
+
+**Open question — should `wipeAllData` and `encrypt-vault`'s `resetVault`
+be unified behind one entry point?** Both are "delete everything and start
+over" style operations. `resetVault` clears the vault key (secure-store) +
+calls `deleteDb()`; `wipeAllData` deletes model files + clears MMKV
+settings + calls the same `deleteDb()`. They overlap on `deleteDb()` but
+each also does something the other doesn't, and `wipeAllData` can't call
+`resetVault` (or vice versa) directly — FSD forbids one feature importing
+another. Options: (a) leave them separate, and whatever eventually wires a
+real "Wipe everything" button on the settings screen calls both in
+sequence; (b) extract a genuinely shared primitive (e.g. `shared/db`
+already owns `deleteDb` — could a `shared/` module own the *sequencing* of
+a full wipe too, with both features supplying their own pre-delete
+cleanup?); (c) leave `resetVault` scoped to vault-recovery specifically
+(its own doc comment already frames it that way) and let `wipeAllData`
+become the one true "wipe everything" entry point once it also knows how
+to clear the vault key — which would need a design decision about how a
+feature-layer module reaches into another feature's storage without a
+forbidden import (mirrors 4.1/4.2's own DI precedent, or moves vault-key
+storage down a layer). Not decided here — genuinely open, worth resolving
+before (not after) either path gets a UI button.
+
+**Device check, once wired to a UI:**
+1. Confirm the models directory is genuinely gone from disk afterward
+   (not just that `.delete()` was called without erroring).
+2. Confirm MMKV-backed settings (inference config, STT model path, any
+   persona defaults) are genuinely reset to their defaults on next launch,
+   not just absent-and-crashing.
+3. Confirm the app doesn't crash immediately after a wipe — every open
+   provider/screen needs to handle "the db was just deleted out from under
+   me" gracefully (this diff doesn't address that; it's real UI-integration
+   work for whoever wires the button).
+
 ### 4.4 — `widgets/AppLockSettings` — passphrase setup form on the privacy screen
 Implemented and green: a "set up a passphrase" form (two `TextInput`s,
 validated via extracted+tested `validatePassphraseSetup.ts`, calls

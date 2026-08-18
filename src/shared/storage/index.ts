@@ -29,3 +29,8 @@ export function setBoolean(key: string, value: boolean): void {
 export function remove(key: string): void {
   storage.remove(key);
 }
+
+/** Removes every stored key. Used by features/wipe-data's full wipe. */
+export function clearAllSettings(): void {
+  storage.clearAll();
+}

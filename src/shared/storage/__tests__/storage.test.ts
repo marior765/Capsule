@@ -1,5 +1,8 @@
 // Tests for step 0.3 — written before implementation (TDD)
+// The "clearAllSettings" block below is for step 4.5, also TDD (written
+// before that export existed).
 import {
+  clearAllSettings,
   getBoolean,
   getNumber,
   getString,
@@ -61,5 +64,25 @@ describe("shared/storage — edge cases", () => {
 describe("shared/storage — error handling", () => {
   it("throws when setting an empty key", () => {
     expect(() => setString("", "value")).toThrow();
+  });
+});
+
+describe("clearAllSettings", () => {
+  it("removes every stored key, regardless of type", () => {
+    setString("clear.string", "value");
+    setNumber("clear.number", 1);
+    setBoolean("clear.bool", true);
+
+    clearAllSettings();
+
+    expect(getString("clear.string")).toBeUndefined();
+    expect(getNumber("clear.number")).toBeUndefined();
+    expect(getBoolean("clear.bool")).toBeUndefined();
+  });
+
+  it("leaves storage usable afterward — a fresh key can still be set and read", () => {
+    clearAllSettings();
+    setString("after.clear", "still works");
+    expect(getString("after.clear")).toBe("still works");
   });
 });
