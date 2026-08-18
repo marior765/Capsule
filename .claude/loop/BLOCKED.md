@@ -23,10 +23,10 @@ directory, writes a "wipe" audit entry (before deleting anything else —
 mirrors `encrypt-vault`'s `resetVault` ordering, mutation-tested), clears
 all MMKV settings, then calls `shared/db`'s `deleteDb()`. Capsules
 (`entities/capsule`) don't exist yet (Phase 6 unbuilt) — nothing to wipe
-there today. **Not wired to any button or screen** — this is the module
-only, deliberately left unwired for a follow-up beat (mirrors 4.3's own
-entity-before-widgets sequencing). **Nothing here has run on a real
-device.**
+there today. **UPDATE (same session, next beat): now wired to a real
+"Wipe all data" button** via `widgets/WipeDataSettings` — see the 4.4
+entry below for the wiring itself and its own device-check items.
+**Nothing here has run on a real device.**
 
 **Open question — should `wipeAllData` and `encrypt-vault`'s `resetVault`
 be unified behind one entry point?** Both are "delete everything and start
@@ -49,24 +49,42 @@ forbidden import (mirrors 4.1/4.2's own DI precedent, or moves vault-key
 storage down a layer). Not decided here — genuinely open, worth resolving
 before (not after) either path gets a UI button.
 
-**Device check, once wired to a UI:**
+**Device check:**
 1. Confirm the models directory is genuinely gone from disk afterward
    (not just that `.delete()` was called without erroring).
 2. Confirm MMKV-backed settings (inference config, STT model path, any
    persona defaults) are genuinely reset to their defaults on next launch,
    not just absent-and-crashing.
-3. Confirm the app doesn't crash immediately after a wipe — every open
-   provider/screen needs to handle "the db was just deleted out from under
-   me" gracefully (this diff doesn't address that; it's real UI-integration
-   work for whoever wires the button).
 
-### 4.4 — `widgets/AppLockSettings` — passphrase setup form on the privacy screen
-Implemented and green: a "set up a passphrase" form (two `TextInput`s,
-validated via extracted+tested `validatePassphraseSetup.ts`, calls
-`encrypt-vault`'s `setUpVault`), wired into `settings/privacy.tsx` alongside
-the already-shipped `PrivacyBanner`/`EgressLog`. Exercises real
-`expo-secure-store`/`react-native-quick-crypto` (via `setUpVault`) from
-actual UI for the first time. **Nothing here has run on a real device.**
+### 4.4 — `widgets/AppLockSettings` + `widgets/WipeDataSettings` — privacy screen
+Both remaining pieces of `settings/privacy.tsx` (app-lock passphrase setup
+and a real "wipe all data" button — `PrivacyBanner`/`EgressLog` shipped in
+4.3) are now wired in.
+
+**App lock:** a "set up a passphrase" form (two `TextInput`s, validated via
+extracted+tested `validatePassphraseSetup.ts`, calls `encrypt-vault`'s
+`setUpVault`). Exercises real `expo-secure-store`/`react-native-quick-crypto`
+(via `setUpVault`) from actual UI for the first time.
+
+**Wipe:** a destructive-styled button, gated by a real OS confirmation
+dialog (`Alert.alert`, wrapped in a promise; the actual "never wipe without
+confirmation" logic is `wipeWithConfirmation`, unit-tested against a fake
+confirm function, mutation-tested for the exact bypass shape — confirm
+skipped, wipe still runs). On a successful wipe, `app/providers`' new
+`remigrateDb()` re-runs migrations (a freshly-wiped database has no tables
+at all — they only ran once, at `Providers`' own mount) before
+`router.replace("/")` sends the user to a screen that will genuinely
+re-fetch fresh state. **Explicitly not solved here:** whether *other*
+already-open screens elsewhere in the app correctly recover from having
+their `db` handle invalidated mid-session — this wiring only guarantees the
+*privacy screen itself* and the screen it navigates to behave correctly
+after a wipe, not every other route a user might have had open in another
+tab/stack entry at the same time. A real cross-app "the database was just
+wiped" broadcast (or simply accepting that a wipe implies leaving other
+screens, which is what `router.replace("/")` does for this one) is a
+broader concern than this step's scope.
+
+**Nothing here has run on a real device.**
 
 **Device check:**
 1. Enter a passphrase, confirm, tap "Enable app lock" — `setUpVault` runs
@@ -83,6 +101,16 @@ actual UI for the first time. **Nothing here has run on a real device.**
    plain SQLite (`file capsule.db`), since `Providers`' `openDb()` call is
    still unconditional and unkeyed until the launch-gate integration below
    exists.
+4. Tap "Wipe all data" — confirm the native OS alert genuinely appears with
+   both options; tapping "Cancel" leaves everything untouched; tapping
+   "Wipe everything" actually deletes data (cross-reference with 4.5's own
+   device-check items above) and lands you back on a working home screen,
+   not a crash or a blank "no such table" error.
+5. After a wipe, confirm the app is genuinely usable again in the same
+   session without a manual restart — send a chat message, download a
+   model, or anything else that touches the db, and confirm it works
+   rather than erroring (this is what `remigrateDb()` is supposed to
+   guarantee; a real device is the only way to know it actually does).
 
 **Two scope decisions made here, deliberately, not unattended:**
 

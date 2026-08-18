@@ -1,12 +1,13 @@
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb } from "@/app/providers";
+import { remigrateDb, useDb } from "@/app/providers";
 import { getAllAuditEntries, type AuditEntry } from "@/entities/audit";
 import { PrivacyBanner } from "@/widgets/PrivacyBanner";
 import { EgressLog } from "@/widgets/EgressLog";
 import { AppLockSettings } from "@/widgets/AppLockSettings";
+import { WipeDataSettings } from "@/widgets/WipeDataSettings";
 
 export default function PrivacyScreen() {
   const db = useDb();
@@ -18,11 +19,23 @@ export default function PrivacyScreen() {
     }, [db]),
   );
 
+  // A fresh, wiped database has no tables until migrations re-run (they
+  // only run once, at Providers' own mount) — remigrateDb() restores that
+  // invariant before router.replace sends the user to a screen that will
+  // genuinely re-fetch fresh (now-empty) state, rather than one still
+  // showing pre-wipe data or hitting "no such table."
+  const handleWiped = () => {
+    remigrateDb();
+    router.replace("/");
+  };
+
   return (
     <View style={styles.root}>
       <PrivacyBanner />
       <Text style={styles.heading}>App lock</Text>
       <AppLockSettings db={db} />
+      <Text style={styles.heading}>Danger zone</Text>
+      <WipeDataSettings db={db} onWiped={handleWiped} />
       <Text style={styles.heading}>Activity log</Text>
       <Text style={styles.meta}>
         Every export, vault unlock, wipe, and model download this app has ever
