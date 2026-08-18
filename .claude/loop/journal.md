@@ -1480,4 +1480,73 @@ exercise `shared/format` against real entity data for the first time.
 
 ---
 
+## Beat 18 — 2026-08-18
+
+**Step:** 5.2 — `features/import-export` (single conversation, single capsule,
+whole vault) — the first real user of 5.1's `shared/format`.
+
+Scoped down from the plan step's three named deliverables to two:
+conversation export/import and whole-vault export/import (every
+conversation). Capsule support genuinely can't exist yet — checked
+`entities/capsule` directly (still `export {}`) rather than assuming, and
+confirmed Phase 6 is entirely unchecked in the plan before writing that
+into the module's own doc comment.
+
+Design decision made and documented up front, not discovered mid-implementation:
+import always assigns **fresh** ids (a new conversation id, and a fresh id
+for every message, remapped consistently through `message.conversationId`,
+`message.parentId`, and `conversation.activeLeafId`). Reasoned explicitly
+about the alternative (preserving the original ids) and why it's wrong for
+*this* step: an id-preserving restore is really "make my data look exactly
+like it did at backup time" — a different feature, and in fact already
+named on the plan as 5.3 (`features/backup-restore`), not yet built. Import
+staying id-generating means it's always safe to run — including running
+the same export twice, which just creates two independent copies rather
+than colliding or overwriting.
+
+Also flagged, directly in the code comment, a naming collision worth being
+explicit about: this step's own plan text calls the "everything" scope
+"whole vault," which has nothing to do with `features/encrypt-vault`'s
+cryptographic vault (the passphrase-wrapped master key). Same English word,
+two unrelated meanings in this codebase now — worth a comment precisely
+because it's the kind of ambiguity that's cheap to clarify once and
+expensive to untangle later if someone reads "vault" in this module and
+assumes encryption is involved.
+
+TDD'd 13 tests first, covering the safety-critical property directly: does
+export capture the *entire* message tree (every branch), not just the
+active leaf — traced `getMessagesByConversation`'s actual SQL to confirm
+it has no branch filtering, rather than assuming. Mutation-tested the
+parentId-remapping logic myself before sending anywhere: broke it (left
+`parentId` unmapped), confirmed the branching-tree test catches it
+immediately, restored.
+
+**Checker: pass on the first attempt.** Independently re-verified id-remap
+correctness with particular attention to the multi-conversation case
+(confirmed each `restoreConversation` call gets its own fresh id map, so a
+whole-vault import with several conversations can't leak an id from one
+conversation's map into another's messages), full-tree export, and
+`PortableFormatError` propagation through `shared/format`. Two minor,
+explicitly non-blocking notes (no transaction wrapping — matches this
+codebase's existing style everywhere else; a hypothetical silent re-root
+if a message's `parentId` ever pointed outside the exported set, not
+reachable via normal app flow) — left as-is, matching the checker's own
+judgment on the last two beats' minor findings.
+
+**Gate:** tsc ✅ · jest ✅ 418/418, 36 suites · eslint ✅ (a real unused-import
+warning caught and fixed before the prettier `--fix` pass, not just
+formatting noise).
+**Checkpoint:** `5ae4583`.
+**Result:** 5.2 marked `done` for its achievable scope — `docs/DEVELOPMENT_PLAN.md`'s
+box stays unchecked (2 of 3 named deliverables, mirrors 4.3's own
+precedent) but annotated inline with the real status. Treated as
+effectively complete-for-now rather than `in_progress`, since the capsule
+piece can't be picked up again until Phase 6 exists — a whole separate,
+not-yet-started phase, not something worth re-selecting every beat.
+
+Cursor advances to **5.3** (`features/backup-restore`) — the id-preserving
+counterpart this beat's own design deliberately deferred to it.
+
+---
+
 <!-- Append new beats above this line. -->

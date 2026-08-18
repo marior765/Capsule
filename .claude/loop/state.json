@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 17,
+    "beat": 18,
     "status": "running"
   },
   "cursor": {
-    "step": "5.2",
+    "step": "5.3",
     "phase": 5
   },
   "steps": {
@@ -140,6 +140,14 @@
       "checkpoint": "6fcd29b",
       "notes": "DONE -- shared/format: wrapPortable/unwrapPortable (object-level envelope {formatVersion,kind,exportedAt,data}), serializePortable/parsePortable (JSON string-level), PortableFormatError. Deliberately domain-agnostic (no entity references anywhere in the implementation, verified by the checker via direct grep) -- wiring an actual entity (Conversation, etc.) through this format is Phase 5.2's job (features/import-export), not this step's; CLAUDE.md's 'every persisted entity must round-trip through the portable format' becomes enforceable once that happens, not before. Only CURRENT_FORMAT_VERSION=1 accepted today -- no migration path built (YAGNI, matches shared/fs's own deferred-until-needed precedent in ARCHITECTURE.md). 13 tests, TDD. Mutation-tested the version-check enforcement myself before sending (removed it, confirmed the right test catches it, restored). Checker passed on first attempt: independently verified round-trip correctness, every parsePortable failure mode, the PortableFormatError prototype chain (instanceof/name probed at runtime, not assumed), and the domain-agnostic claim via grep. Two minor, EXPLICITLY non-blocking observations noted by the checker (non-number exportedAt / non-string kind in malformed input gets coerced rather than rejected with a precise message -- doesn't affect round-tripped data since only `data` is ever returned to callers) -- left as-is per the checker's own judgment rather than expanding scope for a metadata-only polish; noted here in case a future beat wants to tighten it. Not native-classed: docs/DEVELOPMENT_PLAN.md 5.1 ticked."
     },
+    "5.2": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "5ae4583",
+      "notes": "DONE for its achievable scope -- exportConversation/importConversation (single conversation + full message tree, every branch not just active leaf) + exportAllConversations/importAllConversations (whole-vault scope, minus capsules). Import always generates fresh ids, remapping message.conversationId/parentId + conversation.activeLeafId via a per-call id map -- 'always new data' semantics, safe to run twice, never collides. An id-preserving restore is deliberately 5.3's job (features/backup-restore), not this step's. Capsule scope genuinely blocked -- entities/capsule is still export{} (Phase 6 unbuilt), verified before writing the deferral claim. docs/DEVELOPMENT_PLAN.md 5.2's box stays UNCHECKED (3 named deliverables, only 2 done, mirrors 4.3's own precedent) but annotated inline with the real status -- treating this as effectively complete-for-now rather than 'in_progress' since capsule support can't meaningfully be picked up again until Phase 6 (a whole separate, not-yet-started phase) exists; no point re-selecting this step every beat with nothing new to do. 13 tests, TDD, mutation-tested the parentId remapping myself (the single most safety-critical property -- a bug would silently corrupt conversation trees) before sending to the checker. Checker passed on first attempt: independently verified id-remap correctness including no cross-conversation leakage in a multi-conversation whole-vault import, full-tree export, re-import safety, and PortableFormatError propagation. Two minor non-blocking notes (no transaction wrapping -- matches existing codebase convention; a hypothetical silent re-root on corrupted/out-of-set parentId data, not reachable via normal app flow) left as-is."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -153,7 +161,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "6fcd29b",
-    "note": "35 suites, 405 tests passing after 5.1 (shared/format)"
+    "head": "5ae4583",
+    "note": "36 suites, 418 tests passing after 5.2 (import-export)"
   }
 }
