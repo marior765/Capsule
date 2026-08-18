@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 25,
+    "beat": 26,
     "status": "running"
   },
   "cursor": {
-    "step": "6.2",
+    "step": "6.3",
     "phase": 6
   },
   "steps": {
@@ -175,12 +175,12 @@
       "notes": "DONE -- all three named entities complete. capsule-type: CapsuleType, full CRUD, migration v9. field: CapsuleField (9-member FieldType union, opaque config, sort_order ASC display ordering, isActive-style boolean convention, no FK), migration v10. capsule: Capsule (id/capsuleTypeId/title/createdAt/updatedAt, full CRUD, no FK) + CapsuleValue EAV table (capsule_id+field_id UNIQUE, value: string|null), migrations v11+v12. upsertCapsuleValue is this codebase's FIRST real SQL upsert (INSERT...ON CONFLICT...DO UPDATE) -- DO UPDATE SET deliberately touches only value/updated_at, preserving the existing row's id/created_at even when the caller generates a fresh id/createdAt on every call. Mutation-tested myself: broke the identity-preservation (added id/created_at to DO UPDATE SET, 1 test caught it), broke the UNIQUE constraint (removed it, 7 tests immediately failed with a real SQL error) -- both restored after confirming. 59 tests total across the three entities. All three checker rounds passed on first attempt with real independent verification each time (migration-version-collision checks across all 5 new versions, boolean-convention correctness, ordering justification, FSD boundaries, upsert regression scenario re-run independently, UNIQUE constraint genuinely exercised, cross-capsule-type/cross-capsule scoping isolation, null-value round-tripping). Checker explicitly confirmed 6.1 as a whole is complete against its own plan text. docs/DEVELOPMENT_PLAN.md 6.1 TICKED. Design note for whoever builds 6.2+ (CapsuleEditor/FieldRenderer): CapsuleValue's config-per-fieldType shapes (select options, relation target, etc.) still need their concrete definitions -- deferred to 6.8 (relation/attachment) and 6.10 (validation) per this phase's own sequencing, not decided here."
     },
     "6.2": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "18bf624",
-      "notes": "IN PROGRESS -- FieldRenderer DONE and checkpointed. Purely controlled widget dispatching on CapsuleField.fieldType: TextInput (text/long_text/number/date), Switch (boolean), toggleable chip Pressables (single_select/multi_select), placeholder text (relation/attachment -- 6.8's job, 'base field types' = the 9-member union minus those two). fieldValueCodec.ts: parseSelectOptions (defines a {options:string[]} config shape for select types -- a legitimate, necessary in-scope extension since FieldRenderer needs it to render choices; verified against entities/field's own doc comment and 6.8's actual plan text that this doesn't overreach into deferred territory), parseBooleanValue/serializeBooleanValue, parseMultiSelectValue/serializeMultiSelectValue -- all degrade gracefully on malformed/wrong-shaped JSON, never throw. 17 tests. Dynamic per-option testIDs via buildTestID, index-derived (no collision risk from duplicate option text). CapsuleEditor remains genuinely unstarted -- mirrors 6.1's own three-beat entity sequencing. Checker passed on first attempt: independently traced the graceful-degradation try/catch logic (not just test names), verified toggle/select correctness (multi-select adds/removes exactly the pressed option; single-select's tap-again-to-clear is a deliberate, defensible UX choice), confirmed no hardcoded testID strings. docs/DEVELOPMENT_PLAN.md 6.2 stays UNCHECKED -- CapsuleEditor not done."
+      "checkpoint": "68f2399",
+      "notes": "DONE -- both pieces complete. FieldRenderer: purely controlled widget dispatching on CapsuleField.fieldType (TextInput for text/long_text/number/date, Switch for boolean, toggleable chip Pressables for single_select/multi_select, placeholder for relation/attachment -- 6.8's job). fieldValueCodec.ts: parseSelectOptions (defines a {options:string[]} config shape for select types, verified in-scope against entities/field's own deferral and 6.8's actual plan text), boolean/multi-select parse+serialize, all gracefully degrading on malformed JSON. 17 tests. CapsuleEditor: composes a title input + one FieldRenderer per field, purely controlled (no state, no persistence), values[field.id] ?? null correctly keyed by field id not array position, per-field onChange closures verified correct (no cross-field-id leakage with 2+ fields). No dedicated test file for CapsuleEditor itself -- genuinely pure JSX composition with nothing to extract, verified by the checker reading the component rather than trusting the absence of tests. Widget-importing-widget (CapsuleEditor -> FieldRenderer) confirmed permitted by this project's FSD boundaries config (features can't import sibling features; widgets can import widgets). Both checker rounds passed on first attempt with real independent verification. docs/DEVELOPMENT_PLAN.md 6.2 TICKED. No capsule route exists yet to mount CapsuleEditor in -- that's 6.3's job (CapsuleList + CapsuleCard, capsules routes), the natural next step."
     },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -195,7 +195,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "18bf624",
-    "note": "42 suites, 517 tests passing after 6.2's FieldRenderer"
+    "head": "68f2399",
+    "note": "42 suites, 517 tests passing after 6.2 complete (FieldRenderer + CapsuleEditor)"
   }
 }

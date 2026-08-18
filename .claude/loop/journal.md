@@ -1938,4 +1938,49 @@ real `entities/capsule`/`entities/field` data) is the natural next piece.
 
 ---
 
+## Beat 26 — 2026-08-18
+
+**Step:** 6.2's final piece — `CapsuleEditor`, composing a title input with
+one `FieldRenderer` per field. Completes step 6.2.
+
+A thin composition layer over last beat's `FieldRenderer`: a title
+`TextInput`, then `fields.map` producing a labeled row (with a `" *"`
+suffix for required fields) wrapping each field's `FieldRenderer`. Purely
+controlled — no `useState`, no `entities/capsule` import, no persistence —
+matching `FieldRenderer`'s and `VoiceRecordButton`'s own established
+pattern. Deliberately shipped with no dedicated test file this time,
+having actually checked (not assumed) that there's nothing here worth
+extracting: no parsing, no branching beyond a trivial ternary, nothing
+resembling `fieldValueCodec.ts`'s real logic.
+
+The one thing worth being careful about in a per-item-callback component
+like this — whether each field's `onChange` correctly reports its OWN
+field's id rather than leaking whichever field happened to render last
+(a classic closure-in-a-loop mistake) — traced by hand before calling it
+done: each `onChange` closes over the `field` binding from its own
+`map` iteration, a fresh one per call, so there's no shared mutable
+loop variable to leak.
+
+**Checker: pass on the first attempt**, and specifically pushed back on
+whether "no test file" was actually defensible rather than accepting the
+absence of tests at face value — read the component itself and reached
+the same conclusion independently. Also checked something I hadn't
+explicitly verified myself: that `docs/ARCHITECTURE.md`'s and
+`eslint.config.js`'s FSD rules actually *permit* one widget importing
+another (unlike `features/`, which the same rules explicitly forbid from
+importing sibling features) — confirmed rather than assumed.
+
+**Gate:** tsc ✅ · jest ✅ 517/517, 42 suites (unchanged — no new tests to
+add) · eslint ✅.
+**Checkpoint:** `68f2399`.
+**Result:** 6.2 done ✅ — `docs/DEVELOPMENT_PLAN.md` box ticked. Two
+beats, two checker rounds, both first-attempt passes.
+
+Cursor advances to **6.3** (`CapsuleList` + `CapsuleCard`, capsules
+routes) — the first Phase 6 step that will actually mount `CapsuleEditor`
+somewhere real, and the point where `entities/capsule`'s data layer
+finally gets exercised end-to-end through the UI.
+
+---
+
 <!-- Append new beats above this line. -->
