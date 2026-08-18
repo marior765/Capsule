@@ -126,7 +126,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown) — ChatGPT export implemented, unverified against a real export file (see BLOCKED.md); the other four formats not started
 
 ### Phase 6 — Capsule data core
-- [ ] 6.1 `entities/capsule`, `entities/field`, `entities/capsule-type` — models + CRUD
+- [x] 6.1 `entities/capsule`, `entities/field`, `entities/capsule-type` — models + CRUD
 - [ ] 6.2 `CapsuleEditor` + `FieldRenderer` for base field types
 - [ ] 6.3 `CapsuleList` + `CapsuleCard`, capsules routes
 - [ ] 6.4 Create / edit / delete capsule flows
