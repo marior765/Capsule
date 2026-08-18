@@ -1,1 +1,1 @@
-export {};
+export { CapsuleList } from "./CapsuleList";

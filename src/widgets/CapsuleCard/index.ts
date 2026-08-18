@@ -1,1 +1,1 @@
-export {};
+export { CapsuleCard } from "./CapsuleCard";
