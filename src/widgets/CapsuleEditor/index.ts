@@ -1,1 +1,1 @@
-export {};
+export { CapsuleEditor } from "./CapsuleEditor";
