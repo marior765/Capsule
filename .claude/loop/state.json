@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 16,
+    "beat": 17,
     "status": "running"
   },
   "cursor": {
-    "step": "5.1",
+    "step": "5.2",
     "phase": 5
   },
   "steps": {
@@ -132,6 +132,14 @@
       "checkpoint": "3b9f25d",
       "notes": "DONE -- all three named deliverables complete: entities/audit (data layer, shipped earlier beats), shared/egress (begin/end network-activity tracking, no domain knowledge, wired into manage-models.downloadModel via try/finally so it can't get stuck 'active' on a failed download), PrivacyBanner (live indicator, subscribes via useSyncExternalStore), EgressLog (props-driven viewer + extracted formatAuditEntry.ts, exhaustive switch over AuditAction's closed union -- verified this genuinely fails tsc if a case is dropped, not just documented as such). Wired into src/app/(app)/settings/privacy.tsx (was a bare stub). New accent theme color token (both palettes) since danger would misrepresent expected network activity as an error. Checker failed round 2 on two things: box not ticked yet (fair -- fixed) and a real stale-state race in PrivacyBanner's original useState+useEffect subscription pattern -- verified the race myself by re-tracing React's commit/effect timing before accepting, then fixed with useSyncExternalStore (the hook built for exactly this class of problem) rather than reintroducing the setState-in-effect pattern eslint had already flagged on an earlier pass. Re-review: pass, independently verified the hook usage on every axis (argument order, real unsubscribe, correct getSnapshot-as-source-of-truth adapter, no infinite-loop risk). NOT native-classed -- docs/DEVELOPMENT_PLAN.md 4.3 box ticked, first non-native completion in several beats. Note: settings/privacy.tsx now has real content but is NOT yet 4.4's full 'privacy screen' -- still missing app-lock enable/disable UI and wipe-data UI, neither of which has any UI hook built yet (4.2's app-lock and the not-yet-started 4.5 wipe-data)."
     },
+    "5.1": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "6fcd29b",
+      "notes": "DONE -- shared/format: wrapPortable/unwrapPortable (object-level envelope {formatVersion,kind,exportedAt,data}), serializePortable/parsePortable (JSON string-level), PortableFormatError. Deliberately domain-agnostic (no entity references anywhere in the implementation, verified by the checker via direct grep) -- wiring an actual entity (Conversation, etc.) through this format is Phase 5.2's job (features/import-export), not this step's; CLAUDE.md's 'every persisted entity must round-trip through the portable format' becomes enforceable once that happens, not before. Only CURRENT_FORMAT_VERSION=1 accepted today -- no migration path built (YAGNI, matches shared/fs's own deferred-until-needed precedent in ARCHITECTURE.md). 13 tests, TDD. Mutation-tested the version-check enforcement myself before sending (removed it, confirmed the right test catches it, restored). Checker passed on first attempt: independently verified round-trip correctness, every parsePortable failure mode, the PortableFormatError prototype chain (instanceof/name probed at runtime, not assumed), and the domain-agnostic claim via grep. Two minor, EXPLICITLY non-blocking observations noted by the checker (non-number exportedAt / non-string kind in malformed input gets coerced rather than rejected with a precise message -- doesn't affect round-tripped data since only `data` is ever returned to callers) -- left as-is per the checker's own judgment rather than expanding scope for a metadata-only polish; noted here in case a future beat wants to tighten it. Not native-classed: docs/DEVELOPMENT_PLAN.md 5.1 ticked."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -145,7 +153,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "53eaf12",
-    "note": "34 suites, 392 tests passing after 4.4 (WipeDataSettings, screen complete)"
+    "head": "6fcd29b",
+    "note": "35 suites, 405 tests passing after 5.1 (shared/format)"
   }
 }

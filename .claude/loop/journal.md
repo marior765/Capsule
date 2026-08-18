@@ -1430,4 +1430,54 @@ Phase 4 (privacy core) is now fully worked through beat-to-beat; Phase 5
 
 ---
 
+## Beat 17 — 2026-08-18
+
+**Step:** 5.1 — `shared/format` — versioned portable format spec + serializers.
+First step of Phase 5 (portability), first `logic`-classed step since 4.3.
+
+Designed a domain-agnostic envelope: `{formatVersion, kind, exportedAt,
+data}`, plus object-level (`wrapPortable`/`unwrapPortable`) and JSON
+string-level (`serializePortable`/`parsePortable`) pairs. Deliberately kept
+`shared/format` from knowing anything about `Conversation`/`Capsule`/any
+entity — matches `shared/`'s own layering principle, and keeps the actual
+per-entity wiring as Phase 5.2's job (`features/import-export`), which is
+what the plan step's own text scopes this step to (just "shared/format
+itself," not "make every entity round-trip" — that's a standing CLAUDE.md
+convention this step enables but doesn't yet fulfill on its own).
+
+Only `CURRENT_FORMAT_VERSION = 1` is accepted — no migration path built,
+since there's nothing to migrate with a single version yet. Same YAGNI
+discipline `docs/ARCHITECTURE.md` already applies to the deferred
+`shared/fs` wrapper.
+
+TDD'd 13 tests first, then implemented. Mutation-tested the version-check
+enforcement myself before sending anywhere: removed the
+`formatVersion !== CURRENT_FORMAT_VERSION` check, confirmed the right test
+goes red, restored.
+
+**Checker: pass on the first attempt.** Verified round-trip correctness,
+every `parsePortable` failure mode (malformed JSON, bare array/primitive,
+missing fields), the `PortableFormatError` prototype chain by actually
+probing `instanceof`/`.name` at runtime rather than assuming Babel's
+transpilation preserves it, and the domain-agnostic claim via a direct
+grep for entity names. Flagged two genuinely minor, explicitly
+non-blocking gaps (a non-number `exportedAt` or non-string `kind` in
+malformed input gets coerced rather than rejected with a precise message)
+— doesn't affect round-tripped data since only `data` is ever returned to
+callers. Left as-is per the checker's own judgment rather than spending
+another review round on a metadata-only polish; noted in `state.json` for
+whoever picks this up later.
+
+**Gate:** tsc ✅ · jest ✅ 405/405, 35 suites · eslint ✅ (prettier-only
+`--fix` pass).
+**Checkpoint:** `6fcd29b`.
+**Result:** 5.1 done ✅ — `logic`-classed, `docs/DEVELOPMENT_PLAN.md` box
+ticked (first tick since 4.3, several native-classed beats in between).
+
+Cursor advances to **5.2** (`features/import-export` — single conversation,
+single capsule, whole vault) — the natural next step that will actually
+exercise `shared/format` against real entity data for the first time.
+
+---
+
 <!-- Append new beats above this line. -->
