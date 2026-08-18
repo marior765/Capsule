@@ -1983,4 +1983,61 @@ finally gets exercised end-to-end through the UI.
 
 ---
 
+## Beat 27 — 2026-08-18
+
+**Step:** 6.3 — `CapsuleList` + `CapsuleCard`, capsules routes.
+
+`docs/ARCHITECTURE.md`'s own nav-map names four route files under
+`capsules/`: `index.tsx`, `new.tsx`, `[id].tsx`, `[id]/edit.tsx`. Built
+`index.tsx` (mirroring `chat/index.tsx`'s established `useDb` +
+`useFocusEffect` + list-fetch pattern) plus the two named widgets. Before
+attempting the other three routes, checked — rather than assumed —
+whether they're actually buildable yet: grepped for any existing caller
+of `insertCapsuleType`/`insertCapsule` outside their own entity files.
+Zero. There is currently no path in this app that creates a capsule type,
+which means there's also no path that creates a capsule, which means
+`new.tsx`'s "pick a type" flow would pick from a permanently-empty list,
+and `[id].tsx`/`[id]/edit.tsx` have nothing real to ever navigate to.
+
+Built `CapsuleCard`/`CapsuleList` as pure, props-driven composition
+(mirroring `ChatBubble`/`ChatThread` exactly) — no direct db access,
+graceful "Unknown type" fallback for a dangling `capsuleTypeId`. Caught
+one thing myself by checking `ChatBubble`'s own source rather than
+inventing a fresh convention: a card rendered many times in one list
+needs a testID suffixed with its own stable domain id (`capsule.id`), not
+a render-order index — `ChatBubble` had already established exactly this
+pattern for the identical problem.
+
+**Checker: pass on the first attempt**, and sharpened my own reasoning in
+the process — I'd only explicitly named `new.tsx` as blocked; the checker
+independently traced that the same missing link (no type → no capsule)
+transitively blocks `[id].tsx` and `[id]/edit.tsx` too, since neither has
+anything real to display without a capsule existing at all. Recorded that
+clarification rather than letting my own narrower framing stand
+uncorrected.
+
+**Gate:** tsc ✅ · jest ✅ 517/517, 42 suites (unchanged — no new pure
+logic) · eslint ✅ (an unescaped apostrophe and an unused import along
+the way).
+**Checkpoint:** `4e286d6`.
+**Result:** 6.3 `in_progress` — 1 of 4 named route files done, the other
+three genuinely blocked, not deferred by choice. `docs/DEVELOPMENT_PLAN.md`'s
+box stays unchecked.
+
+**A real planning-order gap, worth naming plainly:** the rest of Phase 6
+as numbered — 6.3's remaining routes, 6.4's actual UI wiring, and in
+practice 6.5/6.6 too — is downstream of 6.7 (`SchemaBuilder` +
+`manage-schema`) existing, even though 6.7 comes *after* all of them in
+the plan's own numbering. Reordering the whole phase isn't this beat's
+call to make unilaterally, but there's one genuinely unblocked move
+available without waiting: 6.4's own *feature layer*
+(`create-capsule`/`edit-capsule`/`delete-capsule` — already-scaffolded
+stub directories) doesn't need a real type-picker UI to exist, only 6.4's
+own *route* wiring does — the same "logic layer before its UI" sequencing
+already used everywhere else this session. Cursor advances to **6.4**
+on that basis, not to 6.7, with the UI-wiring half of 6.4 expected to
+stay blocked until 6.7 exists.
+
+---
+
 <!-- Append new beats above this line. -->

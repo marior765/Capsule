@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 26,
+    "beat": 27,
     "status": "running"
   },
   "cursor": {
-    "step": "6.3",
+    "step": "6.4",
     "phase": 6
   },
   "steps": {
@@ -182,6 +182,14 @@
       "checkpoint": "68f2399",
       "notes": "DONE -- both pieces complete. FieldRenderer: purely controlled widget dispatching on CapsuleField.fieldType (TextInput for text/long_text/number/date, Switch for boolean, toggleable chip Pressables for single_select/multi_select, placeholder for relation/attachment -- 6.8's job). fieldValueCodec.ts: parseSelectOptions (defines a {options:string[]} config shape for select types, verified in-scope against entities/field's own deferral and 6.8's actual plan text), boolean/multi-select parse+serialize, all gracefully degrading on malformed JSON. 17 tests. CapsuleEditor: composes a title input + one FieldRenderer per field, purely controlled (no state, no persistence), values[field.id] ?? null correctly keyed by field id not array position, per-field onChange closures verified correct (no cross-field-id leakage with 2+ fields). No dedicated test file for CapsuleEditor itself -- genuinely pure JSX composition with nothing to extract, verified by the checker reading the component rather than trusting the absence of tests. Widget-importing-widget (CapsuleEditor -> FieldRenderer) confirmed permitted by this project's FSD boundaries config (features can't import sibling features; widgets can import widgets). Both checker rounds passed on first attempt with real independent verification. docs/DEVELOPMENT_PLAN.md 6.2 TICKED. No capsule route exists yet to mount CapsuleEditor in -- that's 6.3's job (CapsuleList + CapsuleCard, capsules routes), the natural next step."
     },
+    "6.3": {
+      "status": "in_progress",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "4e286d6",
+      "notes": "IN PROGRESS -- CapsuleList + CapsuleCard + capsules/index.tsx DONE. CapsuleCard: presentational, no db access, root testID appends capsule.id (ChatBubble's own established list-uniqueness pattern), 'Unknown type' fallback on a dangling capsuleTypeId. CapsuleList: capsules + a caller-fetched capsuleTypesById map, FlatList of CapsuleCard or empty state. index.tsx: fetches both getAllCapsules/getAllCapsuleTypes, shows a notice when no types exist. REAL STRUCTURAL GAP found and verified, not assumed: there is currently NO way anywhere in this codebase to create a CapsuleType (features/manage-schema, 6.7, is a bare stub; insertCapsuleType/insertCapsule both have zero callers outside their own entities -- checker independently verified this via search). This means capsules/new.tsx, [id].tsx, and [id]/edit.tsx (3 of 4 named route files) are ALL genuinely blocked -- not just new.tsx as I'd originally articulated; the checker caught that the same missing link (no type -> no capsule -> nothing to view/edit) transitively blocks the other two as well, a clarification worth carrying forward. docs/DEVELOPMENT_PLAN.md 6.3 stays UNCHECKED (only 1 of 4 route files exists, no partial-tick convention in that file). Checker passed on first attempt with real independent verification of the deferral claim (grepped for callers, not assumed). SEQUENCING DECISION for the next beat: the rest of Phase 6 (6.3's remaining routes, 6.4's UI wiring, 6.5, 6.6 in practice) is downstream of 6.7 existing -- but 6.4's FEATURE layer (create-capsule/edit-capsule/delete-capsule, already-scaffolded stub dirs) does NOT need a real type-picker UI to exist, only the ROUTE wiring does (matches every other 'build the logic layer before its UI' precedent this whole session: entities before CapsuleEditor, audit entity before widgets, etc.) -- so cursor advances to 6.4 next, not 6.7, since 6.4's feature layer is genuinely unblocked right now."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -195,7 +203,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "68f2399",
-    "note": "42 suites, 517 tests passing after 6.2 complete (FieldRenderer + CapsuleEditor)"
+    "head": "4e286d6",
+    "note": "42 suites, 517 tests passing after 6.3's CapsuleList/CapsuleCard/index route"
   }
 }

@@ -1496,4 +1496,44 @@ of whether it holds.
 
 ---
 
+## 2026-08-18 — A plan's numbering is not its dependency graph
+
+Every beat this whole run has walked `docs/DEVELOPMENT_PLAN.md` in the
+order its steps are written, on the working assumption that the plan's
+own numbering already encodes the right sequence to build things in. That
+assumption held for five phases. It broke on step 6.3.
+
+The break was small and mechanical to find: building `capsules/index.tsx`
+needed nothing more than what `entities/capsule` already provided. But
+building the plan's other three named capsule routes — `new.tsx`,
+`[id].tsx`, `[id]/edit.tsx` — required a `CapsuleType` to exist first, and
+nothing anywhere in the codebase creates one. That capability is `6.7`,
+four steps *later* in the same phase. The plan's own numbering put the
+screens that need a type before the feature that creates one.
+
+This is worth separating from every other "genuinely blocked, not lazily
+deferred" moment logged earlier this run (3.3's STT model gap, 5.2's
+missing capsule entity, 5.4's four unstarted import formats) — those were
+all cases of *this specific step* needing something that simply didn't
+exist yet anywhere in the plan. This one is different: the missing thing
+isn't undiscovered work, it's mis-ordered work — sitting later in the same
+document, fully specified, just numbered wrong relative to what actually
+depends on it. Confirming that difference took an actual check, not
+inference from the step numbers themselves: grepping for real callers of
+`insertCapsuleType` and `insertCapsule` and finding none, anywhere, rather
+than assuming a later-numbered step must mean "not needed yet."
+
+**Article angle:** a phased plan's step numbers encode the order someone
+expected to explain the work in, which is a different thing from the
+order a dependency graph would put it in — usually they're close enough
+that following the numbers works fine, right up until a step quietly
+assumes a capability that got written down four lines further along the
+same document. The fix isn't to distrust the plan; it's to keep checking
+a step's *actual* prerequisites against what's really in the codebase
+before building on top of them, the same discipline this loop already
+applies to checker findings and its own doc comments — just aimed, this
+time, at the plan document itself rather than at the code.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
