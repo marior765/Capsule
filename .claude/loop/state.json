@@ -2,12 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 20,
+    "beat": 21,
     "status": "running"
   },
   "cursor": {
-    "step": "5.4",
-    "phase": 5
+    "step": "6.1",
+    "phase": 6
   },
   "steps": {
     "1.2": {
@@ -156,6 +156,16 @@
       "checkpoint": "d9541d0",
       "notes": "DONE -- createBackup/restoreBackup, id-preserving (unlike 5.2's import which regenerates ids). restoreBackup validates before destroying anything, then replaces (deletes existing + reinserts backup's own) conversations/messages under original ids -- idempotent, no PK collision on repeat restores. createBackup writes 'export' audit entry; restoreBackup writes 'wipe' after the full delete+restore succeeds (moved from before to after myself, mid-implementation, after noticing my own doc comment claimed 'only after success' while the code did the opposite -- fixed before the checker ever saw it). Deliberately separate module from import-export, not shared code -- verified no generateId() calls for entity ids anywhere, confirming genuinely different logic. Scope: models excluded (re-downloadable binaries), settings genuinely deferred (honest gap), the encryption vault key deliberately NEVER touched (backing it up alongside a portable file would let anyone with the file decrypt the vault -- verified zero references to encrypt-vault/secure-store/MMKV outside doc comments), capsules N/A (Phase 6 unbuilt, same as 5.2). No transaction wrapping -- matches this codebase's existing style everywhere, flagged explicitly rather than silently accepted. 13 tests, hard depth. Mutation-tested the 'replace not merge' property myself (removed the pre-restore delete loop, 8/13 tests immediately caught it, restored). Checker passed on first attempt: independently confirmed id-preservation is real (grepped for generateId, compared directly against import-export's genuinely different idMap approach), replace-not-merge correctness, validate-before-destroy ordering, audit-ordering, idempotency, zero vault/secure-store references. docs/DEVELOPMENT_PLAN.md 5.3 ticked -- plan text names no sub-deliverables (unlike 5.2's parenthetical), so the module's own scope is genuinely complete on its own terms."
     },
+    "5.4": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- single-pass tree resolution depended on Object.entries(mapping) key order, which JSON does not guarantee to be parent-before-child; a child listed before its parent in source JSON would silently mis-root as a spurious top-level message"
+      ],
+      "checkpoint": "31337e1",
+      "notes": "DONE for its achievable scope this beat -- ChatGPT export only (Claude export, CSV, generic JSON, Markdown genuinely unstarted, each needs its own schema/design decision -- CSV/Markdown/generic-JSON have no fixed schema at all). parseChatGptExport (pure) + importChatGptExport (parses + inserts as new conversations, fresh ids, same semantics as 5.2's import). Handles ChatGPT's branching mapping tree, skips synthetic root/unsupported roles/non-text content defensively, converts seconds->milliseconds. 18 tests. Checker failed round 1 on a REAL algorithmic bug, independent of the (honestly disclosed) schema-uncertainty caveat: single-pass parentIndex resolution depended on JS object key iteration order, which JSON never guarantees to be parent-first -- verified myself two ways before fixing (empirically confirmed JSON.parse preserves literal source key order; reproduced the exact bug by reverting to old logic and watching a new regression test go red exactly as predicted). Fixed with a proper two-pass approach (collect all importable nodes+indices first, resolve every parentIndex only after the id map is fully populated) -- checker confirmed on re-review this is structurally immune to ordering for arbitrary-depth reversed chains, not just patched for the one tested case. Wrote the BLOCKED.md '5.4' entry (schema-uncertainty caveat, concrete next steps: get a real ChatGPT export, verify against it) BEFORE the code comment that cites it, per the loop's own rule. docs/DEVELOPMENT_PLAN.md 5.4 stays UNCHECKED, annotated with real status (1 of 5 formats, unverified against a real export file)."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -169,7 +179,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "d9541d0",
-    "note": "37 suites, 434 tests passing after 5.3 (backup-restore)"
+    "head": "31337e1",
+    "note": "38 suites, 452 tests passing after 5.4 (migrate-import, ChatGPT export)"
   }
 }

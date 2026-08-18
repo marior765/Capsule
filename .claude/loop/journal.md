@@ -1660,4 +1660,74 @@ formats rather than round-tripping this app's own.
 
 ---
 
+## Beat 21 — 2026-08-18
+
+**Step:** 5.4 — Migration importers (ChatGPT export, Claude export, CSV,
+JSON, Markdown) — the last step of Phase 5.
+
+Scoped to one format this beat: ChatGPT export. Reasoned through why it's
+the right one to start with — a real, specific, well-known schema (the
+`mapping` tree structure closely mirrors this app's own branching
+conversation model), unlike the other four, each of which needs its own
+separate design pass (Claude's export has a different schema entirely;
+CSV and generic JSON have no fixed schema at all — that's a real design
+decision about column/field conventions, not something to invent
+unilaterally; Markdown export has no standard structure to parse against).
+
+Named an unusual kind of uncertainty honestly, up front: the parser's
+field names (`mapping`, `current_node`, `content_type`, etc.) come from
+training-time knowledge of OpenAI's export format, not a real sample file
+— none was available in this environment. Different from every other
+"unverified" item this loop has produced (those need a device; this needs
+a real external file). Wrote the actual `.claude/loop/BLOCKED.md` entry
+for this — with concrete next steps, not just "verify later" — *before*
+writing the code comment that cites it, per the rule this loop added
+several beats ago specifically to stop that citation-without-content
+mistake from recurring.
+
+**Checker: FAIL on the first round, and a good one.** Found a genuine
+algorithmic bug, entirely separate from the disclosed schema uncertainty:
+the tree-resolution logic walked `Object.entries(mapping)` in a single
+pass, resolving each node's `parentIndex` against a lookup map that was
+being built *during the same pass* — meaning a child listed before its
+parent in the source JSON's own key order would silently resolve to no
+parent at all, becoming a spurious extra root with the branch structure
+silently wrong. My own test fixture happened to list every parent before
+its children, so nothing caught it. This wasn't a "might be wrong because
+I don't have real data" problem — it would be wrong on *any* input with
+that key ordering, real ChatGPT export or not.
+
+Verified the finding two ways before touching anything: confirmed
+empirically that `JSON.parse` preserves literal source key order (so this
+wasn't theoretical), then reproduced the actual failure by temporarily
+reverting to the old single-pass logic and watching a newly-written
+regression test go exactly as red as predicted. Fixed with a real
+two-pass approach — collect every importable node and assign it a stable
+index first, only resolve `parentIndex` once that map is completely
+built — rather than patching around the one reversed-pair case found.
+
+**Checker round 2: pass**, and went further than confirming the fix works
+on the tested case — traced the two-pass structure itself and confirmed
+it's immune to *any* ordering (arbitrary-depth reversed chains, forward
+references to forward references), not just the specific fixture that
+caught the bug.
+
+**Gate:** tsc ✅ · jest ✅ 452/452, 38 suites · eslint ✅ (a real
+`Array<T>` → `T[]` style fix along the way).
+**Checkpoint:** `31337e1`.
+**Result:** 5.4 done ✅ for its achievable scope — ChatGPT export
+implemented and correct; Claude export/CSV/generic JSON/Markdown
+genuinely unstarted, each needing its own future design pass.
+`docs/DEVELOPMENT_PLAN.md`'s box stays unchecked, annotated with the real
+status.
+
+Phase 5 (portability) is now worked through in full for this run — 5.1
+through 5.4 all touched, each with an honest note about what's genuinely
+complete versus deliberately deferred. Cursor advances to **6.1**
+(`entities/capsule`, `entities/field`, `entities/capsule-type` — models +
+CRUD), starting Phase 6 (capsule data core), the app's second major domain
+after AI chat.
+
+---
+
 <!-- Append new beats above this line. -->
