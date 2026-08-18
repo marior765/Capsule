@@ -1368,4 +1368,66 @@ is real, separate scope for the next beat, not folded into this one.
 
 ---
 
+## Beat 16 — 2026-08-18
+
+**Step:** 4.4's remaining piece — wiring `features/wipe-data`'s `wipeAllData`
+into a real "Wipe all data" button, completing the privacy screen.
+
+With 4.5 now shipped last beat, 4.4's last blocker was gone. Built
+`widgets/WipeDataSettings`: a destructive-styled `Pressable`, gated by a
+real `Alert.alert` confirmation wrapped in a promise. TDD'd
+`wipeWithConfirmation` first — the "never wipe without confirmation" logic,
+extracted so it's testable against a fake confirm function rather than a
+real dialog. Mutation-tested myself before sending anywhere: removed the
+confirmation gate (an authentication-bypass-shaped bug — confirm skipped,
+wipe still runs), confirmed 2 of 5 tests catch it immediately, restored.
+
+**Caught my own architectural mistake mid-beat, before it ever reached the
+checker.** The widget's first draft imported `remigrateDb` from
+`@/app/providers` directly, so it could restore the database's table
+structure (a fresh, wiped db has none — migrations only run once, at
+`Providers`' own mount) immediately after a successful wipe. `npx eslint
+src` caught this immediately: `widgets/` cannot import from `app/` —
+FSD's layering, lint-enforced at error severity, not just prose. Fixed
+properly rather than working around it: the widget now takes an `onWiped:
+() => void` callback prop; the route (`settings/privacy.tsx`, itself in
+the `app/` layer) supplies the real implementation (`remigrateDb()` then
+`router.replace("/")`). A genuinely better design, not just a lint
+workaround — the widget stays reusable and doesn't need to know anything
+about app-wide bootstrap or navigation.
+
+Also updated `BLOCKED.md`'s prior-beat entries for 4.4/4.5, which had
+gone stale the moment this beat started (they said wipe was "left unwired
+for a follow-up beat" — now false) — checked this before writing anything
+new that might cite them, per the rule added last beat.
+
+**Checker: PASS on the first attempt.** This is the first diff reviewed
+under `safe-loop.md`'s new Definition-of-Done rule (added last beat, after
+the false-BLOCKED.md-citation mistake recurred three times in a row). The
+checker was explicitly told to treat this diff as the first real test of
+whether the structural fix held, and reported back that it did — no fourth
+occurrence. First direct evidence that editing the loop's own instructions
+(rather than just journaling a lesson) actually changes downstream
+behavior, not just this beat's narrative confidence that it would.
+
+**Gate:** tsc ✅ · jest ✅ 392/392, 34 suites · eslint ✅ (the boundaries
+violation caught and fixed before commit, not shipped and caught later).
+**Checkpoint:** `53eaf12`.
+**Result:** 4.4 done ✅ — `settings/privacy.tsx` now composes all four
+things `docs/ARCHITECTURE.md` names for this route (`PrivacyBanner`,
+`AppLockSettings`, `WipeDataSettings`, `EgressLog`). Native class
+regardless of code-completeness (real secure-store/crypto/file-system/MMKV/
+sqlite deletion from actual UI) — box stays unchecked, `BLOCKED.md`
+updated with real device-check items for the whole screen, including an
+honestly-scoped-out concern: other already-open screens elsewhere in the
+app aren't guaranteed to recover cleanly from a mid-session wipe — only
+this screen and its post-wipe navigation target are.
+
+Cursor advances to **5.1** (`shared/format` — versioned portable format
+spec + serializers) — the next unclassified, unstarted step in plan order.
+Phase 4 (privacy core) is now fully worked through beat-to-beat; Phase 5
+(portability) hasn't been touched yet this run.
+
+---
+
 <!-- Append new beats above this line. -->

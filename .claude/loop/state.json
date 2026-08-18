@@ -2,12 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 15,
+    "beat": 16,
     "status": "running"
   },
   "cursor": {
-    "step": "4.4",
-    "phase": 4
+    "step": "5.1",
+    "phase": 5
   },
   "steps": {
     "1.2": {
@@ -112,14 +112,14 @@
       "notes": "DONE (module only, not wired to UI -- plan text scopes this to 'features/wipe-data' itself, matching 4.1's own precedent of being 'done' as a feature before its UI wiring). wipeAllData(db): deletes on-disk models directory, writes 'wipe' audit entry before deleting anything else (mutation-tested for ordering, mirrors encrypt-vault's resetVault), clears all MMKV settings (new shared/storage.clearAllSettings), then deleteDb() (covers chats + model rows in one action, since it destroys the whole db file). Capsules N/A (entities/capsule doesn't exist, Phase 6 unbuilt) -- verified, not assumed. New Directory.delete() added to the expo-file-system mock (previously absent). Deliberately does NOT call/import encrypt-vault's resetVault (forbidden cross-feature import) -- whether the two 'wipe everything' paths should unify is a real open question, laid out with three concrete options in BLOCKED.md. Checker failed round 1 on a FALSE BLOCKED.md citation -- the third occurrence of this exact mistake in one session (after 4.2, 4.4). Verified myself before fixing (git diff --stat, zero changes). This time, rather than just patching the instance, ALSO edited .claude/commands/safe-loop.md itself: added Definition-of-Done item 9 ('no comment cites BLOCKED.md/journal.md for content that isn't there yet -- write the target content first') and added the same check to the checker's own standing instructions, so future beats (fresh sessions, no memory of this pattern) inherit the fix structurally rather than relying on narrative memory in journal.md/ARTICLE.md. Re-review: pass, independently re-verified the new BLOCKED.md section and confirmed no regression elsewhere. Native class (real expo-file-system/MMKV/sqlite deletion, matches 1.2's own precedent for what counts as native here): box stays unchecked. Device-check entry in BLOCKED.md, explicitly deferring UI-wiring concerns (providers/screens surviving a wipe mid-session) to whoever builds the actual button -- likely folds into 4.4's remaining 'wipe' piece."
     },
     "4.4": {
-      "status": "in_progress",
+      "status": "done",
       "class": "native",
-      "attempts": 2,
+      "attempts": 3,
       "failureSignatures": [
-        "checker: fail -- doc comment falsely claimed two decisions (no-disable-control, decrypt-for-setup audit action) were 'flagged in BLOCKED.md' when the file was genuinely untouched -- same failure class as 4.2's first round; also a decorative test asserted the identical (\"\",\"\") input as an earlier test, unable to discriminate check-ordering"
+        "checker: fail (round 1, AppLockSettings) -- doc comment falsely claimed two decisions were 'flagged in BLOCKED.md' when the file was genuinely untouched -- same failure class as 4.2's first round; also a decorative test asserted the identical (\"\",\"\") input as an earlier test, unable to discriminate check-ordering"
       ],
-      "checkpoint": "e3739e5",
-      "notes": "IN PROGRESS -- widgets/AppLockSettings (passphrase setup form: setUpVault + validatePassphraseSetup.ts + biometric-availability status line) wired into settings/privacy.tsx alongside 4.3's PrivacyBanner/EgressLog. Deliberately does NOT use features/app-lock's createAppLock (gate state machine, different concern from one-shot setup) and deliberately has NO disable control (resetVault destroys the whole db, not just the lock -- wiring it to a casual toggle would be a real data-loss trap). Vault setup logged as action:'decrypt' (closed 4-value AuditAction union has no 'setup' category) -- flagged as an imperfect fit with alternatives, not decided unilaterally. Checker failed round 1 on the SAME mistake as 4.2's first round: doc comment claimed BLOCKED.md coverage that didn't exist -- verified myself (git diff --stat, zero changes) before fixing. This is now the second beat in a row to make this exact mistake; see docs/ARTICLE.md for the pattern write-up. Fixed by actually writing the BLOCKED.md '4.4' section (device-check + both open decisions as real questions with concrete alternatives) and fixing a decorative test (mutation-tested myself: swapped the implementation's check order, confirmed the fix catches it, restored). Re-review: pass, independently re-verified including reproducing the mutation test and reading BLOCKED.md directly. NOT complete: ARCHITECTURE.md names FOUR things for this route (app-lock, wipe, audit log, egress indicator) -- audit log + egress indicator done (4.3), app-lock settings form done (this beat), but 'wipe' is entirely absent (4.5 doesn't exist yet) and the actual launch-time unlock gate (Providers gated behind vault unlock) remains separate, unstarted integration work. Native class regardless (exercises real expo-secure-store/react-native-quick-crypto from actual UI for the first time) -- box stays unchecked. Device-check entry in BLOCKED.md."
+      "checkpoint": "53eaf12",
+      "notes": "DONE -- all four things ARCHITECTURE.md names for settings/privacy.tsx now wired: PrivacyBanner + EgressLog (4.3), AppLockSettings (prior beat, round 1 fail -> fixed -> pass), WipeDataSettings (this beat, pass on FIRST attempt). WipeDataSettings: destructive-styled button gated by a real Alert.alert confirmation wrapped in a promise; the actual 'never wipe without confirmation' logic is wipeWithConfirmation, extracted, unit-tested against a fake confirm function, mutation-tested myself for the exact bypass shape (confirm skipped, wipe still runs -- caught). Real architectural correction mid-beat: WipeDataSettings' first draft imported remigrateDb from @/app/providers directly -- eslint-plugin-boundaries correctly flagged this as a forbidden upward import (widgets/ can't import app/, lint-enforced at error severity). Fixed properly, not suppressed: the widget now takes an onWiped callback instead; the route (already in the app/ layer) supplies remigrateDb() + router.replace('/'). remigrateDb is a new app/providers export -- necessary because Providers only runs migrations ONCE at its own mount (verified by reading the actual code, not assumed), so a freshly-wiped database (deleteDb() during wipeAllData) would have zero tables until migrations re-run; without this the app would be unusable after a wipe until a real restart. Also proactively updated BLOCKED.md's stale 4.4/4.5 entries (from the prior beat) to reflect that wipe is now genuinely wired, rather than leaving an outdated 'left unwired for a follow-up beat' claim sitting there false. This is the first diff reviewed under safe-loop.md's new Definition-of-Done rule (added last beat after the false-BLOCKED.md-citation mistake recurred three times) -- checker passed on the FIRST attempt and explicitly verified the new rule held (no fourth occurrence), the first real evidence the structural fix (editing the skill file itself, not just journaling the lesson) actually worked. Native class (real expo-secure-store/react-native-quick-crypto/expo-file-system/MMKV/sqlite deletion from actual UI): box stays unchecked despite the screen being code-complete, per this loop's own convention. Device-check entries updated in BLOCKED.md, including a genuinely still-open scope boundary: whether OTHER already-open screens elsewhere in the app correctly recover from a mid-session wipe isn't solved here (only the privacy screen + its post-wipe navigation target are guaranteed correct)."
     },
     "4.3": {
       "status": "done",
@@ -145,7 +145,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "ce5ab7e",
-    "note": "33 suites, 387 tests passing after 4.5 (wipe-data)"
+    "head": "53eaf12",
+    "note": "34 suites, 392 tests passing after 4.4 (WipeDataSettings, screen complete)"
   }
 }

@@ -1417,4 +1417,45 @@ too many.
 
 ---
 
+## 2026-08-18 — Following up: did editing the instructions actually work?
+
+The previous entry ended on a claim, not a result: that a mistake
+recurring three times in a row meant the fix belonged in the loop's own
+instructions (`.claude/commands/safe-loop.md`, re-read fresh every beat)
+rather than in a journal a future beat might only skim. That was a
+prediction. This entry is the check.
+
+The very next beat gave it a real test, unprompted — a genuine
+architectural mistake happened mid-implementation (a widget importing
+directly from the app layer, a forbidden upward dependency this project's
+FSD rules explicitly forbid), caught immediately by `eslint`, fixed
+properly, and the resulting diff went to the same kind of independent
+checker review as everything else in this loop. The checker was told,
+explicitly, to treat this diff as the test case for whether last beat's
+rule change held. It passed on the first attempt — no false citation, no
+fourth occurrence of the pattern that had shown up three beats running.
+
+One clean pass is a small sample size, and it would be a mistake to
+overclaim permanence from it — the honest version of this entry is "held
+once, worth watching," not "solved forever." But it's a meaningfully
+different kind of evidence than the previous entry had: not "here is why
+we believe editing the instructions should work" but "here is what
+happened the next time the same situation arose." The distinction matters
+for anyone building an unattended, memoryless-between-iterations loop like
+this one: a fix's credibility shouldn't rest on how convincing the
+reasoning sounds at the moment it's written, because that reasoning
+sounded just as convincing the first two times the same mistake got
+"fixed" and then happened again anyway. It should rest on whether the next
+independent occurrence, tested under the same adversarial review the
+mistake was originally caught by, actually goes differently.
+
+**Article angle:** in any system that can't rely on memory to enforce a
+lesson, the honest unit of progress isn't "we identified the problem and
+explained the fix" — it's "the fix was tested against a fresh, real
+instance of the problem, and held." Writing that follow-up down, separate
+from the fix itself, is what turns a plausible-sounding correction into a
+verified one.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
