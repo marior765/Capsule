@@ -17,6 +17,7 @@ import {
   type Message,
 } from "@/entities/message";
 import { PortableFormatError } from "@/shared/format";
+import { auditMigration, getAllAuditEntries } from "@/entities/audit";
 import {
   exportConversation,
   importConversation,
@@ -60,6 +61,7 @@ beforeEach(() => {
     conversationsLeafMigration,
     messagesMigration,
     messagesParentMigration,
+    auditMigration,
   ]);
 });
 
@@ -173,6 +175,30 @@ describe("exportConversation — error handling", () => {
   });
 });
 
+// CLAUDE.md hard rule: "Privacy-sensitive actions (export, decrypt, wipe,
+// model download) must write to the audit entity." Export is the direction
+// that can move data outside the device, so it's the one covered here —
+// import only ever brings data in, and isn't named by the rule's own
+// wording, so it deliberately does not write an audit entry.
+describe("exportConversation — audit logging", () => {
+  it("writes an 'export' audit entry", () => {
+    insertConversation(db, makeConversation("c1", "My chat"));
+    insertMessage(db, makeMessage("m1", "c1", null, "hi"));
+
+    exportConversation(db, "c1");
+
+    const entries = getAllAuditEntries(db);
+    expect(entries).toContainEqual(
+      expect.objectContaining({ action: "export" }),
+    );
+  });
+
+  it("does not write an audit entry when the export fails", () => {
+    expect(() => exportConversation(db, "nonexistent")).toThrow();
+    expect(getAllAuditEntries(db)).toEqual([]);
+  });
+});
+
 describe("importConversation — error handling", () => {
   it("rejects a portable payload of the wrong kind", () => {
     const wrongKindJson = JSON.stringify({
@@ -193,6 +219,17 @@ describe("importConversation — error handling", () => {
   });
 });
 
+describe("exportAllConversations — audit logging", () => {
+  it("writes an 'export' audit entry", () => {
+    insertConversation(db, makeConversation("c1", "First"));
+    exportAllConversations(db);
+    const entries = getAllAuditEntries(db);
+    expect(entries).toContainEqual(
+      expect.objectContaining({ action: "export" }),
+    );
+  });
+});
+
 describe("exportAllConversations / importAllConversations — the 'whole vault' scope", () => {
   it("exports and reimports every conversation", () => {
     insertConversation(db, makeConversation("c1", "First"));
@@ -209,6 +246,7 @@ describe("exportAllConversations / importAllConversations — the 'whole vault' 
       conversationsLeafMigration,
       messagesMigration,
       messagesParentMigration,
+      auditMigration,
     ]);
 
     const imported = importAllConversations(db, json);

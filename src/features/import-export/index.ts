@@ -12,6 +12,7 @@ import {
 } from "@/entities/message";
 import { serializePortable, parsePortable } from "@/shared/format";
 import { generateId } from "@/shared/lib";
+import { insertAuditEntry } from "@/entities/audit";
 
 /**
  * "features/import-export (single conversation, single capsule, whole
@@ -36,6 +37,14 @@ import { generateId } from "@/shared/lib";
  * anything. An id-*preserving* restore (make the app look exactly like it
  * did at backup time, replacing what's there) is a different semantic —
  * that's `features/backup-restore` (5.3), deliberately not this step's job.
+ *
+ * Audit logging: CLAUDE.md's hard rule names "export, decrypt, wipe, model
+ * download" as privacy-sensitive. Export is the direction that can move
+ * data outside the device, so `exportConversation`/`exportAllConversations`
+ * both log an "export" entry, written only after the export has actually
+ * succeeded (never on a failure — nothing left the device). Import only
+ * ever brings data *in* and isn't named by the rule's own wording, so it
+ * deliberately writes nothing.
  */
 
 const CONVERSATION_KIND = "conversation";
@@ -101,10 +110,17 @@ export function exportConversation(
     throw new Error(`No conversation with id "${conversationId}"`);
   }
   const messages = getMessagesByConversation(db, conversationId);
-  return serializePortable<PortableConversation>(CONVERSATION_KIND, {
+  const json = serializePortable<PortableConversation>(CONVERSATION_KIND, {
     conversation,
     messages,
   });
+  insertAuditEntry(db, {
+    id: generateId(),
+    action: "export",
+    detail: `Conversation "${conversation.title}"`,
+    createdAt: Date.now(),
+  });
+  return json;
 }
 
 /** Imports a single conversation export, always as a new conversation. */
@@ -118,11 +134,19 @@ export function importConversation(
 
 /** Exports every conversation — the "whole vault" scope. */
 export function exportAllConversations(db: SQLiteDatabase): string {
-  const conversations = getAllConversations(db).map((conversation) => ({
+  const allConversations = getAllConversations(db);
+  const conversations = allConversations.map((conversation) => ({
     conversation,
     messages: getMessagesByConversation(db, conversation.id),
   }));
-  return serializePortable<PortableVault>(VAULT_KIND, { conversations });
+  const json = serializePortable<PortableVault>(VAULT_KIND, { conversations });
+  insertAuditEntry(db, {
+    id: generateId(),
+    action: "export",
+    detail: `Whole vault (${allConversations.length} conversation${allConversations.length === 1 ? "" : "s"})`,
+    createdAt: Date.now(),
+  });
+  return json;
 }
 
 /** Imports a whole-vault export, restoring every conversation as new. */
