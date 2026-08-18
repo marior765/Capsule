@@ -120,7 +120,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 4.5 `features/wipe-data` — secure full wipe (models, chats, capsules, settings)
 
 ### Phase 5 — Portability ← key differentiator
-- [ ] 5.1 `shared/format` — versioned portable format spec + serializers
+- [x] 5.1 `shared/format` — versioned portable format spec + serializers
 - [ ] 5.2 `features/import-export` (single conversation, single capsule, whole vault)
 - [ ] 5.3 `features/backup-restore`
 - [ ] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown)
