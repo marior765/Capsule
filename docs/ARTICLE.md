@@ -1369,4 +1369,52 @@ could never be false in the first place.
 
 ---
 
+## 2026-08-18 — Three strikes: when a per-instance fix isn't a fix
+
+The false-BLOCKED.md-citation mistake (a code comment claiming "see
+BLOCKED.md" for content that was never actually written there — see this
+file's entry two days earlier, on step 4.2) happened again on step 4.4.
+Then it happened a third time, on step 4.5, in the same session, using
+almost the same sentence structure each time. Each occurrence was caught
+the same way — a checker running `git diff --stat` on the one file the
+comment named — and fixed the same way: write the missing content, correct
+the comment. The fix worked, locally, every single time. It just never
+generalized.
+
+That's the actual lesson, and it's a different one from the 4.2 entry's.
+The 4.2 write-up said "verify a citation before writing it, the way you'd
+verify a test." That's true, and it's still true — but stating a
+discipline in a narrative document (a journal entry, an article draft) and
+expecting it to change future behavior turns out to be exactly as reliable
+as the original mistake it was trying to prevent. This loop's own
+architecture already explains why: every beat is a fresh session with no
+memory of the last one. `journal.md` and `ARTICLE.md` get *read*, as
+background context alongside dozens of other things, but nothing about
+reading a paragraph of prose enforces that its lesson actually gets
+applied three steps later under time pressure, mid-implementation, writing
+a comment that just wants to explain itself.
+
+The actual fix, once it became obvious a third time wasn't a coincidence,
+was to stop treating this as a lesson to remember and start treating it as
+a rule to enforce — by editing the two files this loop's own engine
+re-reads, verbatim, at the start of every single beat: the beat algorithm's
+Definition of Done, and the checker's standing review instructions. A rule
+sitting in the actual instructions a fresh session loads is structurally
+different from a rule sitting in a log a fresh session might skim. One is
+enforced by re-reading; the other is enforced by remembering, and
+remembering is exactly the thing a stateless-between-beats loop can't do.
+
+**Article angle:** in a system with no persistent memory across
+iterations, "we already learned this" is not a safe assumption — the
+system re-derives its behavior from its instructions every time, not from
+its history. A mistake that recurs isn't asking for a better-written
+explanation of why it's wrong; it's asking for the rule to move from the
+narrative layer (journal, article, commit messages — read, but optional in
+practice) into the operational layer (the skill file itself, the checker's
+own prompt — read and structurally binding). The number of times a mistake
+repeats before that move happens is a real cost, and three is at least one
+too many.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

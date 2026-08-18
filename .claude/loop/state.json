@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 14,
+    "beat": 15,
     "status": "running"
   },
   "cursor": {
@@ -101,6 +101,16 @@
       "checkpoint": "9cc93ba",
       "notes": "DONE -- isBiometricAvailable/authenticateWithBiometrics (expo-local-authentication wrapper) + createAppLock (real lock/unlock state machine: starts locked, unlockWithBiometrics/unlockWithPassphrase/lock/subscribe, notifies only on actual transitions). Passphrase verification is injected (authenticateWithPassphrase param) rather than importing features/encrypt-vault directly -- FSD forbids same-layer cross-slice imports, confirmed lint-enforced at error severity via eslint-plugin-boundaries (not just prose), and confirmed no feature in this repo imports another feature anywhere. Mirrors voice-input's existing getSttContext DI shape. 31 tests (8 biometric, 23 state-machine), TDD throughout. Checker failed the first pass HARD: I'd shipped only the biometric wrapper and tried to justify the missing gate/fallback logic via a doc comment claiming 'see BLOCKED.md,' which was factually false (git diff --stat confirmed BLOCKED.md was untouched) -- verified this myself before accepting the finding. Checker correctly identified this as the SAME class of mistake as 3.3's original failure (step text implying wiring that wasn't there), not a legitimate 4.3/3.3.1-style partial delivery, and named the exact fix (voice-input's DI pattern). Rebuilt with createAppLock actually implementing the gate/state-machine logic, and wrote a real, complete BLOCKED.md '4.2' section this time (not just a promise to write one). Mutation-tested myself before AND after the checker round: temporarily made unlockWithPassphrase transition to unlocked regardless of the injected authenticator's result (an authentication-bypass-shaped bug) -- confirmed the test catches it, restored. Re-review: pass, independently reproduced (checker ran the identical mutation test itself, plus confirmed eslint-plugin-boundaries enforces the cross-feature-import rule at error severity, not just as prose). Native class: box stays unchecked. Explicitly documented in BLOCKED.md as 'logic done, wiring is not' -- no provider, AppState listener, or lock-screen UI exists yet. This is a load-bearing prerequisite for 4.1 to ever actually encrypt anything (shared/db's openDb({key}) no-ops until Providers' own openDb() call is gated behind this)."
     },
+    "4.5": {
+      "status": "done",
+      "class": "native",
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- doc comment falsely claimed an 'open question' about unifying wipeAllData and resetVault was recorded in BLOCKED.md when the file was genuinely untouched -- THIRD occurrence of this exact mistake this session (after 4.2, 4.4)"
+      ],
+      "checkpoint": "ce5ab7e",
+      "notes": "DONE (module only, not wired to UI -- plan text scopes this to 'features/wipe-data' itself, matching 4.1's own precedent of being 'done' as a feature before its UI wiring). wipeAllData(db): deletes on-disk models directory, writes 'wipe' audit entry before deleting anything else (mutation-tested for ordering, mirrors encrypt-vault's resetVault), clears all MMKV settings (new shared/storage.clearAllSettings), then deleteDb() (covers chats + model rows in one action, since it destroys the whole db file). Capsules N/A (entities/capsule doesn't exist, Phase 6 unbuilt) -- verified, not assumed. New Directory.delete() added to the expo-file-system mock (previously absent). Deliberately does NOT call/import encrypt-vault's resetVault (forbidden cross-feature import) -- whether the two 'wipe everything' paths should unify is a real open question, laid out with three concrete options in BLOCKED.md. Checker failed round 1 on a FALSE BLOCKED.md citation -- the third occurrence of this exact mistake in one session (after 4.2, 4.4). Verified myself before fixing (git diff --stat, zero changes). This time, rather than just patching the instance, ALSO edited .claude/commands/safe-loop.md itself: added Definition-of-Done item 9 ('no comment cites BLOCKED.md/journal.md for content that isn't there yet -- write the target content first') and added the same check to the checker's own standing instructions, so future beats (fresh sessions, no memory of this pattern) inherit the fix structurally rather than relying on narrative memory in journal.md/ARTICLE.md. Re-review: pass, independently re-verified the new BLOCKED.md section and confirmed no regression elsewhere. Native class (real expo-file-system/MMKV/sqlite deletion, matches 1.2's own precedent for what counts as native here): box stays unchecked. Device-check entry in BLOCKED.md, explicitly deferring UI-wiring concerns (providers/screens surviving a wipe mid-session) to whoever builds the actual button -- likely folds into 4.4's remaining 'wipe' piece."
+    },
     "4.4": {
       "status": "in_progress",
       "class": "native",
@@ -122,8 +132,6 @@
       "checkpoint": "3b9f25d",
       "notes": "DONE -- all three named deliverables complete: entities/audit (data layer, shipped earlier beats), shared/egress (begin/end network-activity tracking, no domain knowledge, wired into manage-models.downloadModel via try/finally so it can't get stuck 'active' on a failed download), PrivacyBanner (live indicator, subscribes via useSyncExternalStore), EgressLog (props-driven viewer + extracted formatAuditEntry.ts, exhaustive switch over AuditAction's closed union -- verified this genuinely fails tsc if a case is dropped, not just documented as such). Wired into src/app/(app)/settings/privacy.tsx (was a bare stub). New accent theme color token (both palettes) since danger would misrepresent expected network activity as an error. Checker failed round 2 on two things: box not ticked yet (fair -- fixed) and a real stale-state race in PrivacyBanner's original useState+useEffect subscription pattern -- verified the race myself by re-tracing React's commit/effect timing before accepting, then fixed with useSyncExternalStore (the hook built for exactly this class of problem) rather than reintroducing the setState-in-effect pattern eslint had already flagged on an earlier pass. Re-review: pass, independently verified the hook usage on every axis (argument order, real unsubscribe, correct getSnapshot-as-source-of-truth adapter, no infinite-loop risk). NOT native-classed -- docs/DEVELOPMENT_PLAN.md 4.3 box ticked, first non-native completion in several beats. Note: settings/privacy.tsx now has real content but is NOT yet 4.4's full 'privacy screen' -- still missing app-lock enable/disable UI and wipe-data UI, neither of which has any UI hook built yet (4.2's app-lock and the not-yet-started 4.5 wipe-data)."
     },
-    "4.4": { "status": "pending", "class": "ui", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Settings -> privacy screen. src/app/(app)/settings/privacy.tsx already has real content as of 4.3 (PrivacyBanner + EgressLog), but that is NOT this step complete -- a full privacy screen also needs app-lock enable/disable controls (4.2 has zero UI right now, by design -- logic-only) and wipe-data controls (4.5 not started). Reconcile carefully: this step may turn out to be blocked on 4.5, or scoped down to 'wire what already has logic' (app-lock) with wipe deferred, mirroring past partial-delivery precedent -- do not silently claim this step complete just because the route file already renders something." },
-    "4.5": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "features/wipe-data -- secure full wipe (models, chats, capsules, settings). Not started. 4.1's beat flagged an unresolved design question that touches this step directly: resetVault's audit entry doesn't survive deleteDb() deleting the same file it's recorded in -- whether wipe-adjacent audit entries need a home outside the store being wiped is a real open question for this step to resolve, not decided unilaterally in 4.1." },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -136,8 +144,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-17T00:00:00Z",
-    "head": "e3739e5",
-    "note": "32 suites, 379 tests passing after 4.4 (AppLockSettings, in progress)"
+    "at": "2026-08-18T00:00:00Z",
+    "head": "ce5ab7e",
+    "note": "33 suites, 387 tests passing after 4.5 (wipe-data)"
   }
 }

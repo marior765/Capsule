@@ -1300,4 +1300,72 @@ across several beats before completing.
 
 ---
 
+## Beat 15 — 2026-08-18
+
+**Step:** 4.5 — `features/wipe-data` — secure full wipe (models, chats, capsules,
+settings), picked up as a detour to unblock 4.4
+
+4.4 (still `in_progress` from last beat) has one remaining piece — "wipe" —
+that genuinely depends on `features/wipe-data` existing, which it didn't.
+Rather than re-select 4.4 and immediately hit the same wall, moved to 4.5
+directly: a real, buildable next step, not an external dependency gap.
+
+Also fixed a real spine-integrity bug while reconciling: `state.json` had a
+**stale duplicate `"4.4"` key** (a pre-work bootstrap-era placeholder at the
+bottom of the file, still `pending`/`ui`, alongside the real up-to-date
+`in_progress`/`native` entry written last beat) plus a matching stale
+`"4.5"` placeholder. JSON's last-key-wins semantics meant any strict parse
+of this file would have silently resurrected the STALE 4.4 state over the
+real one — the exact same class of bug journaled once before (a duplicate
+`"3.3"` key overwriting a `blocked` status). Removed both stale entries,
+verified `python3 -c "json.loads(...)"` parses clean with no remaining
+duplicate keys before continuing.
+
+Designed `wipeAllData(db)`: on-disk models directory deletion (new
+`Directory.delete()` in the expo-file-system mock — didn't exist before),
+audit-log-before-delete (same ordering discipline as `encrypt-vault`'s
+`resetVault`, mutation-tested myself), MMKV settings clearing (new
+`shared/storage.clearAllSettings()`, TDD'd first), then `deleteDb()`
+(covers chats + model rows in one shot — the whole db file goes). Capsules:
+confirmed `entities/capsule` is still `export {}` before writing "N/A,"
+rather than assuming.
+
+Deliberately left unwired to any UI — `features/wipe-data` module only,
+mirrors 4.3's own entity-before-widgets sequencing. Deliberately does not
+call `encrypt-vault`'s `resetVault` (forbidden cross-feature import);
+whether the two "wipe everything" paths should someday unify is a real
+open design question, not decided here.
+
+**Checker round 1: FAIL — a third occurrence, not a second.** Same exact
+mistake as 4.2's and 4.4's first rounds: a doc comment claimed an "open
+question" was recorded in `.claude/loop/BLOCKED.md` when the file was
+genuinely untouched. Verified myself before accepting (same `git diff
+--stat` check every time). Fixed the immediate instance the same way as
+before — wrote the actual BLOCKED.md section — but three times in one
+session means the per-instance fix clearly isn't sticking on its own.
+This time, also edited **`.claude/commands/safe-loop.md` itself**: added a
+new Definition-of-Done item (§5.9) making an unbacked file citation an
+explicit non-negotiable check, and added the same check to the checker's
+own standing instructions (§6). Both spine artifacts are re-read fresh
+every beat per the loop's own contract — this is meant to make the fix
+structural rather than something a future beat has to rediscover from
+`journal.md`/`ARTICLE.md` narrative, which evidently wasn't enough on its
+own to prevent the third recurrence.
+
+**Checker round 2: pass**, independently re-verified.
+
+**Gate:** tsc ✅ · jest ✅ 387/387, 33 suites · eslint ✅.
+**Checkpoint:** `ce5ab7e`.
+**Result:** 4.5 done ✅ (module only — native class regardless, box stays
+unchecked). `docs/ARTICLE.md` gets a dated entry on the "self-documentation
+needs the same verify-before-claiming discipline as self-testing" pattern,
+now backed by three occurrences instead of two.
+
+Cursor stays on **4.4** — its remaining "wipe" piece is now genuinely
+unblocked (`wipeAllData` exists); wiring an actual "Wipe all data" button
+(with real confirmation UX — a destructive action) into `settings/privacy.tsx`
+is real, separate scope for the next beat, not folded into this one.
+
+---
+
 <!-- Append new beats above this line. -->

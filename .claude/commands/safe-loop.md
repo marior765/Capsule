@@ -197,6 +197,16 @@ npx eslint src
 6. Every interactive element has a `testID` from a `createComponentTestIDs` object.
 7. No network call was added to core logic.
 8. For `class: native` — plus an entry in `BLOCKED.md` naming the device check.
+9. **No code comment or doc-string cites `BLOCKED.md`, `journal.md`, or any other
+   file for content that isn't actually there yet.** If a comment says "see
+   BLOCKED.md" or "flagged in BLOCKED.md," the cited section must already exist
+   in the working tree *before* you write the sentence that cites it — write the
+   target content first, then the comment, never the other way around. This
+   failure mode (a true-sounding citation to a document that was never updated)
+   recurred three times in one run (steps 4.2, 4.4, 4.5) before this rule was
+   added — it is cheap for a reviewer to catch (`git diff --stat` on the named
+   file) and cheap to avoid, so treat an unbacked citation exactly like a test
+   that never failed: a sign the step isn't actually done, not a stylistic nit.
 
 A bare `index.ts` stub is **not** done. Existing files prove scaffolding, tests
 prove behavior.
@@ -219,8 +229,11 @@ Instruct it: *"Try to refute that this diff correctly and completely implements 
 step. Default to `fail` when uncertain. Check specifically: do the tests assert
 real behavior or merely that a mock returns a value? Is any dependency mocked so
 heavily the test proves nothing about our code? Are there hardcoded testIDs? Any
-`any`? Any cross-slice import bypassing `index.ts`? Any network call? Return a
-verdict of `pass` or `fail` with concrete file:line findings."*
+`any`? Any cross-slice import bypassing `index.ts`? Any network call? Does any
+comment cite `BLOCKED.md`, `journal.md`, or another file for content that isn't
+actually there — run `git diff --stat` on any file a comment names and confirm it
+was genuinely touched, not just referenced? Return a verdict of `pass` or `fail`
+with concrete file:line findings."*
 
 Do not argue with a `fail`. Fix, then re-review. Two consecutive `fail` verdicts on
 the same finding → quarantine.
