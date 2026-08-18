@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 22,
+    "beat": 23,
     "status": "running"
   },
   "cursor": {
@@ -171,8 +171,8 @@
       "class": "logic",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "ecfdc46",
-      "notes": "IN PROGRESS -- entities/capsule-type DONE and checkpointed (CapsuleType: id/name/description-nullable/createdAt/updatedAt, full CRUD, migration v9, 11 tests, TDD, real in-memory SQLite). entities/field and entities/capsule remain genuinely unstarted -- deliberate first slice of this compound step, mirroring 4.3's own entity-before-widgets sequencing (verified that precedent is real, not just claimed, by re-checking journal.md's 4.3 history). Checker passed on first attempt: independently verified migration version has no collision against every other entity's version number, CRUD correctness against entities/persona's precedent, ordering, row/domain mapping, no cross-entity FSD violation, and that the test harness genuinely hits real SQLite. Design note for whoever continues this: capsule field VALUES (CapsuleValue in CLAUDE.md's domain model) aren't a separate named plan step -- planned to live in entities/capsule itself as an EAV-style capsule_values table (capsule_id, field_id, value as TEXT, type-appropriately serialized), kept minimal for CRUD-only scope now; 6.5 (search/filter/sort) may need typed columns later, deliberately not built ahead of that need (YAGNI, matches shared/fs's own deferred-until-needed precedent). docs/DEVELOPMENT_PLAN.md 6.1 stays UNCHECKED -- only 1 of 3 named entities done."
+      "checkpoint": "50f664e",
+      "notes": "IN PROGRESS -- entities/capsule-type AND entities/field DONE and checkpointed. capsule-type: CapsuleType (id/name/description-nullable/createdAt/updatedAt), full CRUD, migration v9, 11 tests. field: CapsuleField (id/capsuleTypeId/name/fieldType-9-member-union/config-opaque-nullable-JSON/sortOrder/required/createdAt/updatedAt), migration v10, getFieldsByCapsuleType ordered by sort_order ASC (deliberate deviation from the updated_at DESC convention -- display order, not recency), required follows entities/model's isActive/is_active boolean-storage convention exactly, no SQL FK on capsule_type_id (matches this app's graceful-degradation convention, no FK constraints anywhere in this codebase), updateCapsuleField's patch type excludes both id and capsuleTypeId (type-enforced, verified via a checker-run @ts-expect-error probe, not just conventionally avoided). 16 tests including all 9 field types round-tripped and cross-capsule-type scoping isolation. entities/capsule remains genuinely unstarted -- the last of the three named entities. Both checker rounds passed on first attempt with real independent verification (migration-version-collision checks, boolean-convention correctness on both read/write paths, ordering justification, FSD boundaries). Design note carried forward for entities/capsule: capsule field VALUES (CapsuleValue in CLAUDE.md's domain model, not its own named plan step) planned as an EAV-style capsule_values table living inside entities/capsule itself, kept minimal for CRUD-only scope now, typed columns deferred until 6.5 (search/filter/sort) actually needs them (YAGNI). docs/DEVELOPMENT_PLAN.md 6.1 stays UNCHECKED -- 2 of 3 named entities done."
     },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -187,7 +187,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "ecfdc46",
-    "note": "39 suites, 463 tests passing after 6.1's entities/capsule-type"
+    "head": "50f664e",
+    "note": "40 suites, 479 tests passing after 6.1's entities/field"
   }
 }

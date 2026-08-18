@@ -1784,4 +1784,52 @@ storing values.
 
 ---
 
+## Beat 23 — 2026-08-18
+
+**Step:** 6.1's second piece — `entities/field` (`CapsuleField`, typed field
+definitions belonging to a `CapsuleType`).
+
+Built the 9-member `FieldType` closed union exactly matching CLAUDE.md's
+Set 1 feature list (text, long-text, number, boolean, date/time,
+single-select, multi-select, relation, attachment). Kept `config`
+(type-specific settings — select options, a relation's target, etc.)
+as a completely opaque JSON string this entity never parses — the
+concrete per-type shapes are genuinely future steps' work (6.8 relation/
+attachment field types, 6.10 field validation), not something to
+pre-design now.
+
+Two deliberate departures from the pattern established across every prior
+entity, each reasoned through rather than copied by habit:
+- `getFieldsByCapsuleType` orders by `sort_order ASC` (a stable,
+  author-controlled display order) instead of `updated_at DESC`
+  (recency) — a form's fields shouldn't reshuffle themselves because one
+  got edited.
+- No SQL `FOREIGN KEY` on `capsule_type_id` — checked first that this
+  matches an *existing* convention (grepped every entity's schema; zero
+  FK constraints anywhere in this codebase) rather than introducing a new
+  one, consistent with CLAUDE.md's own stated philosophy that relations
+  should degrade gracefully rather than being DB-enforced.
+
+**Checker: pass on the first attempt.** Went a step further than reading
+the type signature to confirm `updateCapsuleField`'s patch correctly
+excludes `capsuleTypeId` (reassigning a field to a different capsule type
+post-creation would be a strange, likely-dangerous operation) — wrote a
+temporary `@ts-expect-error` probe and ran `tsc` to prove this is actually
+type-enforced, not just something the tests happen not to exercise.
+
+**Gate:** tsc ✅ · jest ✅ 479/479, 40 suites · eslint ✅ (no formatting
+fixes needed this time).
+**Checkpoint:** `50f664e`.
+**Result:** 6.1 still `in_progress` — 2 of 3 named entities now done
+(`entities/capsule` remains). `docs/DEVELOPMENT_PLAN.md`'s box stays
+unchecked. Ending the beat here again at a clean checkpoint, same
+reasoning as last beat.
+
+Cursor stays on **6.1** — `entities/capsule` (the actual instance entity,
+holding a title, a `capsuleTypeId` reference, and — per the design note
+carried forward from the previous beat — an EAV-style values table) is
+the natural final piece.
+
+---
+
 <!-- Append new beats above this line. -->
