@@ -1730,4 +1730,58 @@ after AI chat.
 
 ---
 
+## Beat 22 — 2026-08-18
+
+**Step:** 6.1 — `entities/capsule`, `entities/field`, `entities/capsule-type`
+— the first step of Phase 6 (capsule data core), the app's second major
+domain after AI chat.
+
+A compound, three-entity step with real interdependency (a `CapsuleField`
+belongs to a `CapsuleType`; a `Capsule` belongs to a `CapsuleType` and
+holds values tied to its fields) — splitting them into naturally-sequenced,
+independently-reviewable pieces made more sense than one large diff.
+Started with `entities/capsule-type` (the schema/template, no dependency
+on the other two), the same entity-before-widgets sequencing already
+established for 4.3 — checked that precedent was real (re-read 4.3's own
+journal history) rather than just asserting it applied here.
+
+Built `CapsuleType` (id, name, description — nullable, createdAt,
+updatedAt) mirroring `entities/persona`'s exact structure (the closest
+existing precedent: simple entity, no foreign keys) — migration, full
+CRUD, row/domain conversion. Assigned the next global migration version
+(9) after checking every existing entity's version number first, since
+this app's migrations share one sequence across the whole database, not
+one per entity.
+
+Left a design note for whoever continues this step: CLAUDE.md's domain
+model names a `CapsuleValue` entity, but the plan's own step text doesn't
+list it separately — planned (not yet built) to live inside
+`entities/capsule` itself as an EAV-style table, kept minimal for
+CRUD-only scope now rather than pre-building typed, queryable columns
+6.5's future search/filter/sort work might actually need — the same YAGNI
+discipline already applied to the deferred `shared/fs` wrapper.
+
+**Checker: pass on the first attempt.** Independently verified the
+migration version has no collision, CRUD correctness against the persona
+precedent (including the nullable-`description` delta persona itself
+doesn't have — confirmed `!== undefined` checks, not truthiness, so
+`description` can be explicitly reset to `null`), and confirmed the test
+harness genuinely exercises real in-memory SQLite (a real `PRIMARY KEY`
+constraint firing on the duplicate-id test), not a mock.
+
+**Gate:** tsc ✅ · jest ✅ 463/463, 39 suites · eslint ✅.
+**Checkpoint:** `ecfdc46`.
+**Result:** 6.1 `in_progress` — 1 of 3 named entities done.
+`docs/DEVELOPMENT_PLAN.md`'s box stays unchecked. Ending the beat cleanly
+here rather than pushing into `entities/field` in the same turn, per the
+loop's own context-hygiene principle — a clean checkpoint handoff beats
+carrying a beat forward past a natural stopping point.
+
+Cursor stays on **6.1** — `entities/field` (typed field definitions
+belonging to a `CapsuleType`) is the natural next piece, since `entities/capsule`
+itself will need field definitions to validate against once it starts
+storing values.
+
+---
+
 <!-- Append new beats above this line. -->

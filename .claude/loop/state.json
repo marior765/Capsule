@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 21,
+    "beat": 22,
     "status": "running"
   },
   "cursor": {
@@ -166,6 +166,14 @@
       "checkpoint": "31337e1",
       "notes": "DONE for its achievable scope this beat -- ChatGPT export only (Claude export, CSV, generic JSON, Markdown genuinely unstarted, each needs its own schema/design decision -- CSV/Markdown/generic-JSON have no fixed schema at all). parseChatGptExport (pure) + importChatGptExport (parses + inserts as new conversations, fresh ids, same semantics as 5.2's import). Handles ChatGPT's branching mapping tree, skips synthetic root/unsupported roles/non-text content defensively, converts seconds->milliseconds. 18 tests. Checker failed round 1 on a REAL algorithmic bug, independent of the (honestly disclosed) schema-uncertainty caveat: single-pass parentIndex resolution depended on JS object key iteration order, which JSON never guarantees to be parent-first -- verified myself two ways before fixing (empirically confirmed JSON.parse preserves literal source key order; reproduced the exact bug by reverting to old logic and watching a new regression test go red exactly as predicted). Fixed with a proper two-pass approach (collect all importable nodes+indices first, resolve every parentIndex only after the id map is fully populated) -- checker confirmed on re-review this is structurally immune to ordering for arbitrary-depth reversed chains, not just patched for the one tested case. Wrote the BLOCKED.md '5.4' entry (schema-uncertainty caveat, concrete next steps: get a real ChatGPT export, verify against it) BEFORE the code comment that cites it, per the loop's own rule. docs/DEVELOPMENT_PLAN.md 5.4 stays UNCHECKED, annotated with real status (1 of 5 formats, unverified against a real export file)."
     },
+    "6.1": {
+      "status": "in_progress",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "ecfdc46",
+      "notes": "IN PROGRESS -- entities/capsule-type DONE and checkpointed (CapsuleType: id/name/description-nullable/createdAt/updatedAt, full CRUD, migration v9, 11 tests, TDD, real in-memory SQLite). entities/field and entities/capsule remain genuinely unstarted -- deliberate first slice of this compound step, mirroring 4.3's own entity-before-widgets sequencing (verified that precedent is real, not just claimed, by re-checking journal.md's 4.3 history). Checker passed on first attempt: independently verified migration version has no collision against every other entity's version number, CRUD correctness against entities/persona's precedent, ordering, row/domain mapping, no cross-entity FSD violation, and that the test harness genuinely hits real SQLite. Design note for whoever continues this: capsule field VALUES (CapsuleValue in CLAUDE.md's domain model) aren't a separate named plan step -- planned to live in entities/capsule itself as an EAV-style capsule_values table (capsule_id, field_id, value as TEXT, type-appropriately serialized), kept minimal for CRUD-only scope now; 6.5 (search/filter/sort) may need typed columns later, deliberately not built ahead of that need (YAGNI, matches shared/fs's own deferred-until-needed precedent). docs/DEVELOPMENT_PLAN.md 6.1 stays UNCHECKED -- only 1 of 3 named entities done."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -179,7 +187,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "31337e1",
-    "note": "38 suites, 452 tests passing after 5.4 (migrate-import, ChatGPT export)"
+    "head": "ecfdc46",
+    "note": "39 suites, 463 tests passing after 6.1's entities/capsule-type"
   }
 }
