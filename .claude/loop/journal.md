@@ -1884,4 +1884,58 @@ actually exercise `entities/capsule`'s data layer end-to-end.
 
 ---
 
+## Beat 25 — 2026-08-18
+
+**Step:** 6.2 — `CapsuleEditor` + `FieldRenderer` for base field types.
+Split into pieces again, same reasoning as 6.1: built `FieldRenderer`
+first (the more foundational, reusable piece), `CapsuleEditor` deferred.
+
+"Base field types" read as the 9-member `FieldType` union minus
+`relation`/`attachment`, since those two are separately named in 6.8 —
+checked `docs/DEVELOPMENT_PLAN.md`'s own 6.8 line to confirm that reading
+rather than assuming it.
+
+A real scope question came up immediately: `entities/field`'s own doc
+comment (from an earlier beat) said `config`'s concrete per-type shapes
+belong to "6.8/6.10, not this step's scope" — but `FieldRenderer` cannot
+render select choices without knowing where to find them, and 6.8 is
+specifically about relation/attachment, not select types. Defined a
+minimal `{options: string[]}` shape for select fields here, reasoning
+through why this is genuinely in-scope for 6.2 (not an encroachment on
+deferred territory) rather than either inventing it silently or blocking
+on it.
+
+Extracted `fieldValueCodec.ts` first, TDD'd (17 tests) — pure parse/
+serialize functions for select options, booleans, and multi-select
+values, every one degrading gracefully on malformed or wrong-shaped JSON
+rather than throwing, since a hand-corrupted config string should never
+be able to crash the whole capsule editor. Then `FieldRenderer.tsx`
+itself: a purely controlled component (owns no state, matching
+`VoiceRecordButton`'s established pattern) dispatching on `fieldType` —
+`TextInput` variants, a `Switch`, and a row of toggleable "chip"
+`Pressable`s for the two select types, with dynamic per-option testIDs
+derived from array index (not option text) so duplicate option labels
+can never collide on identity.
+
+**Checker: pass on the first attempt.** Independently traced the
+graceful-degradation guarantee through the actual try/catch and
+type-narrowing logic — not just reading test names and trusting them —
+and separately verified both the multi-select toggle (adds/removes
+exactly the pressed option) and the single-select tap-again-to-clear
+behavior as a deliberate, defensible UX choice rather than an
+accidental redundancy.
+
+**Gate:** tsc ✅ · jest ✅ 517/517, 42 suites · eslint ✅ (an unescaped
+apostrophe and a couple of prettier fixes along the way).
+**Checkpoint:** `18bf624`.
+**Result:** 6.2 `in_progress` — `FieldRenderer` done, `CapsuleEditor`
+remains. `docs/DEVELOPMENT_PLAN.md`'s box stays unchecked. Ending the
+beat here at a clean checkpoint, same discipline as the last few beats.
+
+Cursor stays on **6.2** — `CapsuleEditor` (the container that will
+actually use `FieldRenderer` per-field, plus a title input, wired against
+real `entities/capsule`/`entities/field` data) is the natural next piece.
+
+---
+
 <!-- Append new beats above this line. -->

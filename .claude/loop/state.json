@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 24,
+    "beat": 25,
     "status": "running"
   },
   "cursor": {
@@ -174,6 +174,14 @@
       "checkpoint": "110b7a8",
       "notes": "DONE -- all three named entities complete. capsule-type: CapsuleType, full CRUD, migration v9. field: CapsuleField (9-member FieldType union, opaque config, sort_order ASC display ordering, isActive-style boolean convention, no FK), migration v10. capsule: Capsule (id/capsuleTypeId/title/createdAt/updatedAt, full CRUD, no FK) + CapsuleValue EAV table (capsule_id+field_id UNIQUE, value: string|null), migrations v11+v12. upsertCapsuleValue is this codebase's FIRST real SQL upsert (INSERT...ON CONFLICT...DO UPDATE) -- DO UPDATE SET deliberately touches only value/updated_at, preserving the existing row's id/created_at even when the caller generates a fresh id/createdAt on every call. Mutation-tested myself: broke the identity-preservation (added id/created_at to DO UPDATE SET, 1 test caught it), broke the UNIQUE constraint (removed it, 7 tests immediately failed with a real SQL error) -- both restored after confirming. 59 tests total across the three entities. All three checker rounds passed on first attempt with real independent verification each time (migration-version-collision checks across all 5 new versions, boolean-convention correctness, ordering justification, FSD boundaries, upsert regression scenario re-run independently, UNIQUE constraint genuinely exercised, cross-capsule-type/cross-capsule scoping isolation, null-value round-tripping). Checker explicitly confirmed 6.1 as a whole is complete against its own plan text. docs/DEVELOPMENT_PLAN.md 6.1 TICKED. Design note for whoever builds 6.2+ (CapsuleEditor/FieldRenderer): CapsuleValue's config-per-fieldType shapes (select options, relation target, etc.) still need their concrete definitions -- deferred to 6.8 (relation/attachment) and 6.10 (validation) per this phase's own sequencing, not decided here."
     },
+    "6.2": {
+      "status": "in_progress",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "18bf624",
+      "notes": "IN PROGRESS -- FieldRenderer DONE and checkpointed. Purely controlled widget dispatching on CapsuleField.fieldType: TextInput (text/long_text/number/date), Switch (boolean), toggleable chip Pressables (single_select/multi_select), placeholder text (relation/attachment -- 6.8's job, 'base field types' = the 9-member union minus those two). fieldValueCodec.ts: parseSelectOptions (defines a {options:string[]} config shape for select types -- a legitimate, necessary in-scope extension since FieldRenderer needs it to render choices; verified against entities/field's own doc comment and 6.8's actual plan text that this doesn't overreach into deferred territory), parseBooleanValue/serializeBooleanValue, parseMultiSelectValue/serializeMultiSelectValue -- all degrade gracefully on malformed/wrong-shaped JSON, never throw. 17 tests. Dynamic per-option testIDs via buildTestID, index-derived (no collision risk from duplicate option text). CapsuleEditor remains genuinely unstarted -- mirrors 6.1's own three-beat entity sequencing. Checker passed on first attempt: independently traced the graceful-degradation try/catch logic (not just test names), verified toggle/select correctness (multi-select adds/removes exactly the pressed option; single-select's tap-again-to-clear is a deliberate, defensible UX choice), confirmed no hardcoded testID strings. docs/DEVELOPMENT_PLAN.md 6.2 stays UNCHECKED -- CapsuleEditor not done."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -187,7 +195,7 @@
     "jest": "pass",
     "eslint": "pass",
     "at": "2026-08-18T00:00:00Z",
-    "head": "110b7a8",
-    "note": "41 suites, 500 tests passing after 6.1 complete (all three entities)"
+    "head": "18bf624",
+    "note": "42 suites, 517 tests passing after 6.2's FieldRenderer"
   }
 }
