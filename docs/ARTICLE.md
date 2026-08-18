@@ -1323,4 +1323,50 @@ linter's complaint.
 
 ---
 
+## 2026-08-18 — The same lie told twice: a comment citing a document that was never written
+
+Step 4.4 failed its first checker round for a mistake this loop had
+already made and supposedly learned from two beats earlier, on 4.2: a code
+comment claimed a scope decision was "flagged in `.claude/loop/BLOCKED.md`"
+when the file had never actually been touched. Same words, almost — same
+shape of sentence, same false confidence, same file. The checker caught it
+the same way both times: not by disputing the underlying decision, but by
+running `git diff --stat` against the one file the comment named and
+finding it unchanged.
+
+What makes this worth writing down isn't that the mistake happened once —
+mistakes happen — it's that it happened *again*, in the same session, by
+the same process, after the exact same correction had already been applied
+and journaled in detail. The first time, the fix was narrow: write the
+missing BLOCKED.md section, tighten the comment, move on. What didn't
+happen was turning that into a standing habit — check, before writing any
+comment that cites a document, whether the citation is true right now, not
+whether it's true in spirit or about to become true. A "see BLOCKED.md"
+comment is not documentation of an intention; it's a factual claim about
+the current state of a specific file, and factual claims are exactly the
+kind of thing that should never be written before they're true.
+
+The deeper failure mode here is a general one, not specific to this
+project's spine files: an AI-assisted loop (or any developer, for that
+matter) that documents *decisions* while implementing them will naturally
+reach for phrasing like "see the tracking doc" as a way to signal "this was
+considered, not overlooked." That phrasing is cheap to write and easy to
+believe while writing it — the intention to actually go add the entry is
+real in the moment. But intention isn't verification, and a reviewer
+(human or automated) that takes the claim at face value would have shipped
+a comment lying about its own paper trail, twice, in the same afternoon.
+
+**Article angle:** self-documentation has the same trust problem as
+self-testing — a comment claiming "this is tracked elsewhere" needs the
+same discipline as a test claiming "this proves X": don't write it until
+you've confirmed the thing it points to actually exists, and don't treat
+"I already fixed this exact bug once today" as evidence it can't happen
+again. If anything, having just fixed it is a reason to specifically check
+for it a second time, not a reason to assume the lesson is now permanent.
+The fix that finally stuck here wasn't a smarter comment — it was writing
+the BLOCKED.md section *before* the comment that cites it, so the citation
+could never be false in the first place.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

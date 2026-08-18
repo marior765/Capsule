@@ -1221,4 +1221,83 @@ for later) the same way 3.3.1 and 4.3 itself were legitimately sequenced.
 
 ---
 
+## Beat 14 — 2026-08-18
+
+**Step:** 4.4 — Settings → privacy screen (app-lock piece)
+
+User asked mid-beat to tighten the loop's check-in cadence to 2 minutes;
+applied to this beat's continuation scheduling.
+
+`docs/ARCHITECTURE.md`'s nav-map comment for `settings/privacy.tsx` names
+four things: app-lock, wipe, audit log, egress indicator. Two shipped last
+beat (4.3). This beat targeted app-lock; wipe stays untouched (4.5 doesn't
+exist as a feature yet, a real dependency gap, not scope-dodging).
+
+Reconciled carefully before writing anything, given a note left at the end
+of 4.3 flagging this step's scope as ambiguous. Deliberately scoped down
+from "the full launch-time unlock gate" (blocking `Providers`, an `AppState`
+listener, a lock screen — genuinely separate, large integration work
+4.1/4.2's own BLOCKED.md entries already called out as its own future beat)
+to just: a settings-screen form letting the user configure a passphrase via
+`encrypt-vault`'s `setUpVault`. Deliberately did NOT use `features/app-lock`'s
+`createAppLock` — that's a gate state machine for guarding access over
+time, a different concern from a one-shot setup form. Deliberately shipped
+with NO "disable app lock" control: the only existing removal path,
+`resetVault()`, deletes the *entire* database, not just the lock — wiring
+it to what a user would expect to be a harmless toggle would be a real,
+silent data-loss trap. Chose `action: "decrypt"` for logging vault *setup*
+(closed 4-value `AuditAction` union has no "setup" category) as the closest
+fit, not a clean one.
+
+TDD'd `validatePassphraseSetup.ts` (5 tests) before the widget, then built
+`widgets/AppLockSettings` (async `isVaultConfigured`/`isBiometricAvailable`
+loading with the established `cancelled`-flag pattern, form + validation +
+`setUpVault` + audit logging + status display), wired into
+`settings/privacy.tsx` alongside 4.3's `PrivacyBanner`/`EgressLog`.
+
+**Checker round 1: FAIL — and a repeat mistake, not a new one.** The
+widget's own doc comment claimed two decisions (the missing disable
+control, the `"decrypt"` interpretation) were "flagged in
+`.claude/loop/BLOCKED.md`" — checker found the file genuinely untouched,
+`git diff --stat` empty. This is the *exact* failure class 4.2's first
+round already burned on two beats ago: writing a comment that cites a
+document as evidence for a scope decision without actually updating that
+document. Verified the false claim myself (same check the checker ran)
+before accepting it, rather than assuming "I probably meant to and forgot"
+covered it. Also caught, separately: `validatePassphraseSetup.test.ts`'s
+ordering test asserted `("", "")` — identical to an earlier test case, so
+it couldn't discriminate "empty checked before mismatch" from the reverse
+order, since both converge on the same answer for that input.
+
+Fixed by writing the actual BLOCKED.md "4.4" section (device-check steps
+plus both scope decisions spelled out as genuine open questions with
+concrete alternatives — not just a promise to think about it later), and
+fixing the test to `("", "x")`, a case where the two orderings would
+actually disagree. Mutation-tested the fix myself: swapped the
+implementation's two `if` blocks, confirmed the corrected test goes red,
+restored, confirmed a clean diff.
+
+**Checker round 2: pass**, independently re-verified — read the new
+BLOCKED.md section directly rather than trusting the summary, and
+reproduced the mutation test itself to confirm the ordering fix has real
+teeth.
+
+**Gate:** tsc ✅ · jest ✅ 379/379, 32 suites · eslint ✅ (one unescaped-
+apostrophe fix along the way).
+**Checkpoint:** `e3739e5`.
+**Result:** 4.4 marked `in_progress`, not `done` — native class (exercises
+real `expo-secure-store`/`react-native-quick-crypto` from actual UI for the
+first time) so the box stays unchecked regardless, and the step is also
+genuinely incomplete on its own terms: "wipe" is entirely absent, and the
+actual launch-time gate remains separate, unstarted integration work.
+Device-check entry added to BLOCKED.md. A dated `docs/ARTICLE.md` entry
+follows on the "false BLOCKED.md citation" pattern recurring across two
+separate beats — worth naming as a real failure mode of this loop, not
+just two unrelated one-off mistakes.
+
+Cursor stays on **4.4** — in_progress, not done, same convention 4.3 used
+across several beats before completing.
+
+---
+
 <!-- Append new beats above this line. -->
