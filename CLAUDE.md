@@ -31,6 +31,43 @@ If the repo is not indexed yet, run `index_repository` before anything else.
 Grep/Glob/Read stay fine for text, configs, and non-code files — and always
 `Read` a file before editing it.
 
+### Library docs — always use context7
+Any time a task touches a third-party library, framework, or SDK — API syntax,
+config, version migration, library-specific debugging, setup — use `context7`
+**before** writing or debugging code against it, even for well-known libraries.
+Training data lags; Capsule pins fast-moving majors where APIs shift release to
+release, so don't answer from memory alone.
+
+1. `resolve-library-id` with the library name + what you need from its docs
+   (unless an exact `/org/project` ID is already known)
+2. Pick the best match: exact name, description relevance, snippet count,
+   source reputation (High/Medium preferred), benchmark score. Use
+   version-specific IDs when the pinned version matters (it usually does here).
+3. `query-docs`, scoped to one concept per call — split multi-concept questions
+   into separate calls against the same library ID
+4. Answer using the fetched docs
+
+Key libraries in this repo to resolve via context7 (exact pins in `package.json`):
+- **Expo SDK 56** and its modules: `expo-router`, `expo-sqlite`, `expo-secure-store`,
+  `expo-audio`, `expo-speech`, `expo-image`, `expo-glass-effect`, `expo-symbols`,
+  `expo-system-ui`, `expo-clipboard`, `expo-constants`, `expo-device`, `expo-linking`,
+  `expo-web-browser`, `expo-splash-screen`, `expo-font`, `@expo/ui`
+- `react`, `react-native`, `react-native-reanimated` (v4), `react-native-gesture-handler`,
+  `react-native-screens`, `react-native-safe-area-context`, `react-native-worklets`,
+  `react-native-unistyles`, `react-native-web`
+- `drizzle-orm` / `drizzle-kit`, `expo-drizzle-studio-plugin`
+- `llama.rn`, `whisper.rn`, `react-native-nitro-modules`,
+  `@fugood/react-native-audio-pcm-stream`
+- `react-native-mmkv`, `react-native-quick-crypto`
+- `jest-expo`, `eslint-config-expo`, `eslint-plugin-boundaries`
+
+Expo SDK 56 moves fast between point releases — `docs/AGENTS.md` pins the versioned
+reference at https://docs.expo.dev/versions/v56.0.0/. If context7's Expo results look
+stale, version-ambiguous, or contradict that page, defer to the versioned docs.
+
+Skip context7 for refactoring, business-logic debugging, code review, or general
+programming questions with no library API surface.
+
 ### docs/DEVELOPMENT_PLAN.md — progress tracking
 When completing any task that maps to a checklist item in `docs/DEVELOPMENT_PLAN.md`,
 mark it `[x]` immediately. Keep the file current so it always reflects real progress.
@@ -114,6 +151,7 @@ When modeling: *"Does this capsule make sense on its own, without relying on ext
 ## Project Conventions
 
 - Explore code through `codebase-memory-mcp` first; fall back to Grep/Glob only for non-code files
+- Look up third-party library/API docs through `context7` first; don't answer from memory on pinned fast-moving deps
 - Discuss architecture and approach **before** writing code for any non-trivial feature
 - Use **plan mode** for multi-file changes
 - Keep business logic decoupled from UI — LLM and capsule operations must be testable without rendering
