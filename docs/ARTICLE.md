@@ -1617,4 +1617,64 @@ Definition of Done, not just assuming it falls out of "tests pass."
 
 ---
 
+---
+
+### 2026-08-19 — When the autonomous loop finds someone else's unfinished work
+
+An unattended `/loop` beat's health check is supposed to handle one failure
+mode: a dirty tree left by a *dead* beat (this same loop, interrupted).
+Today it hit a different one — a dirty tree with real, coherent, 150+-line
+diffs across three route files, and *no* matching entry in the journal or
+`state.json` at all. The loop's own contract only gives two moves for a
+dirty tree: finish it, or `git reset --hard` to the last checkpoint. Neither
+move is safe when the tree might not be dead — `ps aux` turned up a second,
+separately-resumed Claude Code session with live read access to the same
+repo, at the same time. Resetting could have destroyed someone else's actual
+work; silently finishing it risked writing into files mid-edit under another
+process.
+
+The loop stopped and asked a person instead of picking one of its two
+built-in options. That's the actual point: an autonomy contract's failure
+modes are usually written for the failures its author anticipated (a crash,
+a timeout), and a well-designed unattended loop needs a third path —
+"the evidence doesn't match either assumption I was built for, stop and
+surface it" — for the failure nobody wrote a rule for. A loop that only
+knows "finish" or "reset" will eventually guess wrong on the case its rules
+never imagined.
+
+Once a human confirmed the WIP was legitimate and asked for it to be
+finished rather than discarded, reviewing someone else's uncommitted,
+un-journaled diff turned out to need the same discipline as reviewing your
+own: check it against the repo's *actual* conventions, not just "does it
+run." The three route diffs were solid, but one of them — an edit screen's
+save handler — hand-diffed which fields had actually changed directly
+inside the route component. `docs/ARCHITECTURE.md` already has a rule for
+this ("route files contain no business logic"), and an earlier beat had
+already established the concrete precedent for *how* to fix it: pull real
+logic into its own pure, tested module, the same move that produced
+`SchemaBuilder`'s `moveField.ts`. Applying a precedent set by a different
+beat, on code a different session wrote, is a small proof that the pattern
+generalizes rather than being a one-off.
+
+The tests for that extraction needed one non-obvious trick. The DB's own
+upsert preserves a value's `id` and `createdAt` across *any* write, whether
+the value actually changed or not — so after a "no-op" save, the row looks
+identical to a save that wrote the same value back. The only field that
+moves on a real write and stays frozen on a skipped one is `updatedAt`.
+Proving "this was correctly skipped" therefore isn't a value assertion at
+all — it's an equality check on a timestamp that a naive test would never
+think to make, because the row's *content* alone can't distinguish the two
+cases.
+
+**Article angle:** "resume the loop" and "the loop found unrecorded work
+mid-flight" are different events, and conflating them is how autonomous
+systems clobber real work. The interesting decision here wasn't the
+diffing-logic extraction (routine, if you already have the `moveField.ts`
+precedent) — it was recognizing, from process-table evidence rather than
+from anything in its own spine, that the situation didn't match either of
+its two hardcoded recovery paths, and that the honest move was to ask
+before choosing one anyway.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

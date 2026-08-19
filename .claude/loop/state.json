@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 30,
+    "beat": 31,
     "status": "running"
   },
   "cursor": {
-    "step": "6.3",
+    "step": "6.5",
     "phase": 6
   },
   "steps": {
@@ -31,16 +31,22 @@
     "3.1": {
       "status": "blocked",
       "class": "native",
-      "attempts": 2,
+      "attempts": 3,
       "failureSignatures": [
         "gate: TS2307 cannot find module 'whisper.rn' (package exports map has no '.' entry) + prettier formatting",
-        "checker: fail — releaseStt had no assertion it released anything; 'omits params' test could not fail; toBeDefined filler; record omission contradicts docs/ARCHITECTURE.md:109"
+        "checker: fail \u2014 releaseStt had no assertion it released anything; 'omits params' test could not fail; toBeDefined filler; record omission contradicts docs/ARCHITECTURE.md:109"
       ],
       "checkpoint": "b373c47",
-      "attempts": 3,
       "notes": "whisper.rn + expo-audio wrapper. Beat 6: record half added (startRecording via AudioModule.AudioRecorder -- expo-audio's recording API is hook-only otherwise, doesn't fit this plain-function module). 33 tests total. Checker fail->fix cycle: (1) missing assertions that prepareToRecordAsync/record were actually called -- fixed, verified by mutation; (2) permission-comment overstatement -- fixed; (3) checker claimed a NativeAudioModule type-workaround was unnecessary, verified true for tsc alone but FALSE for the full gate -- npx eslint src genuinely fails with import/namespace error without it, reproduced myself, sent correction back to checker. Also survived a self-inflicted detour: a botched backup-restore + an auto-format hook that deleted real code twice (treating transiently-unused code as dead code mid-fix). Recovered via one clean full-file Write + fresh unfiltered gate verification, not incremental patching. Re-review sent, awaiting verdict."
     },
-    "3.2": { "status": "done", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "DONE 2026-08-16 -- user ran expo prebuild directly. Clean finish, no config-plugin error. ios/Podfile.lock confirms whisper-rn (0.6.0) genuinely linked (real evidence, not absence-of-error). Android autolinking is command-based (autolinkLibrariesFromCommand), no static per-package evidence expected there -- confirmed by reading android/settings.gradle before treating the empty grep as concerning. No code change was ever needed (whisper.rn ships no config plugin, confirmed by two independent investigations now). docs/DEVELOPMENT_PLAN.md 3.2 ticked. No checkpoint sha -- no code changed, only docs/spine." },
+    "3.2": {
+      "status": "done",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "DONE 2026-08-16 -- user ran expo prebuild directly. Clean finish, no config-plugin error. ios/Podfile.lock confirms whisper-rn (0.6.0) genuinely linked (real evidence, not absence-of-error). Android autolinking is command-based (autolinkLibrariesFromCommand), no static per-package evidence expected there -- confirmed by reading android/settings.gradle before treating the empty grep as concerning. No code change was ever needed (whisper.rn ships no config plugin, confirmed by two independent investigations now). docs/DEVELOPMENT_PLAN.md 3.2 ticked. No checkpoint sha -- no code changed, only docs/spine."
+    },
     "3.3": {
       "status": "done",
       "class": "native",
@@ -183,20 +189,20 @@
       "notes": "DONE -- both pieces complete. FieldRenderer: purely controlled widget dispatching on CapsuleField.fieldType (TextInput for text/long_text/number/date, Switch for boolean, toggleable chip Pressables for single_select/multi_select, placeholder for relation/attachment -- 6.8's job). fieldValueCodec.ts: parseSelectOptions (defines a {options:string[]} config shape for select types, verified in-scope against entities/field's own deferral and 6.8's actual plan text), boolean/multi-select parse+serialize, all gracefully degrading on malformed JSON. 17 tests. CapsuleEditor: composes a title input + one FieldRenderer per field, purely controlled (no state, no persistence), values[field.id] ?? null correctly keyed by field id not array position, per-field onChange closures verified correct (no cross-field-id leakage with 2+ fields). No dedicated test file for CapsuleEditor itself -- genuinely pure JSX composition with nothing to extract, verified by the checker reading the component rather than trusting the absence of tests. Widget-importing-widget (CapsuleEditor -> FieldRenderer) confirmed permitted by this project's FSD boundaries config (features can't import sibling features; widgets can import widgets). Both checker rounds passed on first attempt with real independent verification. docs/DEVELOPMENT_PLAN.md 6.2 TICKED. No capsule route exists yet to mount CapsuleEditor in -- that's 6.3's job (CapsuleList + CapsuleCard, capsules routes), the natural next step."
     },
     "6.3": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "4e286d6",
-      "notes": "IN PROGRESS -- CapsuleList + CapsuleCard + capsules/index.tsx DONE (beat 27). CapsuleCard: presentational, no db access, root testID appends capsule.id (ChatBubble's own established list-uniqueness pattern), 'Unknown type' fallback on a dangling capsuleTypeId. CapsuleList: capsules + a caller-fetched capsuleTypesById map, FlatList of CapsuleCard or empty state. index.tsx: fetches both getAllCapsules/getAllCapsuleTypes, shows a notice when no types exist (as of beat 30 that notice now includes a real 'Create a type' link to /types/new instead of a dead-end message). UNBLOCKED as of beat 30 (6.7 checkpoint 9a06bd8): a real way to create a CapsuleType now exists (types/new.tsx), so the remaining 3 route files -- capsules/new.tsx, [id].tsx, [id]/edit.tsx -- are no longer structurally blocked. docs/DEVELOPMENT_PLAN.md 6.3 stays UNCHECKED (only 1 of 4 route files exists). Cursor advances here next (beat 31): build the remaining capsule routes, using create-capsule/edit-capsule/delete-capsule (6.4's already-done feature layer, checkpoint e13df1b) + CapsuleEditor (6.2) as the building blocks -- this also finishes 6.4's own remaining UI-wiring half in the same pass, mirroring 6.7's own two-beat feature-then-UI split."
+      "checkpoint": "1a2275d",
+      "notes": "Completed together with 6.4 -- capsules/[id].tsx (detail+delete) and capsules/new.tsx (create) landed in this beat, on top of the existing capsules/index.tsx (CapsuleList/CapsuleCard)."
     },
     "6.4": {
-      "status": "in_progress",
-      "class": "logic",
+      "status": "done",
+      "class": "ui",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "e13df1b",
-      "notes": "IN PROGRESS -- feature layer done (create-capsule/edit-capsule/delete-capsule), UI/route wiring not started (capsules/new.tsx, [id]/edit.tsx still bare stubs). createCapsule (inserts capsule + initial values in one call), renameCapsule + setCapsuleFieldValue (the latter ALSO bumps the capsule's own updatedAt, not just the value's -- verified via a real test, since entities/capsule's own upsertCapsuleValue never touches the capsules row), deleteCapsule (cascades to values, mirrors manage-conversations' deleteConversation, correctly aliases the entity's own deleteCapsule as deleteCapsuleRecord to avoid self-recursion -- checker specifically verified this, a real bug category). All three explicitly modeled on manage-conversations' precedent. 18 tests. Mutation-tested the delete cascade myself (removed values cleanup, confirmed orphaned-values test catches it, restored). Checker passed on first attempt: independently re-verified the 'no real CapsuleType exists anywhere, feature layer doesn't need one to function' premise, traced the cross-entity updatedAt bump against the real code, and specifically checked the delete-capsule aliasing for self-recursion. docs/DEVELOPMENT_PLAN.md 6.4 stays UNCHECKED -- no UI exists yet, checker explicitly agreed ticking now would be premature. UI wiring remains blocked on 6.7 the same way 6.3's remaining routes are."
+      "checkpoint": "1a2275d",
+      "notes": "Completed together with 6.3 -- capsules/[id]/edit.tsx landed with a new saveCapsuleEdits export in features/edit-capsule (diffing logic extracted out of the route, 8 new tests). create-capsule/delete-capsule feature layers were already done (checkpoint e13df1b)."
     },
     "6.7": {
       "status": "done",
@@ -208,20 +214,62 @@
       "checkpoint": "9a06bd8",
       "notes": "DONE -- both halves complete. Beat 29: manage-schema feature layer (createCapsuleType/renameCapsuleType/setCapsuleTypeDescription, addField/updateField/removeField/reorderFields, deleteCapsuleType cascading to fields but not capsules), checker caught a real sortOrder collision bug (count-based vs max+1), fixed and re-verified, checkpoint 02f637e. Beat 30 (this beat): SchemaBuilder widget (purely controlled, mirrors CapsuleEditor/FieldRenderer -- name/description inputs, field list with reorder/required-toggle/remove, an 'add a field' mini-form with a FieldType chip picker covering all 9 types since FieldRenderer already degrades gracefully for relation/attachment) + moveField.ts (extracted pure reorder logic, mirrors holdGesture.ts/recommend.ts precedent for widgets with no @testing-library, 10 tests, mutation-tested myself -- broke the bounds check, confirmed a test catches it, restored) + all three types/ routes wired for real (index.tsx: list+create+delete; new.tsx: stages fields locally with client-side ids stripped before one createCapsuleType call; [id].tsx: every field mutation applies immediately via manage-schema then refetches, handles a deleted-type navigation gracefully). Also fixed capsules/index.tsx's now-stale 'Type management is not built yet' notice with a real working link. Checker passed on FIRST attempt this round: independently reproduced the moveField mutation test, traced every [id].tsx handler by hand, confirmed client-side ids never leak into createCapsuleType, verified testID coverage (incl. validating the buildTestID-for-dynamic-ids precedent against FieldRenderer's own prior approval), confirmed FSD boundaries clean. docs/DEVELOPMENT_PLAN.md 6.7 TICKED. UNBLOCKS: 6.3's remaining 3 route files (new.tsx/[id].tsx/[id]/edit.tsx, still bare capsule stubs) and 6.4's UI wiring -- both were parked waiting on exactly this gap since beats 27/28. Cursor advances to 6.3 next."
     },
-    "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
-    "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
-    "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
-    "9.3": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
-    "9.4": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
-    "9.5": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Full STT model management (entities/stt-model + download/selection, mirrors 1.1-1.3). Was 3.3's option (a); user chose option (b) (3.3.1) instead on 2026-08-16 and moved this here as future work, not abandoned. Revisit only if multi-model choice for STT becomes a real need." }
+    "7.1": {
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Embedding model spike; requires a real model"
+    },
+    "9.1": {
+      "status": "deferred",
+      "class": "deferred",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Phase 9 deferred by the plan"
+    },
+    "9.2": {
+      "status": "deferred",
+      "class": "deferred",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Phase 9 deferred by the plan"
+    },
+    "9.3": {
+      "status": "deferred",
+      "class": "deferred",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Phase 9 deferred by the plan"
+    },
+    "9.4": {
+      "status": "deferred",
+      "class": "deferred",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Phase 9 deferred by the plan"
+    },
+    "9.5": {
+      "status": "deferred",
+      "class": "deferred",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Full STT model management (entities/stt-model + download/selection, mirrors 1.1-1.3). Was 3.3's option (a); user chose option (b) (3.3.1) instead on 2026-08-16 and moved this here as future work, not abandoned. Revisit only if multi-model choice for STT becomes a real need."
+    }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-19T00:00:00Z",
-    "head": "9a06bd8",
-    "note": "47 suites, 569 tests passing after 6.7's SchemaBuilder + routes"
+    "at": "2026-08-19T20:55:00Z",
+    "head": "1a2275d",
+    "note": "47 suites, 577 tests passing after 6.3+6.4 (capsule detail/edit/new routes + saveCapsuleEdits)"
   }
 }

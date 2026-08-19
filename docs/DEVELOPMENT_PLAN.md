@@ -128,8 +128,8 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 ### Phase 6 — Capsule data core
 - [x] 6.1 `entities/capsule`, `entities/field`, `entities/capsule-type` — models + CRUD
 - [x] 6.2 `CapsuleEditor` + `FieldRenderer` for base field types
-- [ ] 6.3 `CapsuleList` + `CapsuleCard`, capsules routes
-- [ ] 6.4 Create / edit / delete capsule flows
+- [x] 6.3 `CapsuleList` + `CapsuleCard`, capsules routes
+- [x] 6.4 Create / edit / delete capsule flows
 - [ ] 6.5 Search, filter, sort
 - [ ] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature

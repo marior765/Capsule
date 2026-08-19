@@ -2216,4 +2216,89 @@ in one pass, since building capsules/new.tsx necessarily wires up
 
 ---
 
+## Beat 31 — 2026-08-19
+
+Not a normal beat start. Health check (step 2) found the working tree already
+dirty on `src/app/(app)/capsules/[id].tsx`, `[id]/edit.tsx`, and `new.tsx` —
+substantial diffs (150+ lines each) with **no matching journal or `state.json`
+entry**. Beat 30 had ended clean at checkpoint `9a06bd8`/`7fe3d54`; this WIP
+appeared after that with no record of who wrote it or whether it was finished.
+
+Investigated before touching anything: `ps aux` showed a second, distinct
+Claude Code session (opus-5, resumed across several processes) holding read
+access to this repo, actively running at the time. Per the contract ("each
+beat is a fresh session... everything you remember is wrong unless it's
+written in the spine"), unrecorded WIP under a possibly-live concurrent
+session is exactly the case the contract doesn't cover on its own — resetting
+it could destroy someone else's real work, finishing it risks a race. Paused
+and asked the user directly rather than guessing. **User's call: treat the
+WIP as legitimate, review it, finish it.**
+
+Read all three diffs in full before deciding anything. They were coherent,
+complete-looking implementations of exactly 6.3's remaining routes and 6.4's
+flows — capsule detail view + delete (`[id].tsx`), edit (`[id]/edit.tsx`),
+and the type-picker → `CapsuleEditor` → create flow (`new.tsx`) — using the
+repo's existing entities/features correctly (`getCapsuleById`, `deleteCapsule`,
+`createCapsule`, `renameCapsule`/`setCapsuleFieldValue`) and following
+established conventions (`createComponentTestIDs`, `StyleSheet.create` with
+theme tokens, `useFocusEffect` reload-on-focus matching `capsules/index.tsx`
+and `types/[id].tsx`).
+
+One real gap: `[id]/edit.tsx`'s `handleSave` hand-diffed title/field changes
+inline in the route — a title-trim-to-"Untitled" fallback plus a per-field
+changed/unchanged comparison, entirely untested and, per
+`docs/ARCHITECTURE.md` ("route files contain no business logic — delegate to
+features/widgets"), living in the wrong layer. No route-level tests exist
+anywhere in this repo (`src/app` has zero `*.test.*` files — confirmed by
+search, not assumption) and beat 30 established the repo's actual convention
+for this exact situation: pull real logic out into its own tested module
+(`SchemaBuilder`'s `moveField.ts`). Extracted the diff into a new
+`features/edit-capsule` export, `saveCapsuleEdits(db, id, {title,
+initialTitle, values, initialValues, fieldIds})` — one call, mirroring
+`createCapsule`'s own "title + values together" shape — and wrote 8 tests
+first (TDD, confirmed failing with `saveCapsuleEdits is not a function`
+before implementing): title changed / unchanged / whitespace-emptied /
+trim-only-no-op, a field's value changed / unchanged (asserted via
+`updatedAt` staying byte-identical on a genuine no-op, since
+`upsertCapsuleValue` preserves `id`/`createdAt` across any write and can't be
+distinguished from a no-op by state alone — the *timestamp* not moving is
+the only observable proof nothing was written), and a field present in
+`values` but absent from `initialValues` (new field on the type since load).
+Route now just calls `saveCapsuleEdits` and navigates.
+
+Gate green: tsc clean, 47 suites / 577 tests (was 569; +8 for
+`saveCapsuleEdits`), eslint clean after `--fix` caught two prettier
+formatting issues in the new test file (pre-existing legacy-selector
+warning only, unrelated). Checker: pass on the first attempt — independently
+re-ran the full gate itself rather than trusting my numbers, traced the
+diff logic by hand against every case in the review brief (including the
+value→null and field-absent-from-both-maps cases I hadn't explicitly listed
+in the journal), confirmed `/types/new` actually exists so `new.tsx`'s
+empty-state link isn't dead, and confirmed no layering violations, no `any`,
+no hardcoded testIDs, no network calls. Two non-blocking observations
+(inline `title.trim() || undefined` in `new.tsx`'s `handleCreate` instead of
+delegating to `createCapsule`; duplicated "no types yet" JSX between
+`capsules/index.tsx` and `capsules/new.tsx`) — noted, not acted on, neither
+rises to a correctness defect.
+
+Checkpoint `1a2275d`. Committed only the five step-relevant files
+(`git add` scoped explicitly, not `-A`) — `.claude/audit.log`,
+`.claude/settings.json`, `.vscode/settings.json`, and the untracked
+`.mcp.json` are pre-existing local-environment state unrelated to this step
+and were left untouched, same discipline applied earlier this session to an
+unrelated `CLAUDE.md` commit. Both 6.3 and 6.4 ticked in
+`docs/DEVELOPMENT_PLAN.md` — `class: ui`, provable by tsc+eslint+jest, no
+device dependency. Cursor advances to **6.5** (search, filter, sort).
+
+**Process note for future beats:** this beat's actual trigger wasn't "spine
+says start 6.3" — it was a dirty tree with no spine record, under a
+plausibly-live second session, that the human had to resolve by hand. The
+contract's own dead-beat recovery path (finish or `git reset --hard`)
+assumes single-writer; it does not by itself cover "another live agent might
+be mid-edit right now." Worth folding into `safe-loop.md` itself at some
+point: treat unrecorded dirty state as a human-gate case, not just a
+finish-or-reset binary, whenever process evidence suggests a second writer.
+
+---
+
 <!-- Append new beats above this line. -->
