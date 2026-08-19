@@ -130,7 +130,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.2 `CapsuleEditor` + `FieldRenderer` for base field types
 - [x] 6.3 `CapsuleList` + `CapsuleCard`, capsules routes
 - [x] 6.4 Create / edit / delete capsule flows
-- [ ] 6.5 Search, filter, sort
+- [x] 6.5 Search, filter, sort
 - [ ] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature
 - [ ] 6.8 Relation + attachment field types

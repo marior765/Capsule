@@ -1677,4 +1677,44 @@ before choosing one anyway.
 
 ---
 
+---
+
+### 2026-08-20 — Catching your own process violation mid-step, not after
+
+This run's contract has one non-negotiable rule that's easy to state and,
+it turns out, easy to quietly skip under time pressure: write the failing
+test before the implementation. Every step so far had followed it. This
+beat didn't — the sort-direction-toggle logic for `FilterSheet` got
+written first, out of habit, the same five minutes after deciding "this
+needs its own tested module" that had worked cleanly for `SchemaBuilder`'s
+`moveField.ts` two beats ago.
+
+The interesting part isn't that it happened — it's what "catching it"
+actually looked like in practice: not a reviewer flagging it later, not a
+lint rule, not the checker (which only sees a finished diff and has no way
+to know what order the files were written in). It was noticing, mid-step,
+before moving on to the next file, that the just-written implementation
+had no failing test behind it — and treating that as a real problem worth
+undoing, not a technicality to wave past since the logic was "obviously
+right." The fix cost thirty seconds: delete the implementation, write the
+test, watch it fail for a real reason (`Cannot find module`), rewrite the
+implementation. The fix wasn't the point. Noticing was.
+
+**Article angle:** most discussion of TDD-in-agentic-loops is about
+whether the *rule* survives — does the checker catch a test that never
+failed, does the Definition of Done reject a step without one. Less
+discussed: enforcement has to work even when nothing external is watching
+the *order* things happened in, only the *result*. A reviewer diffing the
+final commit cannot tell "test written first, confirmed red, then
+implemented" apart from "implementation written, test added after to
+match it" — both produce an identical git diff. The only place that
+distinction is visible at all is inside the single continuous stretch of
+actions between deciding to build something and finishing it. Which means
+the discipline only actually exists if it's self-enforced in the moment,
+not because a downstream check would have caught it (it wouldn't have) —
+a genuinely harder property to build into an autonomous loop than "run
+the linter," and the one this beat happened to test.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

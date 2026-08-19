@@ -2356,4 +2356,47 @@ entries.
 
 ---
 
+## Beat 33 — 2026-08-20
+
+Normal beat, health check clean, gate green on HEAD (`53feaa2`). Cursor on
+6.5, `in_progress` from beat 32 — this beat is the second half: `SearchBar`
++ `FilterSheet` widgets and `capsules/index.tsx` wiring, on top of last
+beat's feature layer.
+
+Caught myself mid-step on process discipline: wrote `toggleSort.ts`
+(the tap-to-toggle-sort-direction logic, same "extract real logic out of
+a widget" move as `SchemaBuilder`'s `moveField.ts`) *before* its test —
+broke the TDD-first rule this run has otherwise held all the way through.
+Noticed immediately, deleted the implementation, wrote the test first,
+confirmed it genuinely failed (`Cannot find module '../toggleSort'`), then
+re-implemented. Small thing, but worth naming: the discipline only counts
+if it survives the moments it's easy to skip, and this beat is now the
+concrete anti-example, not just a repeated policy.
+
+`SearchBar`: purely controlled text input + clear button, first real
+consumer of `shared/testing`'s `getInputTestId` helper — that helper
+existed already (with its own tests) but had zero production callers
+before this diff; it was clearly built ahead of this exact widget shape.
+`FilterSheet`: type chips ("All" + one per `CapsuleType`) and three
+sort-key chips, `toggleSort` deciding fresh-ascending-on-key-switch vs.
+flip-direction-on-repeat. `capsules/index.tsx` wiring: `visibleCapsules`
+only calls `searchCapsules` (which does its own db round-trip, including
+the N+1 field-value scan) when the query is non-empty; an empty query
+reuses the already-fetched `capsules` state from `useFocusEffect` rather
+than re-querying on every render.
+
+Gate green: tsc clean, 50 suites / 598 tests (was 594; +4 for
+`toggleSort`), eslint clean after `--fix` caught one prettier issue
+(pre-existing legacy-selector warning only). Checker: pass on first
+attempt — ran `toggleSort`'s tests itself, traced the full search/filter/
+sort chain by hand from `capsules/index.tsx` down through both widgets
+back up to the route's state setters, confirmed no dead props/state and
+that `getInputTestId`'s use is genuine (not a misapplied helper).
+
+Checkpoint `168b1a2`, scoped `git add` as always. **6.5 is now fully
+done** — both halves landed, box ticked in `docs/DEVELOPMENT_PLAN.md`.
+Cursor advances to **6.6** (tags/collections).
+
+---
+
 <!-- Append new beats above this line. -->
