@@ -6,4 +6,5 @@ export {
   insertCapsuleField,
   updateCapsuleField,
   deleteCapsuleField,
+  deleteFieldsByCapsuleType,
 } from "./db";

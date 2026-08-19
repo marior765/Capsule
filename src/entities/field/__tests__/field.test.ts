@@ -5,6 +5,7 @@ import { capsuleTypesMigration } from "@/entities/capsule-type";
 import {
   capsuleFieldsMigration,
   deleteCapsuleField,
+  deleteFieldsByCapsuleType,
   getCapsuleFieldById,
   getFieldsByCapsuleType,
   insertCapsuleField,
@@ -128,6 +129,17 @@ describe("entities/field — happy path", () => {
     insertCapsuleField(db, field);
     deleteCapsuleField(db, field.id);
     expect(getCapsuleFieldById(db, field.id)).toBeNull();
+  });
+
+  it("deleteFieldsByCapsuleType removes every field for that type, leaving other types' fields intact", () => {
+    insertCapsuleField(db, makeField({ id: "a", capsuleTypeId: "ct-1" }));
+    insertCapsuleField(db, makeField({ id: "b", capsuleTypeId: "ct-1" }));
+    insertCapsuleField(db, makeField({ id: "c", capsuleTypeId: "ct-2" }));
+
+    deleteFieldsByCapsuleType(db, "ct-1");
+
+    expect(getFieldsByCapsuleType(db, "ct-1")).toEqual([]);
+    expect(getFieldsByCapsuleType(db, "ct-2").map((f) => f.id)).toEqual(["c"]);
   });
 });
 

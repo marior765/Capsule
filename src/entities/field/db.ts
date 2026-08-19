@@ -119,3 +119,14 @@ export function updateCapsuleField(
 export function deleteCapsuleField(db: SQLiteDatabase, id: string): void {
   db.runSync("DELETE FROM capsule_fields WHERE id = ?;", id);
 }
+
+/** Removes every field belonging to one CapsuleType — e.g. before deleting the type itself (composed by the feature layer, not automatic here). */
+export function deleteFieldsByCapsuleType(
+  db: SQLiteDatabase,
+  capsuleTypeId: string,
+): void {
+  db.runSync(
+    "DELETE FROM capsule_fields WHERE capsule_type_id = ?;",
+    capsuleTypeId,
+  );
+}
