@@ -8,7 +8,11 @@ import {
   getValueByCapsuleAndField,
 } from "@/entities/capsule";
 import { createCapsule } from "@/features/create-capsule";
-import { renameCapsule, setCapsuleFieldValue } from "../index";
+import {
+  renameCapsule,
+  saveCapsuleEdits,
+  setCapsuleFieldValue,
+} from "../index";
 
 let db: SQLiteDatabase;
 
@@ -77,5 +81,122 @@ describe("setCapsuleFieldValue", () => {
     expect(
       getValueByCapsuleAndField(db, capsule.id, "f-notes")?.value,
     ).toBeNull();
+  });
+});
+
+describe("saveCapsuleEdits", () => {
+  it("renames the capsule when the title changed", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1", title: "Dune" });
+    saveCapsuleEdits(db, capsule.id, {
+      title: "Dune Messiah",
+      initialTitle: "Dune",
+      values: {},
+      initialValues: {},
+      fieldIds: [],
+    });
+    expect(getCapsuleById(db, capsule.id)?.title).toBe("Dune Messiah");
+  });
+
+  it("does not touch the capsule's updatedAt when the title is unchanged", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1", title: "Dune" });
+    const before = getCapsuleById(db, capsule.id)!.updatedAt;
+    saveCapsuleEdits(db, capsule.id, {
+      title: "Dune",
+      initialTitle: "Dune",
+      values: {},
+      initialValues: {},
+      fieldIds: [],
+    });
+    expect(getCapsuleById(db, capsule.id)!.updatedAt).toBe(before);
+  });
+
+  it("trims the title and falls back to Untitled when emptied", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1", title: "Dune" });
+    saveCapsuleEdits(db, capsule.id, {
+      title: "   ",
+      initialTitle: "Dune",
+      values: {},
+      initialValues: {},
+      fieldIds: [],
+    });
+    expect(getCapsuleById(db, capsule.id)?.title).toBe("Untitled");
+  });
+
+  it("does not rename when the trimmed title matches the initial title", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1", title: "Dune" });
+    const before = getCapsuleById(db, capsule.id)!.updatedAt;
+    saveCapsuleEdits(db, capsule.id, {
+      title: "  Dune  ",
+      initialTitle: "Dune",
+      values: {},
+      initialValues: {},
+      fieldIds: [],
+    });
+    expect(getCapsuleById(db, capsule.id)!.updatedAt).toBe(before);
+  });
+
+  it("writes only the field whose value changed", () => {
+    const capsule = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      values: { "f-author": "Frank Herbert", "f-year": "1965" },
+    });
+    saveCapsuleEdits(db, capsule.id, {
+      title: capsule.title,
+      initialTitle: capsule.title,
+      values: { "f-author": "Frank Herbert", "f-year": "1966" },
+      initialValues: { "f-author": "Frank Herbert", "f-year": "1965" },
+      fieldIds: ["f-author", "f-year"],
+    });
+    expect(getValueByCapsuleAndField(db, capsule.id, "f-year")?.value).toBe(
+      "1966",
+    );
+  });
+
+  it("does not re-write a field whose value is unchanged", () => {
+    const capsule = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      values: { "f-author": "Frank Herbert" },
+    });
+    const before = getValueByCapsuleAndField(db, capsule.id, "f-author")!;
+    saveCapsuleEdits(db, capsule.id, {
+      title: capsule.title,
+      initialTitle: capsule.title,
+      values: { "f-author": "Frank Herbert" },
+      initialValues: { "f-author": "Frank Herbert" },
+      fieldIds: ["f-author"],
+    });
+    const after = getValueByCapsuleAndField(db, capsule.id, "f-author")!;
+    expect(after.updatedAt).toBe(before.updatedAt);
+  });
+
+  it("does not bump the capsule's updatedAt when nothing changed at all", () => {
+    const capsule = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      title: "Dune",
+      values: { "f-author": "Frank Herbert" },
+    });
+    const before = getCapsuleById(db, capsule.id)!.updatedAt;
+    saveCapsuleEdits(db, capsule.id, {
+      title: "Dune",
+      initialTitle: "Dune",
+      values: { "f-author": "Frank Herbert" },
+      initialValues: { "f-author": "Frank Herbert" },
+      fieldIds: ["f-author"],
+    });
+    expect(getCapsuleById(db, capsule.id)!.updatedAt).toBe(before);
+  });
+
+  it("treats a field absent from initialValues as null (new field added to the type after load)", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    saveCapsuleEdits(db, capsule.id, {
+      title: capsule.title,
+      initialTitle: capsule.title,
+      values: { "f-new": "hello" },
+      initialValues: {},
+      fieldIds: ["f-new"],
+    });
+    expect(getValueByCapsuleAndField(db, capsule.id, "f-new")?.value).toBe(
+      "hello",
+    );
   });
 });
