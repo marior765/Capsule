@@ -2301,4 +2301,59 @@ finish-or-reset binary, whenever process evidence suggests a second writer.
 
 ---
 
+## Beat 32 — 2026-08-19
+
+Normal beat this time — health check clean (only the pre-existing unrelated
+local config files dirty), gate green on HEAD (`1a2275d`... then `19b68d0`
+after beat 31's own close). Cursor pointed at 6.5.
+
+Selection walk confirmed 6.5 really is next: 4.4/4.5/5.2/5.4 are all
+`status: done` in `state.json` despite unchecked boxes in
+`docs/DEVELOPMENT_PLAN.md` (each intentionally partial — real hardware,
+a real export file, or unstarted format specs block the rest — annotated
+inline rather than re-selected every beat with nothing new to do). 6.5
+itself: `features/search-capsules` and `features/filter-sort-capsules`
+were both bare `export {};` stubs, `capsules/index.tsx` has no search/
+filter/sort UI at all — genuinely not done, not just an unchecked box.
+
+Scope decision: split this step the same way beat 29/30 split 6.7 —
+feature layer (fully unit-testable, no native/UI risk) this beat,
+`SearchBar`/`FilterSheet` widgets + route wiring next. `searchCapsules`
+deliberately searches title *and* field values (case-insensitive),
+broader than `manage-conversations`' title-only `searchConversations` —
+a capsule's real identity often lives in its typed fields, not its title
+(which can sit at the default "Untitled" indefinitely). `sortCapsules`/
+`filterCapsulesByType` are pure functions over an already-fetched
+`Capsule[]`, no db access of their own — `getAllCapsules` already orders
+by `updated_at DESC` at the db layer, but a user picking a different sort
+shouldn't depend on that default silently carrying through.
+
+TDD: 17 tests written first, confirmed failing (`... is not a function`
+against the stub exports) before implementing. Both modules passed their
+own tests on the first implementation attempt.
+
+Gate green: tsc clean, 49 suites / 594 tests (was 577; +17), eslint clean
+after `--fix` caught two prettier issues (pre-existing legacy-selector
+warning only). Checker: pass on first attempt — ran the tests itself
+rather than trusting the count, traced both modules' edge cases by hand
+(null field value, empty/whitespace query, no-mutation on sort/filter,
+default sort direction), and specifically verified the claimed scope
+boundary held: `SearchBar`/`FilterSheet` still stubs, `capsules/index.tsx`
+and `docs/DEVELOPMENT_PLAN.md`'s 6.5 checkbox both untouched by this diff.
+
+Checkpoint `5dbe843`, scoped `git add` (same discipline as every commit
+this session — `.claude/audit.log`/`settings.json`/`.vscode/settings.json`/
+`.mcp.json` are pre-existing local-environment state, not this step's).
+6.5 stays `in_progress`, box unchecked. Cursor stays on **6.5** for next
+beat: build `SearchBar` + `FilterSheet` widgets and wire them into
+`capsules/index.tsx` alongside this beat's feature layer, then tick.
+
+No `docs/ARTICLE.md` entry — this beat applied an already-documented
+pattern (the 6.7 split, the "extract real logic into a tested pure
+module" convention) rather than discovering a new one; nothing here
+would read as new insight to a reader who's already seen beat 29/30's
+entries.
+
+---
+
 <!-- Append new beats above this line. -->
