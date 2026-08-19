@@ -2096,4 +2096,62 @@ observation.
 
 ---
 
+## Beat 29 — 2026-08-19
+
+Step 6.7, feature-layer half: `manage-schema`. Cursor came into this beat pointed
+here from beat 28's own reasoning (6.3's remaining routes and 6.4's UI wiring are
+both blocked on a way to create a CapsuleType, which is this step's job).
+
+Split scope the same way as 6.1->6.2 and 6.4: shipped the feature layer
+(`createCapsuleType`, `renameCapsuleType`/`setCapsuleTypeDescription`,
+`addField`/`updateField`/`removeField`/`reorderFields`, `deleteCapsuleType`) this
+beat, left `SchemaBuilder` (widget) and `types/` routes for the next one. Also
+added `entities/field`'s `deleteFieldsByCapsuleType` (bulk delete, mirrors
+`deleteValuesByCapsule`/`deleteMessagesByConversation`), needed for
+`deleteCapsuleType`'s cascade.
+
+Deliberate design decision, documented in the code itself: `deleteCapsuleType`
+cascades to the type's own `CapsuleField`s but NOT to `Capsule`s of that type.
+No SQL FK exists in this codebase by design; a capsule with a dangling
+`capsuleTypeId` already degrades gracefully today (`CapsuleCard`'s "Unknown
+type" fallback, built in 6.3) so cascading the delete further would be adding a
+cross-entity cascade this step doesn't actually need, not matching an existing
+convention.
+
+Checker round 1 found a real bug, independent of the disclosed scope-narrowing:
+`addField`'s `sortOrder` was `getFieldsByCapsuleType(...).length` — field count.
+That's correct only when the most recently removed field (if any) was the LAST
+one in sort order; remove a first/middle field instead and the next `addField`
+collides with a field that's still there (e.g. `[A:0, B:1]`, remove A, add C ->
+C also lands at sortOrder 1, same as the surviving B). My own test for "doesn't
+reuse the removed field's sortOrder" only ever removed the last field — the one
+case where count-based and `max(sortOrder)+1`-based derivation happen to agree —
+so it shipped green while asserting a docstring claim ("removing a field never
+leaves a gap that a later add could collide into") that was flatly false for the
+untested case.
+
+This is the same shape of mistake as 5.4's parentIndex bug from earlier this
+run: a test that exercises only the coincidentally-easy branch of an ordering
+property, not the general case, structurally cannot catch a real regression in
+the branch it never visits. Fixed to `max(existing sortOrders) + 1` (0 for an
+empty type), rewrote the docstring with a concrete counterexample instead of a
+bare assertion, and added a test that specifically removes a NON-last field
+before re-adding. Verified myself before resending: reverted just the
+derivation line, watched the new test fail with the exact predicted collision
+(`Expected: 2, Received: 1`), restored. Checker re-verified independently with
+three of its own probe scenarios (middle-field removal, five cycles of
+remove-then-add churn, empty-type reset-to-0) and reproduced the pre-fix
+failure itself before passing — didn't just trust my account of either.
+
+Gate green throughout: tsc clean, 46 suites / 559 tests, eslint clean (only the
+long-standing pre-existing `[boundaries]` legacy-selector warning, unrelated to
+this diff). Checkpoint `02f637e`. `docs/DEVELOPMENT_PLAN.md` 6.7 stays UNCHECKED
+— only half the step's named scope (the feature, not the widget) is done.
+`state.json` cursor stays on `6.7` for beat 30: build `SchemaBuilder` +
+`types/index.tsx`/`new.tsx`/`[id].tsx`. That in turn should unblock 6.3's
+remaining capsules routes and 6.4's UI wiring, both parked waiting on exactly
+this gap since beats 27/28.
+
+---
+
 <!-- Append new beats above this line. -->

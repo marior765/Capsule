@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 28,
+    "beat": 29,
     "status": "running"
   },
   "cursor": {
@@ -198,6 +198,16 @@
       "checkpoint": "e13df1b",
       "notes": "IN PROGRESS -- feature layer done (create-capsule/edit-capsule/delete-capsule), UI/route wiring not started (capsules/new.tsx, [id]/edit.tsx still bare stubs). createCapsule (inserts capsule + initial values in one call), renameCapsule + setCapsuleFieldValue (the latter ALSO bumps the capsule's own updatedAt, not just the value's -- verified via a real test, since entities/capsule's own upsertCapsuleValue never touches the capsules row), deleteCapsule (cascades to values, mirrors manage-conversations' deleteConversation, correctly aliases the entity's own deleteCapsule as deleteCapsuleRecord to avoid self-recursion -- checker specifically verified this, a real bug category). All three explicitly modeled on manage-conversations' precedent. 18 tests. Mutation-tested the delete cascade myself (removed values cleanup, confirmed orphaned-values test catches it, restored). Checker passed on first attempt: independently re-verified the 'no real CapsuleType exists anywhere, feature layer doesn't need one to function' premise, traced the cross-entity updatedAt bump against the real code, and specifically checked the delete-capsule aliasing for self-recursion. docs/DEVELOPMENT_PLAN.md 6.4 stays UNCHECKED -- no UI exists yet, checker explicitly agreed ticking now would be premature. UI wiring remains blocked on 6.7 the same way 6.3's remaining routes are."
     },
+    "6.7": {
+      "status": "in_progress",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- addField derived sortOrder from getFieldsByCapsuleType(...).length, which collides whenever a non-last field had been removed (count doesn't equal 'next free slot' once removal leaves a gap); the original test only ever removed the LAST field, the one case where count-based and max+1-based derivation happen to agree, so it shipped green"
+      ],
+      "checkpoint": "02f637e",
+      "notes": "IN PROGRESS -- manage-schema feature layer DONE (createCapsuleType/renameCapsuleType/setCapsuleTypeDescription, addField/updateField/removeField/reorderFields, deleteCapsuleType). SchemaBuilder widget + types/ routes (index.tsx, new.tsx, [id].tsx -- all still bare stubs) NOT started, mirrors 6.1->6.2 and 6.4's own feature-layer-first split. deleteCapsuleType cascades to CapsuleFields (mirrors delete-capsule's cascade to CapsuleValues) but deliberately NOT to Capsules of that type -- no SQL FK, matches this app's graceful-degradation convention, verified consistent with CapsuleCard's own 'Unknown type' fallback (6.3) and confirmed the function never imports entities/capsule at all. reorderFields filters orderedFieldIds against the type's own current field ids -- a stale/cross-type id can't rewrite another type's ordering (mutation-tested myself: removed the filter, the cross-type test caught it immediately). Also added entities/field's deleteFieldsByCapsuleType (bulk delete, mirrors deleteValuesByCapsule/deleteMessagesByConversation), TDD'd and mutation-tested independently. Checker failed round 1 on a REAL bug I'd missed: addField's sortOrder came from field COUNT, not max(sortOrder)+1 -- collides whenever a removed field wasn't the last one (e.g. [A:0,B:1], remove A, add C -> C gets sortOrder 1, same as B). My own test only ever removed the LAST field (count and max+1 agree there), so it shipped green with a docstring asserting the opposite of what the code actually did. Fixed to max(sortOrder)+1 (0 for empty), rewrote the docstring with a concrete counterexample, added a real test removing a first/middle field. Verified myself before resending: reverted just the sortOrder line, confirmed the new test fails with the exact collision (expected 2, received 1), restored. Checker re-verified independently with 3 of its OWN probe scenarios (middle-field removal, 5 cycles of remove-then-add churn, empty-type reset) before passing, plus independently reproduced the pre-fix failure itself rather than trusting my account. docs/DEVELOPMENT_PLAN.md 6.7 stays UNCHECKED -- step's full stated scope (SchemaBuilder + manage-schema) isn't done yet, only the feature half is. Cursor stays on 6.7 for the next beat: build SchemaBuilder widget + wire types/ routes (index.tsx, new.tsx, [id].tsx), which also unblocks 6.3's remaining capsules routes and 6.4's UI wiring, both left blocked on this exact gap since beat 27/28."
+    },
     "7.1": { "status": "pending", "class": "native", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Embedding model spike; requires a real model" },
     "9.1": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
     "9.2": { "status": "deferred", "class": "deferred", "attempts": 0, "failureSignatures": [], "checkpoint": null, "notes": "Phase 9 deferred by the plan" },
@@ -210,8 +220,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-18T00:00:00Z",
-    "head": "e13df1b",
-    "note": "45 suites, 535 tests passing after 6.4's feature layer"
+    "at": "2026-08-19T00:00:00Z",
+    "head": "02f637e",
+    "note": "46 suites, 559 tests passing after 6.7's feature layer"
   }
 }

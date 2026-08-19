@@ -1536,4 +1536,48 @@ time, at the plan document itself rather than at the code.
 
 ---
 
+### 2026-08-19 — A test that only ever removes the last item can't catch what happens when you remove the first one
+
+Building `manage-schema`'s `addField` (step 6.7), I wrote a function to append
+a new field to a `CapsuleType` and gave its `sortOrder` the type's current
+field *count* — reasoning that if a field was removed earlier, the count
+naturally accounts for the gap. I wrote a test to back up exactly that claim:
+create two fields, remove the second one, add a third, assert no collision.
+It passed. The checker's independent review found the claim was false anyway.
+
+The bug: field count only equals "the next free `sortOrder` slot" when the
+field that got removed happened to be the *last* one in order. Remove a
+first or middle field instead — `[A:0, B:1]`, remove A, leaving only `B:1` —
+and the count is 1, so the next `addField` also lands at `sortOrder` 1,
+colliding with the surviving B. My test never removed anything but the last
+item, so count-based and `max(sortOrder)+1`-based derivation looked
+identical from where I was standing. The docstring I wrote alongside the
+code ("removing a field never leaves a gap that a later add could collide
+into") was stated as a general property when it had only actually been
+checked against one specific, easy case.
+
+This is the same shape of gap as 5.4's ChatGPT-import `parentIndex` bug from
+earlier this run (a single-pass tree resolution that happened to work for
+every case the test data covered, and only for those cases) — both times,
+an ordering/positioning property was asserted from a test that exercised
+exactly one branch of the state space, the branch where the naive
+implementation and the correct one give the same answer. Neither test was
+dishonest or lazy on its face; both looked like reasonable coverage of "the
+thing I just built." The gap only shows up when someone — here, the
+checker — asks "what if the removed item *wasn't* the special one?"
+
+**Article angle:** for any function whose correctness depends on *order* or
+*position* (sort indices, tree parent pointers, anything with a "first",
+"last", or "next" in its own reasoning), a single happy-path test is
+structurally the wrong shape of proof — the interesting bugs live
+specifically in the positions a naive implementation treats as
+interchangeable with the general case, and only checking the position that
+happens to be trivial gives false confidence. The fix that generalizes: for
+ordering-sensitive logic, deliberately write the *non-trivial* case first
+(remove something other than the edge item, resolve a parent that appears
+out of order) rather than reaching for whichever case is easiest to set up
+and calling it representative.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
