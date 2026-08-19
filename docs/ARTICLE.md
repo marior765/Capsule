@@ -1580,4 +1580,41 @@ and calling it representative.
 
 ---
 
+### 2026-08-19 — A UI change can falsify a sentence in a completely different screen
+
+Finishing `SchemaBuilder`'s routes meant a real way to create a `CapsuleType`
+existed in the app for the first time. Nothing about that touched
+`capsules/index.tsx` — different route, different feature, not in this
+step's stated scope at all. But `capsules/index.tsx` already had a sentence
+on screen for the empty-types case: *"Type management is not built yet."*
+That sentence was true when it was written (beat 27, before 6.7 existed)
+and became false the instant this beat's routes landed, without a single
+line of `capsules/index.tsx` needing to change for the underlying fact to
+shift under it.
+
+Nothing would have caught this automatically — it's not a type error, not
+a failing test, not a lint rule. The only way to catch it is to ask, after
+finishing a change, "what does this make newly false somewhere else?"
+rather than just "does this satisfy the step I was given." That's a
+narrower, more mechanical version of the same discipline this run has
+applied to code comments citing `BLOCKED.md` content that wasn't there
+(3 occurrences, eventually fixed structurally in `safe-loop.md` itself) —
+except here the claim wasn't even a comment in the diff under review, it
+was a pre-existing sentence in an unrelated file with no obvious link to
+this step's own change.
+
+**Article angle:** most staleness-detection advice is about comments and
+docs describing the code they sit next to — "does this docstring still
+match this function." The harder version, with no established checklist
+item for it, is user-facing copy that describes the *state of the product*
+elsewhere — an empty-state message, a "coming soon" label, a disabled
+button's tooltip — which goes stale the moment some other, unrelated part
+of the codebase changes. Catching it isn't a code-review technique; it's a
+product-sense habit of asking "who else was relying on the old world being
+true" before calling a step done, the same reflex a human maintainer would
+need and one worth deliberately building into an agentic loop's own
+Definition of Done, not just assuming it falls out of "tests pass."
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

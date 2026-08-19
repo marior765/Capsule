@@ -2154,4 +2154,66 @@ this gap since beats 27/28.
 
 ---
 
+## Beat 30 — 2026-08-19
+
+Step 6.7, second half: `SchemaBuilder` widget + `types/` routes, completing the
+step. Feature layer landed last beat (checkpoint `02f637e`); this beat is pure
+UI on top of it, same split as 6.1->6.2.
+
+`SchemaBuilder` follows `CapsuleEditor`/`FieldRenderer`'s established
+"purely controlled" shape — no domain state, no persistence, caller decides
+when writes happen. Extracted `moveField.ts` for the reorder-button logic
+(swap with a neighbor, no-op via reference equality at either boundary) —
+mirrors `holdGesture.ts`/`recommend.ts`: widgets have no
+`@testing-library/react-native` in this repo, so any real logic worth a test
+gets pulled into its own pure module. 10 tests; mutation-tested myself
+(broke the bounds check, watched the boundary tests fail with a leaked
+`undefined`, restored) before sending to the checker — same discipline as
+every other safety-critical property this run.
+
+Wired all three `types/` routes for real:
+- `index.tsx` — list, a "New type" button, per-row delete (cascades to
+  fields via `manage-schema`'s `deleteCapsuleType`, not to capsules).
+- `new.tsx` — stages fields locally with client-generated ids before any
+  write exists; `handleCreate` strips those ids back out (verified by the
+  checker reading the actual object literal, not trusting my claim) and
+  makes exactly one `createCapsuleType` call with the whole field list —
+  `createCapsuleType`'s own API was designed for precisely this shape back
+  in beat 29, and it paid off here.
+- `[id].tsx` — the opposite strategy: this type already exists, so every
+  field mutation (add/remove/toggle-required/reorder) applies immediately
+  via a real `manage-schema` call and then re-fetches from the db, rather
+  than hand-patching local state. Handles navigating to a since-deleted
+  type without crashing.
+
+Also fixed a small but real staleness bug in `capsules/index.tsx`: its
+"no capsule types exist yet" notice literally said "Type management is not
+built yet," which stopped being true the moment this beat's routes landed.
+Replaced with a working "Create a type" link. Worth naming because it's an
+easy thing to miss — the notice wasn't *in* this step's diff until I went
+looking for what this change would make newly false elsewhere in the
+codebase, the same kind of check that's caught stale doc-comment claims all
+run.
+
+Checker passed on the first attempt — independently reproduced the
+`moveField` mutation test rather than trusting my account of it, traced
+every `[id].tsx` handler by hand, confirmed the client-side-id-stripping
+claim by reading the actual literal, and specifically validated that the
+`buildTestID`-for-dynamic-ids pattern (used here for per-field move/remove/
+required testIDs) is a real, already-approved precedent from `FieldRenderer`
+rather than an invented excuse to skip the usual `testIDs` object.
+
+Gate green: tsc clean, 47 suites / 569 tests, eslint clean (pre-existing
+warning only). Checkpoint `9a06bd8`. `docs/DEVELOPMENT_PLAN.md` 6.7 is now
+TICKED — first full step-completion (both named deliverables) since 6.2.
+
+This unblocks exactly what beats 27/28 predicted it would: 6.3's remaining
+three capsule routes and 6.4's UI wiring. Cursor advances to 6.3 next —
+selected over 6.4 only because 6.3 sorts earlier in the plan and both are
+equally unblocked now; the actual work for both will likely land together
+in one pass, since building capsules/new.tsx necessarily wires up
+`create-capsule`'s feature layer too.
+
+---
+
 <!-- Append new beats above this line. -->
