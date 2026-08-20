@@ -2521,4 +2521,43 @@ beat's job. Cursor stays on **6.6**.
 
 ---
 
+## Beat 36 — 2026-08-20
+
+Normal beat, health check clean, gate green on HEAD (`8b6b8fb`). Cursor
+on 6.6, `in_progress` from beat 35 — second half: `TagPicker` widget +
+route wiring, on top of last beat's entity/feature layer.
+
+`TagPicker`: tag chips (name + remove button) plus an add-tag input,
+following `SchemaBuilder`'s own established shape almost exactly — local
+`draftName` state for the transient "what's being typed" text, trimmed
+and guarded against empty/whitespace before calling `onAddTag`, cleared
+after. No new pure-logic module needed this time (unlike `moveField.ts`/
+`toggleSort.ts`) — the only local logic is a one-line trim+guard, well
+under the bar that's triggered extraction in every other widget so far.
+
+Wired into `capsules/[id].tsx` using `types/[id].tsx`'s "already exists →
+apply immediately via a real feature call, then re-fetch from the db"
+shape, not `types/new.tsx`'s different "stage locally, one create call"
+pattern — the right choice here since a capsule being viewed on its
+detail screen already exists, there's nothing to batch. `handleAddTag`/
+`handleRemoveTag` are thin pass-throughs to `tagCapsule`/`untagCapsule`
+followed by a `getTagsByCapsule` refetch; the existing `useFocusEffect`
+already refreshes `tags` on re-entry, so nothing new needed there.
+
+Gate green: tsc clean, 53 suites / 625 tests — unchanged, no new tests
+this beat, matching this repo's established convention that routes/
+widgets don't get their own test files (the tagging *logic* was already
+proven at the entity/feature layer last beat; this beat is pure UI
+composition). Checker: pass on first attempt — traced both handlers
+end-to-end against the real feature-layer signatures (argument order,
+not just presence), confirmed the widget stays purely controlled, and
+confirmed no business logic leaked out of `features/tag-capsule` into
+the route.
+
+Checkpoint `037cf6e`. **6.6 is now fully done** — both halves landed, box
+ticked in `docs/DEVELOPMENT_PLAN.md`. Cursor advances to **6.8** (relation
++ attachment field types) — 6.7 is already done, 6.9/6.10 come after.
+
+---
+
 <!-- Append new beats above this line. -->

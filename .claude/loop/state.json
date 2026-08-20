@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 35,
+    "beat": 36,
     "status": "running"
   },
   "cursor": {
-    "step": "6.6",
+    "step": "6.8",
     "phase": 6
   },
   "steps": {
@@ -271,12 +271,12 @@
       "notes": "Both halves done -- feature layer (5dbe843, beat 32) + SearchBar/FilterSheet widgets + capsules/index.tsx wiring (168b1a2, beat 33). searchCapsules matches title+field values; filterCapsulesByType by CapsuleType; sortCapsules by title/createdAt/updatedAt asc/desc, tap-to-toggle via toggleSort.ts."
     },
     "6.6": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "3a5a662",
-      "notes": "Entity+feature layer done this beat (entities/tag: Tag CRUD + capsule_tags junction, v13/v14 migrations, registered in Providers; features/tag-capsule: tagCapsule/untagCapsule/deleteTag). Self-caught addendum: delete-capsule now cascades into capsule_tags (was missing). 21 tests. Widget (TagChip/TagPicker or similar) + route/CapsuleEditor wiring left for next beat, same split as 6.5/6.7. docs/DEVELOPMENT_PLAN.md box stays unchecked until both halves land."
+      "checkpoint": "037cf6e",
+      "notes": "Both halves done -- entity+feature layer (3a5a662, beat 35, incl. delete-capsule cascade addendum) + TagPicker widget wired into capsules/[id].tsx (037cf6e, beat 36). tagCapsule get-or-create by trimmed name, untagCapsule, deleteTag cascade."
     }
   },
   "quarantinedThisRun": [],
@@ -284,8 +284,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-20T01:45:00Z",
-    "head": "3a5a662",
-    "note": "53 suites, 625 tests passing after 6.6 entity+feature layer (entities/tag + features/tag-capsule + delete-capsule cascade)"
+    "at": "2026-08-20T02:15:00Z",
+    "head": "037cf6e",
+    "note": "53 suites, 625 tests passing after 6.6 completion (TagPicker widget)"
   }
 }
