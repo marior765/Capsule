@@ -7,7 +7,13 @@ import {
   getCapsuleById,
   getValuesByCapsule,
 } from "@/entities/capsule";
+import {
+  capsuleTagsMigration,
+  getTagsByCapsule,
+  tagsMigration,
+} from "@/entities/tag";
 import { createCapsule } from "@/features/create-capsule";
+import { tagCapsule } from "@/features/tag-capsule";
 import { deleteCapsule } from "../index";
 
 let db: SQLiteDatabase;
@@ -15,7 +21,12 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [capsulesMigration, capsuleValuesMigration]);
+  runMigrations(db, [
+    capsulesMigration,
+    capsuleValuesMigration,
+    tagsMigration,
+    capsuleTagsMigration,
+  ]);
 });
 
 describe("deleteCapsule", () => {
@@ -44,5 +55,21 @@ describe("deleteCapsule", () => {
 
   it("deleting an unknown id does not throw", () => {
     expect(() => deleteCapsule(db, "missing")).not.toThrow();
+  });
+
+  it("removes the capsule's tag attachments too, without deleting the tag records themselves (6.6 cascade)", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    tagCapsule(db, capsule.id, "urgent");
+    deleteCapsule(db, capsule.id);
+    expect(getTagsByCapsule(db, capsule.id)).toEqual([]);
+  });
+
+  it("leaves another capsule's tag attachments intact", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const tag = tagCapsule(db, a.id, "shared-tag");
+    tagCapsule(db, b.id, "shared-tag");
+    deleteCapsule(db, a.id);
+    expect(getTagsByCapsule(db, b.id).map((t) => t.id)).toEqual([tag.id]);
   });
 });

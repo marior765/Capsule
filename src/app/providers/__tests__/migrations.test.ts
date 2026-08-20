@@ -15,8 +15,10 @@ import { migrations } from "../migrations";
 import { getAllCapsules } from "@/entities/capsule";
 import { getAllCapsuleTypes } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType } from "@/entities/field";
+import { getTagsByCapsule } from "@/entities/tag";
 import { createCapsuleType } from "@/features/manage-schema";
 import { createCapsule } from "@/features/create-capsule";
+import { tagCapsule } from "@/features/tag-capsule";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -43,5 +45,19 @@ describe("Providers' registered migrations", () => {
     });
     expect(getAllCapsules(db).map((c) => c.id)).toContain(capsule.id);
     expect(getFieldsByCapsuleType(db, capsuleType.id)).toHaveLength(1);
+  });
+
+  it("lets a capsule actually be tagged through the real migration set (6.6)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    tagCapsule(db, capsule.id, "sci-fi");
+    expect(getTagsByCapsule(db, capsule.id).map((t) => t.name)).toEqual([
+      "sci-fi",
+    ]);
   });
 });
