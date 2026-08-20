@@ -11,8 +11,11 @@ import {
 } from "@/entities/capsule";
 import { getCapsuleTypeById, type CapsuleType } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
+import { getTagsByCapsule, type Tag } from "@/entities/tag";
 import { deleteCapsule } from "@/features/delete-capsule";
+import { tagCapsule, untagCapsule } from "@/features/tag-capsule";
 import { createComponentTestIDs } from "@/shared/testing";
+import { TagPicker } from "@/widgets/TagPicker";
 
 export default function CapsuleDetailScreen() {
   const db = useDb();
@@ -21,6 +24,7 @@ export default function CapsuleDetailScreen() {
   const [capsuleType, setCapsuleType] = useState<CapsuleType | null>(null);
   const [fields, setFields] = useState<CapsuleField[]>([]);
   const [values, setValues] = useState<CapsuleValue[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -30,6 +34,7 @@ export default function CapsuleDetailScreen() {
         setCapsuleType(getCapsuleTypeById(db, found.capsuleTypeId));
         setFields(getFieldsByCapsuleType(db, found.capsuleTypeId));
         setValues(getValuesByCapsule(db, found.id));
+        setTags(getTagsByCapsule(db, found.id));
       }
     }, [db, id]),
   );
@@ -37,6 +42,19 @@ export default function CapsuleDetailScreen() {
   const handleDelete = () => {
     deleteCapsule(db, id);
     router.replace("/capsules");
+  };
+
+  // Tags apply immediately, like SchemaBuilder's field mutations on an
+  // already-existing type (types/[id].tsx) — a real feature-layer call,
+  // then re-fetch from the db, rather than hand-patching local state.
+  const handleAddTag = (name: string) => {
+    tagCapsule(db, id, name);
+    setTags(getTagsByCapsule(db, id));
+  };
+
+  const handleRemoveTag = (tagId: string) => {
+    untagCapsule(db, id, tagId);
+    setTags(getTagsByCapsule(db, id));
   };
 
   if (!capsule) {
@@ -70,6 +88,12 @@ export default function CapsuleDetailScreen() {
           </Text>
         </View>
       ))}
+
+      <TagPicker
+        tags={tags}
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
+      />
 
       <Pressable
         testID={testIDs.buttons.edit}
