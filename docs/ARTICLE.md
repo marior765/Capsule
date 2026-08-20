@@ -1717,4 +1717,56 @@ the linter," and the one this beat happened to test.
 
 ---
 
+---
+
+### 2026-08-20 — Seven "done" steps, checker-reviewed and green, on tables that would never exist
+
+Every step in this run gets the same treatment: TDD, a gate of tsc/jest/
+eslint, an independent reviewer subagent that's explicitly told to try to
+refute the diff. Seven capsule-domain steps (6.1 through 6.7) went through
+that exact process, all passed, all checkpointed, all ticked in the plan.
+And none of it would have worked on a real device — `Providers`, the one
+place that decides what tables actually get created when the app boots,
+never imported a single capsule migration. `insertCapsule` would have
+hit `no such table: capsules` the first time a real user opened the app.
+
+The layered reason this slipped seven checker passes in a row is the more
+interesting part than the bug itself. Every capsule test — and there were
+hundreds by this point — calls `runMigrations` with its own explicit,
+hand-picked list of exactly the tables that test needs. That's a
+reasonable, even good, testing pattern in isolation: each test is
+self-contained, fast, doesn't depend on unrelated migrations. Its blind
+spot is that it means no test, ever, exercises the *actual* list
+`Providers` uses to boot the real app. A hundred passing tests, each
+correctly proving "this feature works, given the right tables exist," add
+up to zero evidence that the tables get created in practice.
+
+Reflex was to write the obvious regression test — import `Providers` (or
+its `remigrateDb` helper) and assert the boot path creates the tables. It
+couldn't even load: `app/providers/index.tsx`'s first import is
+`react-native-unistyles`, which needs a real native module and throws
+under jest before a single line of test logic runs. That's not a second,
+unrelated bug — it's the actual root cause of the first one. The
+migrations array wasn't just *untested*, it was *untestable*, by
+construction, for as long as it lived inside the one file jest could never
+safely import. No amount of "remember to test this" would have fixed it;
+the file itself made the category of test impossible to write. The fix
+had to be structural — pull the array into its own module with zero
+native-UI imports — not a reminder or a checklist item.
+
+**Article angle:** "the tests all passed" and "the reviewer approved every
+diff" are both true statements about this run's capsule work, and neither
+one implies the feature actually functions, because both were scoped to
+exactly the surface each test author chose to exercise — and the one
+integration point that mattered (what the real app boots with) was never
+in anyone's diff to review, because no plan step named it. A maker-checker
+loop, however disciplined, only ever verifies the code that gets shown to
+it; the actual gap here is a step that plan and process both had no name
+for — "does the sum of these independently-correct pieces boot" — and the
+fix that mattered wasn't more diligence on any one step, it was
+restructuring the code so that question became askable in the first
+place.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

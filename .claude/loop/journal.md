@@ -2399,4 +2399,69 @@ Cursor advances to **6.6** (tags/collections).
 
 ---
 
+## Beat 34 — 2026-08-20
+
+Normal start — health check clean, gate green on HEAD (`a648b31`). Cursor
+on 6.6 (tags/collections). Confirmed genuinely unstarted: `entities/tag`
+and `features/tag-capsule` are both bare `export {};` stubs.
+
+Before writing any tag code, went to check where a new migration would
+get registered — `src/app/providers/index.tsx`'s `migrations` array — and
+found it doesn't contain a single capsule migration. Not "some are
+missing," none: `capsuleTypesMigration`, `capsuleFieldsMigration`,
+`capsulesMigration`, `capsuleValuesMigration` all exist, are all correctly
+exported from their entities, and none of them are imported into
+`Providers`. Every one of steps 6.1 through 6.7 — all already checkpointed,
+all already ticked `[x]` in `docs/DEVELOPMENT_PLAN.md`, all independently
+checker-reviewed and passed — built real, working, well-tested feature
+code on top of tables that a genuine app boot would never create. `insert
+Capsule`/`insertCapsuleType`/etc. would throw `no such table` the first
+time anyone actually opened the app on a device.
+
+This is not a step 6.6 bug and doesn't belong in 6.6's diff, but it's a
+severe enough correctness gap (the entire capsule domain non-functional
+outside of tests) that shipping more capsule-domain work on top of it
+felt wrong before fixing the foundation. Spent this beat on the fix
+instead of starting 6.6 at all.
+
+**Why it went uncaught for 7 steps' worth of checker passes:** every
+`__tests__` file that exercises capsule code calls `runMigrations(db,
+[capsulesMigration, ...])` with its own hand-picked list — never the real
+one `Providers` uses. Nothing in this run's process ever exercised the
+actual boot path. Tried writing the obvious regression test (import
+`remigrateDb` from `app/providers`, run it, assert the tables exist) and
+it crashed immediately under jest: `app/providers/index.tsx`'s first line
+imports `react-native-unistyles`, which requires a real native
+NitroModules binary and throws `TurboModuleRegistry.getEnforcing(...):
+'NitroModules' could not be found`. That's the actual root cause of the
+root cause — the migrations list was *structurally* untestable as long as
+it lived inside the same file as the native UI provider tree, so no test
+anyone wrote (including this run's own, for 6.1–6.7) could ever have
+caught it by construction, not by oversight.
+
+Fixed structurally: extracted the array into a new `providers/
+migrations.ts` with zero UI/native imports, registered all four missing
+capsule migrations there, `index.tsx` now imports it instead of declaring
+it inline. New `providers/__tests__/migrations.test.ts` imports from
+`../migrations`, not `../index` — genuinely testable now. TDD-verified
+properly this time (see beat 33's own self-correction on this): backed up
+the fixed file, temporarily stripped the four capsule lines back out,
+reran, watched both new tests fail with real `SqliteError: no such table:
+capsules`/`capsule_types`, restored the exact original, reran clean.
+
+Checker: pass — independently reproduced the NitroModules crash on
+`../index` to verify the untestability claim rather than trust it,
+confirmed `runMigrations` sorts by `version` internally (so registration
+order genuinely doesn't matter, checked not assumed), grepped every
+`Migration` export in `src/entities` and confirmed all 12 are now
+registered with no version collisions, and reproduced the red-then-green
+cycle itself before passing.
+
+Gate green: tsc clean, 51 suites / 600 tests (was 598; +2), eslint clean.
+Checkpoint `343e853`. Not tied to any single plan step — no
+`docs/DEVELOPMENT_PLAN.md` box to tick. Cursor stays on **6.6** for next
+beat; the actual tags/collections work hasn't started yet.
+
+---
+
 <!-- Append new beats above this line. -->

@@ -2,12 +2,13 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 33,
+    "beat": 34,
     "status": "running"
   },
   "cursor": {
     "step": "6.6",
-    "phase": 6
+    "phase": 6,
+    "notes": "Beat 34 spent entirely on a self-caught, cross-cutting fix (Providers never registered the capsule-domain migrations) rather than starting 6.6 itself -- see journal. 6.6 (Tags/collections) not yet started; entities/tag and features/tag-capsule are both still export {} stubs."
   },
   "steps": {
     "1.2": {
@@ -276,8 +277,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-20T00:15:00Z",
-    "head": "168b1a2",
-    "note": "50 suites, 598 tests passing after 6.5 completion (SearchBar+FilterSheet widgets)"
+    "at": "2026-08-20T01:00:00Z",
+    "head": "343e853",
+    "note": "51 suites, 600 tests passing after self-caught Providers migrations fix (capsule-domain tables were never registered for a real boot)"
   }
 }
