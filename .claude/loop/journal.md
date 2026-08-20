@@ -2464,4 +2464,61 @@ beat; the actual tags/collections work hasn't started yet.
 
 ---
 
+## Beat 35 — 2026-08-20
+
+Normal start, health check clean, gate green on HEAD (`280a856`). Cursor
+on 6.6, confirmed genuinely unstarted (`entities/tag`/`features/tag-capsule`
+still bare `export {};` stubs).
+
+Scope decision, same split as 6.5/6.7: entity + feature layer this beat,
+widget + route wiring next. This repo's own architecture doesn't model
+"Collection" as a separate entity — `docs/ARCHITECTURE.md` places tags
+and collections in one folder (`entities/tag/`), so a tag applied
+consistently across capsules *is* the collection mechanism; no separate
+migration or model needed for that half of 6.6's name.
+
+`entities/tag`: `Tag` CRUD (`tagsMigration`, v13) plus the capsule<->tag
+junction table (`capsuleTagsMigration`, v14) — co-located in the same
+file the same way `capsule_values` lives inside `entities/capsule` rather
+than as its own slice. `PRIMARY KEY(capsule_id, tag_id)` is what makes
+`addTagToCapsule`'s `INSERT OR IGNORE` genuinely idempotent, not just
+apparently so. `features/tag-capsule`: `tagCapsule` does get-or-create by
+trimmed name (no DB-level `UNIQUE(name)`, matching `CapsuleType.name`'s
+own precedent of not being DB-unique-constrained), `untagCapsule`,
+`deleteTag` (cascades the junction cleanup, never touches other capsules'
+attachments to a *different* tag).
+
+**Registered both new migrations in `providers/migrations.ts` immediately**
+— last beat's whole point was that this exact category of gap goes
+uncaught silently, and I was not going to build a second unregistered
+domain one beat after fixing the first one. Extended that file's own
+regression test with a tag-through-real-migrations case, verified it
+red-then-green the same way (temporarily stripped the two lines, watched
+`no such table: tags`, restored).
+
+19 tests written first (TDD), all passing on first implementation attempt
+for both entity and feature layers. First checker pass: pass, with two
+non-blocking notes — `features/delete-capsule` (already "done" since 6.4)
+doesn't cascade into `capsule_tags`, so deleting a capsule would leave
+orphaned attachment rows behind; and the tag-rename test only checked the
+new name, never that the old name stops resolving. Both cheap, both
+directly related to what this beat just built — fixed immediately rather
+than deferred (same call as 5.2's self-caught audit-logging fix earlier
+in this run): `deleteCapsule` now also calls `deleteCapsuleTagsByCapsule`
+(TDD, 2 new tests, confirmed red before the fix), and the rename test now
+asserts both directions. Sent the *complete* diff to a second, fresh
+checker pass rather than assuming the first "pass" verdict still covered
+code written after it — also passed, independently re-ran the entire
+suite and traced the new cascade against real DB state itself.
+
+Gate green throughout: tsc clean, 53 suites / 625 tests (was 600 at beat
+start; +25 across this beat's own work and the addendum), eslint clean
+(pre-existing legacy-selector warning only). Checkpoint `3a5a662`.
+`docs/DEVELOPMENT_PLAN.md` 6.6 stays UNCHECKED — widget layer (a
+`TagChip`/`TagPicker`-shaped widget, wiring into `CapsuleEditor` and/or
+the capsule detail route, possibly a tag filter in `FilterSheet`) is next
+beat's job. Cursor stays on **6.6**.
+
+---
+
 <!-- Append new beats above this line. -->

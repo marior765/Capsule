@@ -2,13 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 34,
+    "beat": 35,
     "status": "running"
   },
   "cursor": {
     "step": "6.6",
-    "phase": 6,
-    "notes": "Beat 34 spent entirely on a self-caught, cross-cutting fix (Providers never registered the capsule-domain migrations) rather than starting 6.6 itself -- see journal. 6.6 (Tags/collections) not yet started; entities/tag and features/tag-capsule are both still export {} stubs."
+    "phase": 6
   },
   "steps": {
     "1.2": {
@@ -270,6 +269,14 @@
       "failureSignatures": [],
       "checkpoint": "168b1a2",
       "notes": "Both halves done -- feature layer (5dbe843, beat 32) + SearchBar/FilterSheet widgets + capsules/index.tsx wiring (168b1a2, beat 33). searchCapsules matches title+field values; filterCapsulesByType by CapsuleType; sortCapsules by title/createdAt/updatedAt asc/desc, tap-to-toggle via toggleSort.ts."
+    },
+    "6.6": {
+      "status": "in_progress",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "3a5a662",
+      "notes": "Entity+feature layer done this beat (entities/tag: Tag CRUD + capsule_tags junction, v13/v14 migrations, registered in Providers; features/tag-capsule: tagCapsule/untagCapsule/deleteTag). Self-caught addendum: delete-capsule now cascades into capsule_tags (was missing). 21 tests. Widget (TagChip/TagPicker or similar) + route/CapsuleEditor wiring left for next beat, same split as 6.5/6.7. docs/DEVELOPMENT_PLAN.md box stays unchecked until both halves land."
     }
   },
   "quarantinedThisRun": [],
@@ -277,8 +284,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-20T01:00:00Z",
-    "head": "343e853",
-    "note": "51 suites, 600 tests passing after self-caught Providers migrations fix (capsule-domain tables were never registered for a real boot)"
+    "at": "2026-08-20T01:45:00Z",
+    "head": "3a5a662",
+    "note": "53 suites, 625 tests passing after 6.6 entity+feature layer (entities/tag + features/tag-capsule + delete-capsule cascade)"
   }
 }
