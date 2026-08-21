@@ -2707,4 +2707,51 @@ entirely untouched (separate, likely native-classed, needs the deferred
 
 ---
 
+## Beat 39 — 2026-08-21
+
+Normal start, health check clean, gate green on HEAD (`1b18af2`). Cursor
+on 6.8, `in_progress` from beat 38 — the last piece: wire `RelationPicker`
+into a route.
+
+Wired into `capsules/[id].tsx`, mirroring `TagPicker`'s existing
+"already exists → apply immediately, then re-fetch" shape exactly, scoped
+per relation field via `refreshRelationField(fieldId)` so linking one
+field never clobbers another's state — the whole reason last beat added
+`field_id` to `CapsuleLink` in the first place now actually pays off.
+Split the existing field-value loop in two: non-relation fields keep
+their unchanged plain-text display, relation fields get their own
+`RelationPicker` block instead of the stale, meaningless "—" they'd
+otherwise show (a relation field never had a `CapsuleValue` backing it to
+begin with).
+
+Small but real correctness fix while here: `FieldRenderer`'s "relation"/
+"attachment" cases shared one merged placeholder ("… are not supported
+yet") since 6.2. Left as-is, that sentence would now be actively false
+for relation fields the moment this diff landed — the same "what does
+this change make newly false elsewhere" check from beat 30's "Type
+management is not built yet" fix, applied again. Split the two cases:
+relation now says "Manage this from the capsule detail screen" (accurate
+— it's real, just not editable through `CapsuleEditor`'s form, same as
+tags); attachment keeps its own unchanged, still-accurate text.
+
+Gate green: tsc clean, 55 suites / 656 tests — unchanged, no new tests,
+matching this repo's established route/widget convention (the relation
+logic itself was proven at the entity/feature layer last beat; this was
+pure UI wiring). Checker: pass on first attempt — traced the full link/
+unlink data flow end-to-end against the real feature-layer signatures
+(argument order, not presence), confirmed graceful degradation for a
+deleted link target actually reaches the route (not just the widget in
+isolation), confirmed the placeholder split left no dangling ternary and
+broke nothing (grepped the repo for the old merged text).
+
+Checkpoint `27d389c`. **Relation half of 6.8 is now fully done.**
+Attachment remains entirely unbuilt — native-classed, and per
+`BLOCKED.md`'s own already-standing note, the `shared/fs` wrapper
+extraction it would need is *already* overdue (triggered by 3.3.1's
+`manage-stt-model`, not yet actioned). `docs/DEVELOPMENT_PLAN.md`'s 6.8
+box stays unticked. Cursor stays on **6.8** for whenever attachment is
+picked up.
+
+---
+
 <!-- Append new beats above this line. -->
