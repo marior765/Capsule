@@ -8,3 +8,13 @@ export {
   deleteCapsuleField,
   deleteFieldsByCapsuleType,
 } from "./db";
+export {
+  parseSelectOptions,
+  parseBooleanValue,
+  serializeBooleanValue,
+  parseMultiSelectValue,
+  serializeMultiSelectValue,
+  parseNumberRangeConfig,
+  type NumberRange,
+} from "./codec";
+export { validateFieldValue, type FieldValidationResult } from "./validation";

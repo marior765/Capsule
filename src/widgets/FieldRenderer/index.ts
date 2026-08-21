@@ -5,4 +5,4 @@ export {
   serializeBooleanValue,
   parseMultiSelectValue,
   serializeMultiSelectValue,
-} from "./fieldValueCodec";
+} from "@/entities/field";

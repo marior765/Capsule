@@ -1,14 +1,14 @@
 import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { buildTestID, createComponentTestIDs } from "@/shared/testing";
-import type { CapsuleField } from "@/entities/field";
 import {
   parseBooleanValue,
   parseMultiSelectValue,
   parseSelectOptions,
   serializeBooleanValue,
   serializeMultiSelectValue,
-} from "./fieldValueCodec";
+  type CapsuleField,
+} from "@/entities/field";
 
 type FieldRendererProps = {
   field: CapsuleField;

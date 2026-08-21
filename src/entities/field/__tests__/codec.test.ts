@@ -1,11 +1,13 @@
-// Tests for step 6.2 — written before implementation (TDD)
+// Tests for step 6.2 — moved from widgets/FieldRenderer for 6.10 (see codec.ts's own docstring)
+// parseNumberRangeConfig: new for 6.10 (field validation).
 import {
   parseSelectOptions,
   parseBooleanValue,
   serializeBooleanValue,
   parseMultiSelectValue,
   serializeMultiSelectValue,
-} from "../fieldValueCodec";
+  parseNumberRangeConfig,
+} from "../codec";
 
 describe("parseSelectOptions", () => {
   it("parses a valid options config", () => {
@@ -91,5 +93,46 @@ describe("parseMultiSelectValue / serializeMultiSelectValue", () => {
 
   it("serializes an empty selection as an empty array, not null", () => {
     expect(serializeMultiSelectValue([])).toBe("[]");
+  });
+});
+
+describe("parseNumberRangeConfig", () => {
+  it("parses a config with both min and max", () => {
+    const config = JSON.stringify({ min: 1, max: 10 });
+    expect(parseNumberRangeConfig(config)).toEqual({ min: 1, max: 10 });
+  });
+
+  it("parses a config with only min", () => {
+    const config = JSON.stringify({ min: 0 });
+    expect(parseNumberRangeConfig(config)).toEqual({ min: 0, max: null });
+  });
+
+  it("parses a config with only max", () => {
+    const config = JSON.stringify({ max: 100 });
+    expect(parseNumberRangeConfig(config)).toEqual({ min: null, max: 100 });
+  });
+
+  it("returns no range for null config — no restriction, not an error", () => {
+    expect(parseNumberRangeConfig(null)).toEqual({ min: null, max: null });
+  });
+
+  it("returns no range for malformed JSON, never throws", () => {
+    expect(() => parseNumberRangeConfig("not json")).not.toThrow();
+    expect(parseNumberRangeConfig("not json")).toEqual({
+      min: null,
+      max: null,
+    });
+  });
+
+  it("ignores non-numeric min/max rather than crashing", () => {
+    const config = JSON.stringify({ min: "low", max: "high" });
+    expect(parseNumberRangeConfig(config)).toEqual({ min: null, max: null });
+  });
+
+  it("treats min:0 as a real bound, not falsy-absent", () => {
+    const config = JSON.stringify({ min: 0, max: 5 });
+    const range = parseNumberRangeConfig(config);
+    expect(range.min).toBe(0);
+    expect(range.min).not.toBeNull();
   });
 });
