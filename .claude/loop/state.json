@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 36,
+    "beat": 37,
     "status": "running"
   },
   "cursor": {
@@ -277,6 +277,14 @@
       "failureSignatures": [],
       "checkpoint": "037cf6e",
       "notes": "Both halves done -- entity+feature layer (3a5a662, beat 35, incl. delete-capsule cascade addendum) + TagPicker widget wired into capsules/[id].tsx (037cf6e, beat 36). tagCapsule get-or-create by trimmed name, untagCapsule, deleteTag cascade."
+    },
+    "6.9": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "88b99d3",
+      "notes": "Deliberately built before 6.8 -- a relation field type (6.8) needs entities/link to exist first. entities/link: CapsuleLink CRUD (getLinksFrom/getLinksTo/deleteLinksByCapsule), v15 migration, registered in Providers immediately. features/link-capsules: linkCapsules (no dedup -- distinct from tagCapsule, a pair can have multiple labeled relationships), unlinkCapsules. delete-capsule now cascades capsule_links too. Plan text names entities/link only (no widget), unlike 6.5/6.6/6.7 -- fully done as stated, no UI half pending."
     }
   },
   "quarantinedThisRun": [],
@@ -284,8 +292,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-20T02:15:00Z",
-    "head": "037cf6e",
-    "note": "53 suites, 625 tests passing after 6.6 completion (TagPicker widget)"
+    "at": "2026-08-21T00:10:00Z",
+    "head": "88b99d3",
+    "note": "55 suites, 647 tests passing after 6.9 (entities/link + features/link-capsules + delete-capsule cascade)"
   }
 }

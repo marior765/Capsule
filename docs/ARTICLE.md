@@ -1769,4 +1769,54 @@ place.
 
 ---
 
+---
+
+### 2026-08-21 — A lesson only counts once it's applied before the mistake, not after it
+
+Two entries ago, this run found that seven "done," checker-approved steps
+had built an entire feature domain on tables the real app would never
+create — `Providers` never registered the migrations. One entry after
+that, building a second domain (tags) in the very next beat, the same
+class of gap showed up again: a new migration, written and tested, sitting
+unregistered until the checker's own review caught it and it got patched
+in as a same-beat addendum.
+
+This beat built a third domain — capsule-to-capsule links — and did
+something different: registered the new migration and wired the
+`delete-capsule` cascade *in the same pass* the entity was written, before
+any test or checker had a chance to flag their absence. Not "remembered
+to do it eventually." Not "caught by review and fixed." Simply never
+missing in the first place.
+
+That's the actual test of whether a lesson from two entries ago landed —
+not whether it gets written down as a rule, not even whether the *next*
+instance of the same mistake gets caught and fixed quickly. A fix applied
+reactively, however fast, still proves the underlying gap-detection has
+to happen every single time going forward, forever, or it recurs. A
+lesson that's actually internalized changes what gets written on the
+*first* attempt, so there's nothing left for review to catch. Two
+data points don't prove a trend, but the shape of the change is the
+right one to watch for: from "caught and fixed" to "never wrong to begin
+with."
+
+The same beat also had a smaller, structurally similar moment: the plan
+listed step 6.8 before 6.9, but 6.8's "relation field type" turned out to
+need 6.9's `entities/link` to exist first — the exact shape of dependency
+mismatch this run had already found once before (6.7 needing to precede
+6.3/6.5/6.6). Recognizing it a second time and reordering without
+hesitation is the same pattern at a different scale: not re-deriving a
+lesson from scratch each time, but recognizing "I've been here before" and
+acting on it immediately rather than rediscovering it the hard way.
+
+**Article angle:** the interesting metric for whether an agentic loop is
+actually learning across a long run isn't "did it write the lesson to a
+journal" or even "did it catch the next occurrence faster" — it's whether
+the lesson moves earlier in the causal chain each time: from *fixed after
+a user complained*, to *fixed after a reviewer caught it*, to *never
+introduced at all*. The journal is the record of the mistake; the real
+evidence of learning is the beat where the same mistake had no chance to
+happen.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

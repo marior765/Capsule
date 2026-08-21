@@ -134,7 +134,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature
 - [ ] 6.8 Relation + attachment field types
-- [ ] 6.9 `entities/link` with graceful missing-target handling
+- [x] 6.9 `entities/link` with graceful missing-target handling
 - [ ] 6.10 Field validation
 
 ### Phase 7 — AI × data (hard)

@@ -2560,4 +2560,71 @@ ticked in `docs/DEVELOPMENT_PLAN.md`. Cursor advances to **6.8** (relation
 
 ---
 
+## Beat 37 — 2026-08-20/21
+
+Normal start, health check clean, gate green on HEAD (`93655e8`). Cursor
+on 6.8 ("Relation + attachment field types").
+
+Before writing anything, checked `FieldRenderer.tsx`'s existing
+`relation`/`attachment` placeholder cases — its own docstring already
+says "their real controls are 6.8's job (structurally different)". Reading
+further: a `relation` field is genuinely meaningless without a link
+mechanism to actually store *what* it relates to, and that mechanism —
+`entities/link` — is step **6.9**, not yet built, and comes AFTER 6.8 in
+the plan's own written order. Same shape of discovery as beats 27/28
+(6.7 needed before 6.3/6.5/6.6 could really finish), applied a second
+time: **deliberately reordered, built 6.9 this beat instead of 6.8.**
+`attachment` fields are a separate, unrelated concern (file pickers,
+likely native-classed, needs the deferred `shared/fs` wrapper per
+`docs/ARCHITECTURE.md`) — still queued for whenever 6.8 is actually
+picked up, doesn't block this reordering.
+
+`entities/link`: `CapsuleLink` (directional — `fromCapsuleId`/
+`toCapsuleId`/optional `label`, no `updatedAt`, mirrors `capsule_tags`'
+simpler shape since links aren't edited in place) + `linksMigration`
+(v15) + CRUD. Deliberately doesn't import `entities/capsule` — same
+loose-coupling convention as `capsule_tags` — so "graceful missing-target
+handling" is provable at THIS layer already: a dedicated test registers
+only `linksMigration` (no `capsules` table exists in that test's schema
+at all, not just "target row absent") and proves `getLinksFrom`/
+`getLinksTo` still return correct data. `features/link-capsules`:
+`linkCapsules` is deliberately NOT a get-or-create like `tagCapsule` — a
+tag's *name* is a shared identity worth deduping, but a capsule pair can
+carry multiple distinct real relationships ("sequel to", "also mentions")
+with different labels; get-or-create would silently collapse them into
+one. Tested explicitly: linking the same pair twice with different labels
+produces two distinct, independently-persisted links.
+
+Applied both of this run's hard-won lessons **immediately, not as a later
+addendum this time**: registered `linksMigration` in
+`providers/migrations.ts` and extended its regression test in the same
+pass entities/link was written, and added `capsule_links` cleanup to
+`deleteCapsule`'s cascade in the same beat rather than discovering the
+gap in a future one. Both of last run's self-caught fixes are now applied
+proactively rather than reactively — the actual measure of whether a
+lesson landed.
+
+Mid-beat process note: a `/loop` re-invocation arrived while this beat's
+implementation was still in progress (uncommitted WIP, tests just
+confirmed red). Recognized it as the same continuous beat rather than a
+foreign dead-beat signal or a second writer (no ambiguity this time — I
+was the one who wrote the dirty state seconds earlier) and continued
+straight through rather than restarting or re-running the health check
+against my own WIP.
+
+18 new tests, TDD throughout. Gate green: tsc clean, 55 suites / 647
+tests (was 625), eslint clean after `--fix` caught 14 prettier issues
+across three files (pre-existing legacy-selector warning only otherwise).
+Checker: pass — independently verified no migration version collision,
+ran every test itself including the graceful-missing-target case, and
+confirmed the 6.8-before-6.9 reordering rationale against `FieldRenderer`'s
+own docstring and `docs/ARCHITECTURE.md`.
+
+Checkpoint `88b99d3`. **6.9 fully done** — its plan text names only
+`entities/link` (no widget, unlike 6.5/6.6/6.7's UI-inclusive wording), so
+there's no second half pending. Cursor advances to **6.8**, now genuinely
+unblocked.
+
+---
+
 <!-- Append new beats above this line. -->
