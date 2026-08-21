@@ -16,9 +16,11 @@ import { getAllCapsules } from "@/entities/capsule";
 import { getAllCapsuleTypes } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType } from "@/entities/field";
 import { getTagsByCapsule } from "@/entities/tag";
+import { getLinksFrom } from "@/entities/link";
 import { createCapsuleType } from "@/features/manage-schema";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
+import { linkCapsules } from "@/features/link-capsules";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -59,5 +61,21 @@ describe("Providers' registered migrations", () => {
     expect(getTagsByCapsule(db, capsule.id).map((t) => t.name)).toEqual([
       "sci-fi",
     ]);
+  });
+
+  it("lets two capsules actually be linked through the real migration set (6.9)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const a = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    const b = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune Messiah",
+    });
+    linkCapsules(db, a.id, b.id, "sequel");
+    expect(getLinksFrom(db, a.id).map((l) => l.toCapsuleId)).toEqual([b.id]);
   });
 });

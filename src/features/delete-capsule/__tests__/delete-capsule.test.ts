@@ -12,8 +12,10 @@ import {
   getTagsByCapsule,
   tagsMigration,
 } from "@/entities/tag";
+import { getLinksFrom, getLinksTo, linksMigration } from "@/entities/link";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
+import { linkCapsules } from "@/features/link-capsules";
 import { deleteCapsule } from "../index";
 
 let db: SQLiteDatabase;
@@ -26,6 +28,7 @@ beforeEach(() => {
     capsuleValuesMigration,
     tagsMigration,
     capsuleTagsMigration,
+    linksMigration,
   ]);
 });
 
@@ -71,5 +74,32 @@ describe("deleteCapsule", () => {
     tagCapsule(db, b.id, "shared-tag");
     deleteCapsule(db, a.id);
     expect(getTagsByCapsule(db, b.id).map((t) => t.id)).toEqual([tag.id]);
+  });
+
+  it("removes links where the deleted capsule is the source (6.9 cascade)", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    linkCapsules(db, a.id, b.id);
+    deleteCapsule(db, a.id);
+    expect(getLinksFrom(db, a.id)).toEqual([]);
+  });
+
+  it("removes links where the deleted capsule is the target", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    linkCapsules(db, a.id, b.id);
+    deleteCapsule(db, b.id);
+    expect(getLinksTo(db, b.id)).toEqual([]);
+  });
+
+  it("leaves another capsule pair's link intact", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const c = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const d = createCapsule(db, { capsuleTypeId: "ct-1" });
+    linkCapsules(db, a.id, b.id);
+    const untouched = linkCapsules(db, c.id, d.id);
+    deleteCapsule(db, a.id);
+    expect(getLinksFrom(db, c.id).map((l) => l.id)).toEqual([untouched.id]);
   });
 });
