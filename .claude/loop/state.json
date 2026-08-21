@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 37,
+    "beat": 38,
     "status": "running"
   },
   "cursor": {
@@ -285,6 +285,14 @@
       "failureSignatures": [],
       "checkpoint": "88b99d3",
       "notes": "Deliberately built before 6.8 -- a relation field type (6.8) needs entities/link to exist first. entities/link: CapsuleLink CRUD (getLinksFrom/getLinksTo/deleteLinksByCapsule), v15 migration, registered in Providers immediately. features/link-capsules: linkCapsules (no dedup -- distinct from tagCapsule, a pair can have multiple labeled relationships), unlinkCapsules. delete-capsule now cascades capsule_links too. Plan text names entities/link only (no widget), unlike 6.5/6.6/6.7 -- fully done as stated, no UI half pending."
+    },
+    "6.8": {
+      "status": "in_progress",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "e4d76d5",
+      "notes": "Relation half done this beat: entities/link extended with fieldId (v16 ALTER TABLE migration, since v15 already shipped), features/link-capsules updated (breaking, deliberate signature change to an options object), RelationPicker widget (purely controlled, graceful missing-target rendering). No route/CapsuleEditor wiring yet -- next beat. Attachment field type entirely untouched (separate, likely native-classed -- needs deferred shared/fs wrapper). docs/DEVELOPMENT_PLAN.md box stays unchecked until relation wiring AND attachment both land."
     }
   },
   "quarantinedThisRun": [],
@@ -292,8 +300,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-21T00:10:00Z",
-    "head": "88b99d3",
-    "note": "55 suites, 647 tests passing after 6.9 (entities/link + features/link-capsules + delete-capsule cascade)"
+    "at": "2026-08-21T01:00:00Z",
+    "head": "e4d76d5",
+    "note": "55 suites, 656 tests passing after 6.8 relation-field entity/feature/widget layer"
   }
 }

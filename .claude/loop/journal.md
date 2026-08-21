@@ -2627,4 +2627,84 @@ unblocked.
 
 ---
 
+## Beat 38 — 2026-08-20/21
+
+Normal start, health check clean, gate green on HEAD (`843525f`). Cursor
+on 6.8 ("Relation + attachment field types"), now genuinely unblocked
+after last beat's deliberate reordering.
+
+Mid-beat process note: a `/loop` re-invocation arrived again while this
+beat's implementation was actively in progress (entities/link and
+features/link-capsules already written, delete-capsule cascade tests
+just confirmed red). Same call as last time this happened — recognized
+it as the same continuous beat, not a foreign signal, and continued
+straight through rather than restarting.
+
+Real design work this beat, not just following an established pattern:
+`FieldRenderer`'s "relation" case needs to read/write *something*, and
+the natural fit is `entities/link` (built last beat specifically so a
+relation field would have a real link mechanism to back it) — but
+`CapsuleLink` as shipped last beat has no way to tell WHICH relation
+field a link belongs to. A `CapsuleType` can define more than one
+relation field (e.g. "Author" and "Related books"); without disambiguation,
+`getLinksFrom(capsuleId)` would mix every relation field's links into one
+indistinguishable pile. Found this by actually trying to use `entities/link`
+for its stated purpose, not by inspecting it in isolation — the same kind
+of gap the Providers migration bug was, caught earlier this time because
+the beat that discovers a foundation is unusable for its own stated
+purpose is a lot cheaper than the beat that discovers it three steps
+later.
+
+Fixed by extending, not editing: `linksMigration` (v15) already shipped
+and was independently reviewed last beat, so its `CREATE TABLE` stays
+untouched — the new `field_id` column lands via a genuinely separate
+`ALTER TABLE` migration (`capsuleLinksFieldIdMigration`, v16), the same
+discipline any real schema change needs on a device that already applied
+v15. Registered it in `providers/migrations.ts` immediately (third time
+running applying that lesson proactively rather than as a later fix) and
+verified red-then-green by temporarily stripping it out — confirmed *every*
+`linkCapsules` call broke, not just field-scoped ones, since the INSERT
+statement itself now names the column.
+
+Also made a deliberate breaking change to `linkCapsules`'s own signature
+(positional `label` → an `{ fieldId?, label? }` options object) — two
+same-typed optional strings in a fixed position is exactly the shape
+that's easy to transpose by accident at a call site, and nothing outside
+tests calls it yet (no route wiring exists for either 6.8 or 6.9), so this
+was the cheapest point in the function's life to fix that. Grepped the
+whole repo to confirm no stale positional call sites survived.
+
+Considered whether a relation field's config should restrict linkable
+capsules to one target `CapsuleType` (the "obvious" design) — checked
+`SchemaBuilder`'s own docstring first and found config-authoring UI is
+out of scope for *every* field type so far, not just relation (deferred
+whole-sale from 6.7, affects `single_select`'s options too). Rather than
+build an unscoped, use-nothing config-authoring feature just for this one
+field type, scoped `RelationPicker` to browse/link across all capsules —
+a strict superset of the type-restricted version, and consistent with
+6.7's own precedent of narrowing scope deliberately and documenting why
+rather than silently doing less than the plan implies.
+
+`RelationPicker`: purely controlled, no internal state at all (nothing to
+manage locally, unlike `TagPicker`'s transient draft text). Renders a
+missing-target link explicitly as "Missing capsule" with a still-working
+unlink button, rather than silently filtering it — CLAUDE.md's "must
+degrade gracefully if target missing" means showing the gap stays visible
+and cleanable, not hiding that the link ever existed.
+
+23 new/changed tests. Gate green: tsc clean, 55 suites / 656 tests (was
+647), eslint clean after `--fix` caught 6 prettier issues. Checker: pass —
+ran the full suite itself, confirmed v15's SQL genuinely byte-for-byte
+unchanged, confirmed NULL `field_id` exclusion via real SQLite (not
+assumed from the docstring), grepped the whole repo for stale
+`linkCapsules(` call sites, traced `RelationPicker`'s missing-target and
+already-linked-exclusion logic by hand.
+
+Checkpoint `e4d76d5`. 6.8 stays `in_progress`, box unchecked — no route/
+`CapsuleEditor` wiring yet (next beat), and "attachment" fields are
+entirely untouched (separate, likely native-classed, needs the deferred
+`shared/fs` wrapper). Cursor stays on **6.8**.
+
+---
+
 <!-- Append new beats above this line. -->

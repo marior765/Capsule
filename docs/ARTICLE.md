@@ -1819,4 +1819,50 @@ happen.
 
 ---
 
+---
+
+### 2026-08-21 — A foundation isn't proven until something actually leans on it
+
+Last beat built `entities/link` specifically so a "relation" field type
+would have somewhere real to store its data, reviewed and shipped it, and
+the review — thorough, run against the real test suite, checking version
+collisions and graceful-degradation semantics — approved it. This beat
+tried to actually use it and found a real gap in five minutes: nothing
+tracked *which* relation field a link belonged to, so a capsule type with
+two relation fields ("Author," "Related books") would have had every
+link on a capsule dumped into one indistinguishable pile the moment
+someone tried to render either field separately.
+
+The previous review wasn't wrong, exactly — everything it checked was
+genuinely true of the code it was looking at. It just couldn't check the
+one thing that only becomes checkable once a *second*, independent piece
+of code tries to build on top of the first: does this API's shape
+actually support the thing it was built for. A migration, a CRUD surface,
+a set of tests that all pass — none of that is evidence the abstraction
+is *usable*, only that it's internally consistent. Usability only gets
+tested by an attempted use.
+
+The fix itself (an `ALTER TABLE` migration adding a column, since the
+original table had already shipped and its `CREATE TABLE` couldn't be
+edited retroactively) was routine. The part worth naming is *when* the
+gap surfaced: at the first attempt to consume the foundation, one beat
+later — not three steps and several more features deeper, the way the
+Providers migration bug sat for seven. That's not a different kind of
+discipline than "test before you build," it's the same discipline aimed
+one layer up: build the consumer as soon as reasonably possible after the
+foundation, specifically because the consumer is the test the foundation
+can't give itself.
+
+**Article angle:** "write the tests first" is well-worn advice for
+functions. The same idea has a less-discussed analog for architecture: an
+entity or module built ahead of anything that uses it is running without
+a spec until something real leans on it, no matter how carefully its own
+tests are written — because its own tests can only check what its author
+already anticipated needing, and the whole reason a gap like this exists
+is that the author didn't anticipate it. The fastest way to find out
+whether a foundation is actually shaped right is still the same one-beat
+lag applied here: build on it soon, not perfectly in isolation first.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
