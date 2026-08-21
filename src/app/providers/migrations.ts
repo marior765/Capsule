@@ -12,7 +12,7 @@ import { capsuleTypesMigration } from "@/entities/capsule-type";
 import { capsuleFieldsMigration } from "@/entities/field";
 import { capsulesMigration, capsuleValuesMigration } from "@/entities/capsule";
 import { capsuleTagsMigration, tagsMigration } from "@/entities/tag";
-import { linksMigration } from "@/entities/link";
+import { capsuleLinksFieldIdMigration, linksMigration } from "@/entities/link";
 
 /**
  * Every migration the app runs at boot, in one place. Deliberately kept in
@@ -44,4 +44,5 @@ export const migrations: Migration[] = [
   tagsMigration,
   capsuleTagsMigration,
   linksMigration,
+  capsuleLinksFieldIdMigration,
 ];

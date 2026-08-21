@@ -14,6 +14,15 @@ export type CapsuleLink = {
   id: string;
   fromCapsuleId: string;
   toCapsuleId: string;
+  /**
+   * The `CapsuleField.id` (a "relation" field) this link represents a
+   * value of, or `null` for a generic, not-field-backed link between two
+   * capsules. A `CapsuleType` can define more than one relation field
+   * (e.g. "Author" and "Related books" on the same type) — without this,
+   * `getLinksFrom(capsuleId)` would mix every relation field's links
+   * together with no way to tell which field a given link belongs to.
+   */
+  fieldId: string | null;
   /** Freeform, optional description of the relationship (e.g. "related to", "part of") — not a fixed enum. */
   label: string | null;
   createdAt: number;
@@ -23,6 +32,7 @@ export type CapsuleLinkRow = {
   id: string;
   from_capsule_id: string;
   to_capsule_id: string;
+  field_id: string | null;
   label: string | null;
   created_at: number;
 };
@@ -32,6 +42,7 @@ export function rowToCapsuleLink(row: CapsuleLinkRow): CapsuleLink {
     id: row.id,
     fromCapsuleId: row.from_capsule_id,
     toCapsuleId: row.to_capsule_id,
+    fieldId: row.field_id,
     label: row.label,
     createdAt: row.created_at,
   };

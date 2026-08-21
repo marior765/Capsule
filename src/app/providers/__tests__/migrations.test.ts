@@ -16,7 +16,7 @@ import { getAllCapsules } from "@/entities/capsule";
 import { getAllCapsuleTypes } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType } from "@/entities/field";
 import { getTagsByCapsule } from "@/entities/tag";
-import { getLinksFrom } from "@/entities/link";
+import { getLinksFrom, getLinksFromByField } from "@/entities/link";
 import { createCapsuleType } from "@/features/manage-schema";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
@@ -75,7 +75,25 @@ describe("Providers' registered migrations", () => {
       capsuleTypeId: capsuleType.id,
       title: "Dune Messiah",
     });
-    linkCapsules(db, a.id, b.id, "sequel");
+    linkCapsules(db, a.id, b.id, { label: "sequel" });
     expect(getLinksFrom(db, a.id).map((l) => l.toCapsuleId)).toEqual([b.id]);
+  });
+
+  it("lets a relation-field-backed link actually be created and queried through the real migration set (6.8)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const a = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    const b = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune Messiah",
+    });
+    linkCapsules(db, a.id, b.id, { fieldId: "f-sequel" });
+    expect(
+      getLinksFromByField(db, a.id, "f-sequel").map((l) => l.toCapsuleId),
+    ).toEqual([b.id]);
   });
 });

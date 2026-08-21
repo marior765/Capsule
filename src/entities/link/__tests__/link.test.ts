@@ -2,10 +2,12 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  capsuleLinksFieldIdMigration,
   deleteLink,
   deleteLinksByCapsule,
   getLinkById,
   getLinksFrom,
+  getLinksFromByField,
   getLinksTo,
   insertLink,
   linksMigration,
@@ -16,6 +18,7 @@ const makeLink = (overrides: Partial<CapsuleLink> = {}): CapsuleLink => ({
   id: `link-${Math.random().toString(36).slice(2)}`,
   fromCapsuleId: "c-1",
   toCapsuleId: "c-2",
+  fieldId: null,
   label: null,
   createdAt: 1000,
   ...overrides,
@@ -26,7 +29,7 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [linksMigration]);
+  runMigrations(db, [linksMigration, capsuleLinksFieldIdMigration]);
 });
 
 describe("entities/link — CRUD", () => {
@@ -59,6 +62,18 @@ describe("entities/link — CRUD", () => {
   it("deleting an unknown link id does not throw", () => {
     expect(() => deleteLink(db, "missing")).not.toThrow();
   });
+
+  it("stores a null fieldId as null (a generic, not-field-backed link)", () => {
+    const link = makeLink({ fieldId: null });
+    insertLink(db, link);
+    expect(getLinkById(db, link.id)?.fieldId).toBeNull();
+  });
+
+  it("stores a real fieldId when the link represents a relation field's value", () => {
+    const link = makeLink({ fieldId: "f-author" });
+    insertLink(db, link);
+    expect(getLinkById(db, link.id)?.fieldId).toBe("f-author");
+  });
 });
 
 describe("entities/link — directional queries", () => {
@@ -89,6 +104,44 @@ describe("entities/link — directional queries", () => {
   it("a capsule with no links returns an empty array in both directions, not an error", () => {
     expect(getLinksFrom(db, "untouched")).toEqual([]);
     expect(getLinksTo(db, "untouched")).toEqual([]);
+  });
+});
+
+describe("entities/link — getLinksFromByField", () => {
+  it("scopes to only links created by one specific relation field, ignoring links from a different field on the same capsule", () => {
+    insertLink(
+      db,
+      makeLink({
+        id: "l-author",
+        fromCapsuleId: "c-1",
+        toCapsuleId: "c-person",
+        fieldId: "f-author",
+      }),
+    );
+    insertLink(
+      db,
+      makeLink({
+        id: "l-related",
+        fromCapsuleId: "c-1",
+        toCapsuleId: "c-other-book",
+        fieldId: "f-related-books",
+      }),
+    );
+    expect(getLinksFromByField(db, "c-1", "f-author").map((l) => l.id)).toEqual(
+      ["l-author"],
+    );
+  });
+
+  it("does not return a generic (fieldId: null) link when scoped to a specific field", () => {
+    insertLink(
+      db,
+      makeLink({ id: "l-generic", fromCapsuleId: "c-1", fieldId: null }),
+    );
+    expect(getLinksFromByField(db, "c-1", "f-author")).toEqual([]);
+  });
+
+  it("a field with no links yet returns an empty array, not an error", () => {
+    expect(getLinksFromByField(db, "c-1", "f-author")).toEqual([]);
   });
 });
 

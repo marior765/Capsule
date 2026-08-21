@@ -12,7 +12,12 @@ import {
   getTagsByCapsule,
   tagsMigration,
 } from "@/entities/tag";
-import { getLinksFrom, getLinksTo, linksMigration } from "@/entities/link";
+import {
+  capsuleLinksFieldIdMigration,
+  getLinksFrom,
+  getLinksTo,
+  linksMigration,
+} from "@/entities/link";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
@@ -29,6 +34,7 @@ beforeEach(() => {
     tagsMigration,
     capsuleTagsMigration,
     linksMigration,
+    capsuleLinksFieldIdMigration,
   ]);
 });
 
