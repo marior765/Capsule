@@ -2807,4 +2807,61 @@ Phase 6 is unblocked and unstarted.
 
 ---
 
+## Beat 41 — 2026-08-21
+
+Normal start, health check clean, gate green on HEAD (`25df6b0`). Cursor
+on 6.10 ("Field validation"), confirmed genuinely unstarted — `field.required`
+exists as a schema flag (shown with a `*` in `CapsuleEditor`'s label) but
+nothing anywhere actually checks it, or a value's type, or a range.
+
+Hit a real layering problem immediately: validation needs the exact same
+select/boolean/multi-select parsers `FieldRenderer` already uses (so
+validation and rendering never quietly disagree about what a value
+means), but those parsers lived in `widgets/FieldRenderer/fieldValueCodec.ts`
+— a higher FSD layer `entities/field` can't import from. Same shape of
+gap as the `shared/fs` trigger already on record in `BLOCKED.md` ("second
+real consumer needs this, but it's sitting one layer too high") —
+recognized the pattern rather than treating it as a new problem, and did
+the move properly rather than duplicating the logic: relocated the codec
+file down into `entities/field/codec.ts`, verified byte-for-byte lossless
+(diffed old vs new before committing), updated `FieldRenderer.tsx`/its
+`index.ts` to import from the new location, grepped the whole repo for
+any straggling import of the old path.
+
+`validateFieldValue`: required, then type (`number`'s `Number(value)` +
+an optional `{min, max}` range from a new `parseNumberRangeConfig` —
+`min: 0` deliberately checked with a type guard, not truthiness, so a
+real zero minimum isn't treated as absent; `date`'s `Date.parse`;
+`single_select`/`multi_select` only reject when options are actually
+configured, matching the standing "config-authoring UI doesn't exist yet
+for any field type" scope note from 6.7 — an unconfigured select field
+validates any value rather than rejecting everything). `relation`/
+`attachment` always pass — neither has a `CapsuleValue` to validate at
+all (their data lives in `entities/link`/`entities/attachment`).
+
+**Caught a real bug in my own first draft via my own test, not the
+checker:** the relation/attachment carve-out was written as one of the
+switch's cases, reached only *after* the required/empty check already
+ran — so a required relation field with a `null` `CapsuleValue`
+incorrectly failed "is required," even though it structurally can never
+have a `CapsuleValue` to be required about. My own test for exactly that
+case failed immediately, before this ever reached the checker. Fixed by
+moving the carve-out to the top of the function, ahead of the required
+check, and removing the now-unreachable switch cases (confirmed the
+switch stays type-exhaustive without them).
+
+35 new tests. Gate green: tsc clean, 57 suites / 702 tests (was 669),
+eslint clean after `--fix` caught one prettier issue. Checker: pass on
+first attempt — independently diffed the relocated codec against its
+pre-move content to confirm a lossless move, grepped the whole repo for
+dangling imports, traced the relation/attachment ordering by reading
+control flow directly rather than trusting the docstring's claim.
+
+Checkpoint `021b4c8`. Logic layer only — `new.tsx`/`[id]/edit.tsx` don't
+call `validateFieldValue` yet, nothing blocks saving an invalid capsule
+today. `docs/DEVELOPMENT_PLAN.md` box stays unchecked. Cursor stays on
+**6.10** for the wiring beat.
+
+---
+
 <!-- Append new beats above this line. -->
