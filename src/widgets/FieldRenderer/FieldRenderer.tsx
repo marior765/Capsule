@@ -20,14 +20,19 @@ type FieldRendererProps = {
 /**
  * Renders the input control for one `CapsuleField`, dispatched on its
  * `fieldType`. "Base field types" only (docs/DEVELOPMENT_PLAN.md 6.2) —
- * `relation`/`attachment` render a placeholder; their real controls are
- * 6.8's job (structurally different: a relation needs to browse/pick other
- * capsules, an attachment needs file pickers — neither fits this widget's
- * plain-value-in, plain-value-out contract without their own design pass).
+ * `relation`/`attachment` render a placeholder here, on purpose, and stay
+ * that way even after 6.8: neither fits this widget's plain-value-in,
+ * plain-value-out contract (a relation needs to browse/pick other
+ * capsules and write to `entities/link`, not `CapsuleValue`; an
+ * attachment needs file pickers). `relation` fields are real as of 6.8 —
+ * `widgets/RelationPicker`, wired directly into `capsules/[id].tsx`
+ * (the detail screen, not through `CapsuleEditor`/this widget), the same
+ * way tags live outside the field-value form entirely. `attachment`
+ * remains genuinely unsupported (deferred, likely native-classed).
  *
  * Purely controlled — like `VoiceRecordButton`, this component owns no
- * state of its own; the caller (`CapsuleEditor`, a later piece of this
- * same step) is responsible for persisting `onChange`'s result.
+ * state of its own; the caller (`CapsuleEditor`) is responsible for
+ * persisting `onChange`'s result for every OTHER field type.
  */
 export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
   switch (field.fieldType) {
@@ -162,11 +167,16 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
     }
 
     case "relation":
+      return (
+        <Text testID={testIDs.texts.unsupported} style={styles.unsupported}>
+          Manage this from the capsule detail screen.
+        </Text>
+      );
+
     case "attachment":
       return (
         <Text testID={testIDs.texts.unsupported} style={styles.unsupported}>
-          {field.fieldType === "relation" ? "Relation" : "Attachment"} fields
-          are not supported yet.
+          Attachment fields are not supported yet.
         </Text>
       );
   }
