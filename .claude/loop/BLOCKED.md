@@ -467,6 +467,30 @@ outside this step's own scope even though the extraction itself is low-risk
 (both existing test suites would catch any regression directly). Left for a
 dedicated follow-up beat rather than folded in silently.
 
+### 6.8 — attachment field type: picker library decision + file-cleanup gap
+`entities/attachment` (this beat) is deliberately metadata-only — `Attachment`
+records a `localUri` string, but nothing anywhere in this repo writes an
+actual file to that path yet. Two real things are missing before an
+attachment field can do anything a user would notice:
+
+1. **A picker library decision.** Neither `expo-image-picker` nor
+   `expo-document-picker` is in `package.json`. Per CLAUDE.md's dependency
+   audit rule and this loop's own `deferred` classification (mirrors 1.6.1's
+   `react-native-markdown-display`/`expo-clipboard` gap), adding either is a
+   decision for you, not something to install unattended. Once decided, the
+   actual file write also needs the `shared/fs` wrapper noted above — so this
+   item and the one above are the same underlying gap, from two directions.
+2. **`features/delete-capsule`'s `deleteAttachmentsByCapsule` cascade only
+   removes the DB rows, not the file bytes at each `localUri`** — because
+   there are no bytes to remove yet. Once a picker + `shared/fs` exist and
+   attachments start actually writing files, capsule deletion needs to also
+   delete those files, or they'll leak on disk forever. Tracked here now,
+   specifically, so the eventual fix has a real citation instead of a vague
+   one — `src/features/delete-capsule/index.ts`'s own docstring points here.
+
+Not fixed now: both require the dependency decision above first; there's
+nothing to implement yet, only something to remember.
+
 ### `src/app/` routes have no testID coverage at all
 CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
 always via the component's `testIDs` object, never a hardcoded string

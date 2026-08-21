@@ -18,6 +18,11 @@ import {
   getLinksTo,
   linksMigration,
 } from "@/entities/link";
+import {
+  attachmentsMigration,
+  getAttachmentsByCapsuleField,
+  insertAttachment,
+} from "@/entities/attachment";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
@@ -35,6 +40,7 @@ beforeEach(() => {
     capsuleTagsMigration,
     linksMigration,
     capsuleLinksFieldIdMigration,
+    attachmentsMigration,
   ]);
 });
 
@@ -107,5 +113,50 @@ describe("deleteCapsule", () => {
     const untouched = linkCapsules(db, c.id, d.id);
     deleteCapsule(db, a.id);
     expect(getLinksFrom(db, c.id).map((l) => l.id)).toEqual([untouched.id]);
+  });
+
+  it("removes the capsule's attachment records too (6.8 cascade)", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    insertAttachment(db, {
+      id: "att-1",
+      capsuleId: capsule.id,
+      fieldId: "f-photo",
+      filename: "photo.jpg",
+      localUri: "file:///docs/photo.jpg",
+      mimeType: "image/jpeg",
+      size: 1024,
+      createdAt: Date.now(),
+    });
+    deleteCapsule(db, capsule.id);
+    expect(getAttachmentsByCapsuleField(db, capsule.id, "f-photo")).toEqual([]);
+  });
+
+  it("leaves another capsule's attachment records intact", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    insertAttachment(db, {
+      id: "att-a",
+      capsuleId: a.id,
+      fieldId: "f-photo",
+      filename: "a.jpg",
+      localUri: "file:///docs/a.jpg",
+      mimeType: null,
+      size: null,
+      createdAt: Date.now(),
+    });
+    insertAttachment(db, {
+      id: "att-b",
+      capsuleId: b.id,
+      fieldId: "f-photo",
+      filename: "b.jpg",
+      localUri: "file:///docs/b.jpg",
+      mimeType: null,
+      size: null,
+      createdAt: Date.now(),
+    });
+    deleteCapsule(db, a.id);
+    expect(
+      getAttachmentsByCapsuleField(db, b.id, "f-photo").map((att) => att.id),
+    ).toEqual(["att-b"]);
   });
 });

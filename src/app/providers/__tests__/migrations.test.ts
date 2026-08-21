@@ -17,6 +17,10 @@ import { getAllCapsuleTypes } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType } from "@/entities/field";
 import { getTagsByCapsule } from "@/entities/tag";
 import { getLinksFrom, getLinksFromByField } from "@/entities/link";
+import {
+  getAttachmentsByCapsuleField,
+  insertAttachment,
+} from "@/entities/attachment";
 import { createCapsuleType } from "@/features/manage-schema";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
@@ -95,5 +99,30 @@ describe("Providers' registered migrations", () => {
     expect(
       getLinksFromByField(db, a.id, "f-sequel").map((l) => l.toCapsuleId),
     ).toEqual([b.id]);
+  });
+
+  it("lets an attachment record actually be created and queried through the real migration set (6.8)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    insertAttachment(db, {
+      id: "att-1",
+      capsuleId: capsule.id,
+      fieldId: "f-cover",
+      filename: "cover.jpg",
+      localUri: "file:///docs/cover.jpg",
+      mimeType: "image/jpeg",
+      size: 2048,
+      createdAt: Date.now(),
+    });
+    expect(
+      getAttachmentsByCapsuleField(db, capsule.id, "f-cover").map(
+        (a) => a.filename,
+      ),
+    ).toEqual(["cover.jpg"]);
   });
 });
