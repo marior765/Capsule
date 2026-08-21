@@ -2754,4 +2754,57 @@ picked up.
 
 ---
 
+## Beat 40 — 2026-08-21
+
+Normal start, health check clean, gate green on HEAD (`36da640`). Cursor
+on 6.8, `in_progress` — the last piece: attachment field type.
+
+Checked what attachment fields would actually need before writing
+anything: an image/document picker library. `package.json` has neither
+`expo-image-picker` nor `expo-document-picker`. Per CLAUDE.md's
+dependency-audit rule and this loop's own `deferred` classification
+(exact same call as 1.6.1's missing `react-native-markdown-display`/
+`expo-clipboard`, already on record in `BLOCKED.md`), adding a new
+dependency is a decision for a human, not something to install
+unattended mid-beat. Rather than stall on the whole step, split it the
+way `entities/link` split from its own eventual UI: build the part that
+doesn't need the missing dependency at all.
+
+`entities/attachment`: metadata-only, on purpose — `localUri` is just a
+`TEXT` column recording where a file *would* live, no `expo-file-system`
+call anywhere in the slice (grepped to confirm). This is real, useful,
+fully-tested work that doesn't need to wait on the picker decision at
+all — the schema, the CRUD, the per-field scoping (`getAttachmentsByCapsuleField`,
+mirroring `getLinksFromByField`'s reasoning: a capsule type could have
+more than one attachment field) are all genuinely done regardless of
+which library eventually gets picked. Applied this run's migration-
+registration and delete-capsule-cascade lessons immediately again — now
+five beats running this hasn't been an afterthought once.
+
+**Self-correction worth naming plainly:** the checker's review came back
+`pass`, but flagged one thing — `deleteCapsule`'s new cascade docstring
+said the file-cleanup follow-up was "tracked in BLOCKED.md," and it
+wasn't; BLOCKED.md's only relevant note was about the `shared/fs` trigger
+generically, not this specific gap. This is exactly the failure mode
+`safe-loop.md`'s own Definition of Done rule 9 exists for — a citation
+that sounds true and isn't backed by real content — the same mistake
+that recurred three times earlier this run before that rule got added.
+A `pass` verdict doesn't mean stop reading the findings: fixed it
+properly before checkpointing, not after — wrote the actual BLOCKED.md
+entry (the picker decision + the file-cleanup gap, cross-referenced both
+ways) so the citation is genuinely backed, exactly the "write the target
+content first" fix the rule prescribes.
+
+Gate green: tsc clean, 56 suites / 669 tests (was 656), eslint clean
+after `--fix` caught 2 prettier issues. Checkpoint `aeaa279`.
+
+**6.8 marked `blocked`, not `done` or left `in_progress` forever** —
+relation is fully complete; attachment has nothing further to build
+without a human's dependency call. `docs/DEVELOPMENT_PLAN.md` annotated
+inline (same style as 5.2/5.4's own partial-completion notes) rather than
+ticked. Cursor advances to **6.10** (field validation) — nothing else in
+Phase 6 is unblocked and unstarted.
+
+---
+
 <!-- Append new beats above this line. -->

@@ -133,7 +133,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.5 Search, filter, sort
 - [x] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature
-- [ ] 6.8 Relation + attachment field types
+- [ ] 6.8 Relation + attachment field types — relation done (RelationPicker, wired into capsule detail); attachment is metadata-only (`entities/attachment`), blocked on a picker-library dependency decision (see BLOCKED.md)
 - [x] 6.9 `entities/link` with graceful missing-target handling
 - [ ] 6.10 Field validation
 

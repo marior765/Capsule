@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 39,
+    "beat": 40,
     "status": "running"
   },
   "cursor": {
-    "step": "6.8",
+    "step": "6.10",
     "phase": 6
   },
   "steps": {
@@ -287,12 +287,12 @@
       "notes": "Deliberately built before 6.8 -- a relation field type (6.8) needs entities/link to exist first. entities/link: CapsuleLink CRUD (getLinksFrom/getLinksTo/deleteLinksByCapsule), v15 migration, registered in Providers immediately. features/link-capsules: linkCapsules (no dedup -- distinct from tagCapsule, a pair can have multiple labeled relationships), unlinkCapsules. delete-capsule now cascades capsule_links too. Plan text names entities/link only (no widget), unlike 6.5/6.6/6.7 -- fully done as stated, no UI half pending."
     },
     "6.8": {
-      "status": "in_progress",
+      "status": "blocked",
       "class": "ui",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "27d389c",
-      "notes": "Relation half FULLY done: entities/link fieldId + link-capsules (beat 38) + RelationPicker wired into capsules/[id].tsx, FieldRenderer placeholder text un-merged (beat 39). Attachment field type entirely unbuilt -- native-classed (real file/image pickers), needs the shared/fs wrapper extraction already flagged as triggered in BLOCKED.md (via 3.3.1, not yet done). docs/DEVELOPMENT_PLAN.md box stays unchecked until attachment lands."
+      "checkpoint": "aeaa279",
+      "notes": "Relation half FULLY done (beats 38-39). Attachment half: entities/attachment built this beat (metadata-only, v17 migration, delete-capsule cascade) but genuinely blocked -- neither expo-image-picker nor expo-document-picker is installed, and adding either is a human dependency decision per CLAUDE.md + this loop own deferred-classification convention (mirrors 1.6.1). Nothing further to implement until that decision is made. See BLOCKED.md \"6.8 -- attachment field type\" entry. docs/DEVELOPMENT_PLAN.md annotated inline, box stays unchecked."
     }
   },
   "quarantinedThisRun": [],
@@ -300,8 +300,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-21T01:35:00Z",
-    "head": "27d389c",
-    "note": "55 suites, 656 tests passing after 6.8 relation-field route wiring"
+    "at": "2026-08-21T02:10:00Z",
+    "head": "aeaa279",
+    "note": "56 suites, 669 tests passing after 6.8 attachment metadata layer (entities/attachment)"
   }
 }
