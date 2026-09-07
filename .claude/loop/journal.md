@@ -2957,4 +2957,68 @@ waits on 7.1's device check, not the mechanism itself.
 
 ---
 
+## Beat 44 — 2026-09-07
+
+Normal start, health check clean, gate green on HEAD (`ca53b97`). Cursor
+on 7.2 — "index capsules into local vector store, retrieval at query
+time," on top of 7.1's just-shipped embedding wrapper.
+
+Scoped honestly against the same constraint 7.1 hit: no live embedding
+context exists anywhere in the app (`LlmProvider` only loads a chat
+completion context), and which model to use for embeddings is still an
+open device-check decision. So this beat built the *mechanism* — fully
+real, fully tested, genuinely usable once that decision lands — without
+wiring it into any route, since a route calling `indexCapsule` today
+would have nothing to pass it as a context.
+
+`entities/capsule` gained `CapsuleEmbedding` storage (`capsuleId`/
+`embedding`/`content`/`updatedAt`, `content` stored alongside the vector
+specifically so `indexCapsule` can skip a wasted re-embed via a plain
+string comparison — no hashing needed). Lives inside `entities/capsule`
+rather than its own slice, same reasoning as `CapsuleValue`: this is the
+capsule's own derived data, not a junction between two entities.
+`features/capsule-rag`: `buildCapsuleText` (pure, deterministic — the
+determinism is what makes the skip-if-unchanged check possible at all),
+`cosineSimilarity` (pure, returns `0` not `NaN` on the zero-vector and
+mismatched-length edge cases), `indexCapsule`, `retrieveRelevantCapsules`
+(short-circuits to `[]` *before* calling `embedText` when nothing's
+indexed — a wasted model call on an empty index would be a real, if
+minor, inefficiency bug). A plain JS linear scan for retrieval, not a
+real vector index (FAISS/HNSW) — deliberate, matching this app's own
+scale (single user, realistically hundreds to low-thousands of capsules,
+not the millions an ANN index earns its complexity at).
+
+**Applied this run's own two hard-won lessons proactively for the third
+domain in a row**, before touching the feature layer: registered
+`capsuleEmbeddingsMigration` in `providers/migrations.ts` (verified
+red-then-green, same as every domain since 6.6) and added `deleteCapsule`'s
+`capsule_embeddings` cascade (TDD, tested both directions) up front,
+rather than discovering either gap later. Three domains in a row now with
+zero instances of the mistake that started this whole habit.
+
+33 new tests, all green on first implementation attempt. Gate: tsc clean,
+61 suites / 750 tests (was 717), eslint clean after `--fix` caught 4
+prettier issues. Checker: pass — hand-computed the cosine similarity
+formula and a sorted-retrieval scenario independently to confirm the
+numbers, confirmed the empty-index short-circuit actually precedes the
+`embedText` call (not just present somewhere), and re-grepped the whole
+`src/` tree itself to confirm no embedding context is loaded anywhere,
+rather than trusting this diff's own scope justification.
+
+Checkpoint `c52b21d`. `docs/DEVELOPMENT_PLAN.md`'s 7.2 box stays
+unchecked (annotated: mechanism done, wiring blocked). Updated
+`BLOCKED.md`'s 7.1 entry to record that 7.2's mechanism now exists and
+what specifically still waits on that entry's device check.
+
+**Marked 7.3 and 7.4 `blocked` without attempting them** — both are
+structurally gated on the exact same unresolved decision: 7.3 ("chat with
+your capsules... grounds responses in the user's data") cannot be built
+or meaningfully tested without a live embedding context, and 7.4 depends
+on 7.3 existing at all. Selecting either now would mean writing UI against
+a mechanism nothing can actually exercise. Cursor advances to **8.1**
+(Phase 8 — multiple backends toggle), independent of the embedding-model
+decision.
+
+---
+
 <!-- Append new beats above this line. -->

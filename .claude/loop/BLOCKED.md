@@ -386,6 +386,20 @@ Not wired into `LlmProvider` or any route — deliberately out of scope for
 a spike. That wiring, plus the vector store itself, is 7.2's job once the
 model choice above is settled.
 
+**UPDATE (same session, next beat): 7.2's mechanism is now built.**
+`entities/capsule` gained `CapsuleEmbedding` storage, and
+`features/capsule-rag` gained `buildCapsuleText`/`cosineSimilarity`/
+`indexCapsule`/`retrieveRelevantCapsules` — fully implemented and tested,
+independent of the model decision above (whichever model wins, it's
+called through the same `embedText` contract). What's still genuinely
+blocked on this entry's device check and model decision: actually WIRING
+`indexCapsule` to fire on capsule create/edit, and `retrieveRelevantCapsules`
+into a real query/chat flow (7.3) — neither route exists yet because no
+live embedding context is loaded anywhere in the app (`LlmProvider` only
+loads a chat completion context). Once the device check settles which
+model to use, wiring both a `Providers`-level embedding context and the
+actual call sites is the remaining work for 7.2/7.3.
+
 ## Needs external verification (not a device check)
 
 ### 5.4 — `features/migrate-import` — ChatGPT export parser's schema is unverified

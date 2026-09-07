@@ -138,8 +138,8 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.10 Field validation
 
 ### Phase 7 — AI × data (hard)
-- [ ] 7.1 Spike: local embedding model via llama.rn (or separate small model)
-- [ ] 7.2 `features/capsule-rag` — index capsules into local vector store, retrieval at query time
+- [ ] 7.1 Spike: local embedding model via llama.rn (or separate small model) — wrapper implemented and tested against mocked natives (`initEmbeddingContext`/`embedText`); real device verification of embedding quality, and the llama.rn-vs-dedicated-model decision, queued in BLOCKED.md
+- [ ] 7.2 `features/capsule-rag` — index capsules into local vector store, retrieval at query time — mechanism fully implemented and tested (storage, `buildCapsuleText`, `cosineSimilarity`, `indexCapsule`, `retrieveRelevantCapsules`); not wired into any route since no live embedding context exists yet — blocked on 7.1's model decision (see BLOCKED.md)
 - [ ] 7.3 "Chat with your capsules" mode — toggle in chat that grounds responses in the user's data
 - [ ] 7.4 RAG context shown transparently (which capsules were referenced)
 
