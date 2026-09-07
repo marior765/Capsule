@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 42,
+    "beat": 43,
     "status": "running"
   },
   "cursor": {
-    "step": "7.1",
+    "step": "7.2",
     "phase": 7
   },
   "steps": {
@@ -215,12 +215,12 @@
       "notes": "DONE -- both halves complete. Beat 29: manage-schema feature layer (createCapsuleType/renameCapsuleType/setCapsuleTypeDescription, addField/updateField/removeField/reorderFields, deleteCapsuleType cascading to fields but not capsules), checker caught a real sortOrder collision bug (count-based vs max+1), fixed and re-verified, checkpoint 02f637e. Beat 30 (this beat): SchemaBuilder widget (purely controlled, mirrors CapsuleEditor/FieldRenderer -- name/description inputs, field list with reorder/required-toggle/remove, an 'add a field' mini-form with a FieldType chip picker covering all 9 types since FieldRenderer already degrades gracefully for relation/attachment) + moveField.ts (extracted pure reorder logic, mirrors holdGesture.ts/recommend.ts precedent for widgets with no @testing-library, 10 tests, mutation-tested myself -- broke the bounds check, confirmed a test catches it, restored) + all three types/ routes wired for real (index.tsx: list+create+delete; new.tsx: stages fields locally with client-side ids stripped before one createCapsuleType call; [id].tsx: every field mutation applies immediately via manage-schema then refetches, handles a deleted-type navigation gracefully). Also fixed capsules/index.tsx's now-stale 'Type management is not built yet' notice with a real working link. Checker passed on FIRST attempt this round: independently reproduced the moveField mutation test, traced every [id].tsx handler by hand, confirmed client-side ids never leak into createCapsuleType, verified testID coverage (incl. validating the buildTestID-for-dynamic-ids precedent against FieldRenderer's own prior approval), confirmed FSD boundaries clean. docs/DEVELOPMENT_PLAN.md 6.7 TICKED. UNBLOCKS: 6.3's remaining 3 route files (new.tsx/[id].tsx/[id]/edit.tsx, still bare capsule stubs) and 6.4's UI wiring -- both were parked waiting on exactly this gap since beats 27/28. Cursor advances to 6.3 next."
     },
     "7.1": {
-      "status": "pending",
+      "status": "done",
       "class": "native",
-      "attempts": 0,
+      "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": null,
-      "notes": "Embedding model spike; requires a real model"
+      "checkpoint": "d052810",
+      "notes": "Implemented against mocked natives only -- shared/llm gained initEmbeddingContext + embedText, separate context path from initLlm. 10 tests. Real embedding-quality validation (does llama.rn or a separate small model produce usable vectors) queued to BLOCKED.md -- can only be judged on a real device with a real GGUF. docs/DEVELOPMENT_PLAN.md box stays unchecked per native-class convention -- this is the users to tick after the device check."
     },
     "9.1": {
       "status": "deferred",
@@ -308,8 +308,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-07T00:00:00Z",
-    "head": "a23d3b6",
-    "note": "57 suites, 707 tests passing after 6.10 completion (field validation wired into create/edit routes)"
+    "at": "2026-09-07T00:35:00Z",
+    "head": "d052810",
+    "note": "58 suites, 717 tests passing after 7.1 embedding wrapper spike"
   }
 }

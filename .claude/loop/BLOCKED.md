@@ -351,6 +351,41 @@ wrapper only, no UI trigger exists yet to call `speak()` on an assistant
 response. That wiring is separate follow-on work, not part of 3.5 as
 scoped.
 
+### 7.1 — Spike: local embedding model via llama.rn
+Implemented and green: `shared/llm` gained `initEmbeddingContext(modelPath,
+contextLength)` (loads a context with `embedding: true`, same validation
+shape as `initLlm`) and `embedText(ctx, text)` (calls `ctx.embedding(text)`,
+returns `{ embedding: number[] }`). Tested against llama.rn's own jest mock
+(for the init call shape) and a hand-rolled fake context (for `embedText`'s
+own contract) — llama.rn's jest mock returns a fixed placeholder vector
+regardless of input, so no in-repo test can distinguish a working embedding
+model from a broken one. **Nothing here has run against a real model.**
+
+**Device check — this is the actual spike, not just a smoke test:**
+1. Load a real embedding-capable GGUF via `initEmbeddingContext` on a real
+   device and confirm it doesn't crash/OOM at a reasonable context length.
+2. `embedText` on two semantically similar sentences ("the cat sat on the
+   mat" / "a cat was sitting on a rug") produces vectors with high cosine
+   similarity; two unrelated sentences produce a clearly lower similarity.
+   This is the real pass/fail criterion for the whole spike — a vector of
+   the right *shape* proves nothing about whether it's a usable embedding.
+3. Rough timing/memory budget for embedding a typical capsule's worth of
+   text (a few hundred words) on a mid-range device — informs whether
+   embedding capsules at write-time (synchronous, blocking) or via a
+   background queue is the right call for 7.2.
+4. **The open decision 7.1's own plan text poses**: does llama.rn's
+   built-in `embedding()` on the existing chat model (or a small
+   general-purpose GGUF) produce good-enough embeddings, or does 7.2 need
+   a dedicated, purpose-built small embedding model (e.g. a
+   sentence-transformers-style GGUF)? This can only be judged empirically,
+   from step 2's actual similarity numbers — not decided in the abstract.
+   7.2 ("index capsules into local vector store") is blocked on this
+   decision, not just on the device check passing.
+
+Not wired into `LlmProvider` or any route — deliberately out of scope for
+a spike. That wiring, plus the vector store itself, is 7.2's job once the
+model choice above is settled.
+
 ## Needs external verification (not a device check)
 
 ### 5.4 — `features/migrate-import` — ChatGPT export parser's schema is unverified

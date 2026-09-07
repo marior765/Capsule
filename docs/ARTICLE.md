@@ -1865,4 +1865,57 @@ lag applied here: build on it soon, not perfectly in isolation first.
 
 ---
 
+---
+
+### 2026-09-07 — What "done" means for a spike a jest mock can't judge
+
+Forty-two beats into this run, every "native" step so far had a concrete
+shape jest could mostly stand in for: a secure-store call, a file delete,
+a speech synthesis trigger. This beat's step — "spike: local embedding
+model" — was the first one where the mock doesn't just simplify the real
+thing, it's *structurally incapable* of answering the question the step
+exists to ask. `llama.rn`'s jest mock returns a fixed placeholder vector
+no matter what text goes in. There is no version of "write a better test"
+that closes that gap — an embedding's entire value is that similar inputs
+produce similar vectors, and a constant output can never demonstrate
+that, on principle, not as a current limitation.
+
+That forced a sharper question than usual: what is "done" for a step like
+this? Not "the code runs" — that was true in five minutes. The honest
+answer turned out to be narrower than it first looked: done means proving
+the *wrapper's own contract* — does it pass the right flags to the native
+call, does it validate its inputs, does it propagate errors, does it
+return the shape it claims to — while being explicit, in the same commit,
+about the one question that contract can't touch. Not "TODO: verify
+later" as an afterthought, but a first-class artifact: a `BLOCKED.md`
+entry that states the actual pass/fail criterion (do two similar
+sentences produce cosine-similar vectors; do two unrelated ones produce
+a clearly lower similarity) and the real decision riding on it (llama.rn's
+built-in embedding vs. a dedicated small model) — not "confirm this works
+on a device," which would just be restating that nobody checked yet.
+
+The review pass leaned into the same distinction rather than fighting it:
+instead of accepting "the tests pass" as evidence, the reviewer traced
+the `embedding: true` flag through llama.rn's actual *compiled* code (not
+just its type declarations) to make sure a wrapper-level claim was
+genuinely backed by the library's real behavior, then deliberately broke
+the implementation mid-review to confirm the tests would have caught it.
+Both moves target the same risk: a wrapper this thin, sitting in front of
+a mock this uninformative, is exactly the shape of code where "the tests
+are green" and "the feature works" can quietly drift apart without anyone
+having lied about anything.
+
+**Article angle:** most advice about testing AI/native integrations
+focuses on making mocks more realistic. The harder and more useful move
+here was the opposite — recognizing when a mock has hit a hard ceiling on
+what it can prove, and drawing the scope boundary explicitly at that
+ceiling rather than either overclaiming ("tests pass, spike complete") or
+stalling on it ("can't fully test this, so don't ship any of it"). The
+deliverable of a spike that can't be finished in software is sometimes
+the sharpest possible statement of the one question a human still has to
+answer — and writing that question down precisely is itself real,
+finishable work.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

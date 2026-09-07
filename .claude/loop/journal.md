@@ -2903,4 +2903,58 @@ rush it at the tail of this one.
 
 ---
 
+## Beat 43 — 2026-09-07
+
+Normal start, health check clean, gate green on HEAD (`9b3cadf`). Cursor
+on 7.1 — the first step in Phase 7 ("AI × data"), and this loop's first
+step explicitly named `native` in `safe-loop.md`'s own classification
+table ("7.1 (embedding model)").
+
+Scoped the spike honestly against what this environment can actually
+prove: a real embedding model has to run on real hardware to know if its
+output is any good, so the achievable work here is the *wrapper*, not
+the *verdict*. Added `initEmbeddingContext` + `embedText` to `shared/llm`,
+deliberately as a second, fully independent context path rather than a
+flag on the existing completion context — `initLlm`'s context and an
+embedding context are typically different GGUFs entirely (the plan's own
+text: "via llama.rn (or separate small model)"), and llama.rn silently
+returns garbage from `.embedding()` on a context that wasn't loaded with
+`embedding: true` — no exception, just meaningless output. Keeping the
+two init functions separate means one can never accidentally leak its
+config into the other.
+
+Followed the file's own established two-tier test pattern exactly:
+`initEmbeddingContext` tests spy on llama.rn's real jest-mocked
+`initLlama` (same as `initLlm`'s own tests) to prove `embedding: true`
+genuinely reaches the native call; `embedText` tests use a hand-rolled
+fake context (same as `runCompletion`'s own tests), because llama.rn's
+mock returns a hardcoded placeholder vector regardless of input — proving
+anything about a *real* embedding is structurally impossible in jest, so
+what's actually provable here is this wrapper's own contract (validation
+order, call shape, error propagation).
+
+10 new tests, all green on first attempt. Gate: tsc clean, 58 suites /
+717 tests (was 707), eslint clean. Checker: pass — went further than
+trusting the diff's own claims: traced `embedding: true` through
+llama.rn's actual *compiled* `initLlama` (not just its `.d.ts`) to
+confirm the flag isn't dropped somewhere in between, cross-checked the
+return-type shapes against llama.rn's real type declarations, and
+deliberately sabotaged `embedText` mid-review to confirm the fake-context
+tests would actually catch a real regression rather than passing
+regardless.
+
+Checkpoint `d052810`. Native-classed: implemented + tested against mocked
+natives only, `docs/DEVELOPMENT_PLAN.md`'s 7.1 box stays unchecked, a
+substantial `BLOCKED.md` entry queues the actual device verification —
+including the real decision this spike exists to answer (llama.rn's
+built-in embedding vs. a dedicated small model), which can only be judged
+from real cosine-similarity numbers on real sentences, not decided in the
+abstract. Cursor advances to **7.2** (capsule RAG indexing) — its vector-
+store/indexing mechanism is buildable now against the existing `embedText`
+call shape regardless of which model eventually backs it, so it isn't
+hard-blocked the way 6.8's attachment work was; only the *model choice*
+waits on 7.1's device check, not the mechanism itself.
+
+---
+
 <!-- Append new beats above this line. -->
