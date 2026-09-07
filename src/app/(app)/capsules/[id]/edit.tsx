@@ -4,7 +4,11 @@ import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import { getCapsuleById, getValuesByCapsule } from "@/entities/capsule";
-import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
+import {
+  validateFields,
+  getFieldsByCapsuleType,
+  type CapsuleField,
+} from "@/entities/field";
 import { saveCapsuleEdits } from "@/features/edit-capsule";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleEditor } from "@/widgets/CapsuleEditor";
@@ -16,6 +20,7 @@ export default function EditCapsuleScreen() {
   const [fields, setFields] = useState<CapsuleField[]>([]);
   const [title, setTitle] = useState("");
   const [values, setValues] = useState<Record<string, string | null>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   // Snapshot of what's actually persisted right now, taken on load —
   // `saveCapsuleEdits` diffs the current (edited) state against this rather
   // than writing every field unconditionally, so an untouched field never
@@ -41,6 +46,7 @@ export default function EditCapsuleScreen() {
       setFields(capsuleFields);
       setTitle(capsule.title);
       setValues(capsuleValues);
+      setErrors({});
       setInitialTitle(capsule.title);
       setInitialValues(capsuleValues);
     }, [db, id]),
@@ -51,6 +57,11 @@ export default function EditCapsuleScreen() {
   };
 
   const handleSave = () => {
+    const fieldErrors = validateFields(fields, values);
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
     saveCapsuleEdits(db, id, {
       title,
       initialTitle,
@@ -79,6 +90,7 @@ export default function EditCapsuleScreen() {
         fields={fields}
         values={values}
         onValueChange={handleValueChange}
+        errors={errors}
       />
       <Pressable
         testID={testIDs.buttons.save}

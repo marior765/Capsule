@@ -114,3 +114,25 @@ export function validateFieldValue(
       return VALID;
   }
 }
+
+/**
+ * Validates every field against its current value, collecting only the
+ * failures — a field missing entirely from `values` is treated as `null`
+ * (the same "unset" a fresh `CapsuleEditor` starts with), not a crash.
+ * The caller (a route, before `createCapsule`/`saveCapsuleEdits`) checks
+ * `Object.keys(result).length === 0` to decide whether to proceed, and
+ * can show each message next to its own field via the fieldId key.
+ */
+export function validateFields(
+  fields: CapsuleField[],
+  values: Record<string, string | null>,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const field of fields) {
+    const result = validateFieldValue(field, values[field.id] ?? null);
+    if (!result.valid) {
+      errors[field.id] = result.error;
+    }
+  }
+  return errors;
+}

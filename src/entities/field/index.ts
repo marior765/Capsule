@@ -17,4 +17,8 @@ export {
   parseNumberRangeConfig,
   type NumberRange,
 } from "./codec";
-export { validateFieldValue, type FieldValidationResult } from "./validation";
+export {
+  validateFieldValue,
+  validateFields,
+  type FieldValidationResult,
+} from "./validation";

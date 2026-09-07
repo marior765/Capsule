@@ -1,6 +1,7 @@
 // Tests for step 6.10 — written before implementation (TDD)
+// validateFields: new for 6.10's route-wiring beat.
 import type { CapsuleField } from "../model";
-import { validateFieldValue } from "../validation";
+import { validateFieldValue, validateFields } from "../validation";
 
 const makeField = (overrides: Partial<CapsuleField> = {}): CapsuleField => ({
   id: "f-1",
@@ -215,5 +216,50 @@ describe("validateFieldValue — relation, attachment", () => {
   it("attachment always passes — it never has a CapsuleValue to validate here (entities/attachment's job)", () => {
     const field = makeField({ fieldType: "attachment", required: true });
     expect(validateFieldValue(field, null)).toEqual({ valid: true });
+  });
+});
+
+describe("validateFields", () => {
+  it("returns an empty object when every field is valid", () => {
+    const fields = [
+      makeField({ id: "f-title", required: true }),
+      makeField({ id: "f-count", fieldType: "number" }),
+    ];
+    const values = { "f-title": "Dune", "f-count": "5" };
+    expect(validateFields(fields, values)).toEqual({});
+  });
+
+  it("collects one error per invalid field, keyed by fieldId", () => {
+    const fields = [
+      makeField({ id: "f-title", name: "Title", required: true }),
+      makeField({ id: "f-count", name: "Count", fieldType: "number" }),
+    ];
+    const values = { "f-title": null, "f-count": "not-a-number" };
+    expect(validateFields(fields, values)).toEqual({
+      "f-title": "Title is required",
+      "f-count": "Count must be a number",
+    });
+  });
+
+  it("only reports the fields that are actually invalid, not every field", () => {
+    const fields = [
+      makeField({ id: "f-title", name: "Title", required: true }),
+      makeField({ id: "f-count", name: "Count", fieldType: "number" }),
+    ];
+    const values = { "f-title": "Dune", "f-count": "not-a-number" };
+    expect(validateFields(fields, values)).toEqual({
+      "f-count": "Count must be a number",
+    });
+  });
+
+  it("treats a field missing from the values map as null, not a crash", () => {
+    const fields = [makeField({ id: "f-title", required: true })];
+    expect(validateFields(fields, {})).toEqual({
+      "f-title": "Field is required",
+    });
+  });
+
+  it("returns an empty object for an empty field list", () => {
+    expect(validateFields([], {})).toEqual({});
   });
 });

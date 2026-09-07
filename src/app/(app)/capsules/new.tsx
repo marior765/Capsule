@@ -5,7 +5,11 @@ import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import { createCapsule } from "@/features/create-capsule";
 import { getAllCapsuleTypes, type CapsuleType } from "@/entities/capsule-type";
-import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
+import {
+  validateFields,
+  getFieldsByCapsuleType,
+  type CapsuleField,
+} from "@/entities/field";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleEditor } from "@/widgets/CapsuleEditor";
 
@@ -16,6 +20,7 @@ export default function NewCapsuleScreen() {
   const [fields, setFields] = useState<CapsuleField[]>([]);
   const [title, setTitle] = useState("");
   const [values, setValues] = useState<Record<string, string | null>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -28,6 +33,7 @@ export default function NewCapsuleScreen() {
     setFields(getFieldsByCapsuleType(db, capsuleType.id));
     setTitle("");
     setValues({});
+    setErrors({});
   };
 
   const handleValueChange = (fieldId: string, value: string | null) => {
@@ -36,6 +42,11 @@ export default function NewCapsuleScreen() {
 
   const handleCreate = () => {
     if (!selectedTypeId) return;
+    const fieldErrors = validateFields(fields, values);
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
     const capsule = createCapsule(db, {
       capsuleTypeId: selectedTypeId,
       title: title.trim() || undefined,
@@ -94,6 +105,7 @@ export default function NewCapsuleScreen() {
         fields={fields}
         values={values}
         onValueChange={handleValueChange}
+        errors={errors}
       />
       <Pressable
         testID={testIDs.buttons.create}

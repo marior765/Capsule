@@ -12,6 +12,8 @@ type CapsuleEditorProps = {
   /** fieldId -> current value, matching CapsuleValue.value's shape. */
   values: Record<string, string | null>;
   onValueChange: (fieldId: string, value: string | null) => void;
+  /** fieldId -> message, from `entities/field`'s `validateFields` (6.10). Omit or pass `{}` for no error state — this widget never validates on its own. */
+  errors?: Record<string, string>;
 };
 
 /**
@@ -33,6 +35,7 @@ export function CapsuleEditor({
   fields,
   values,
   onValueChange,
+  errors,
 }: CapsuleEditorProps) {
   return (
     <ScrollView
@@ -46,19 +49,30 @@ export function CapsuleEditor({
         onChangeText={onTitleChange}
         placeholder="Title"
       />
-      {fields.map((field) => (
-        <View key={field.id} style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>
-            {field.name}
-            {field.required ? " *" : ""}
-          </Text>
-          <FieldRenderer
-            field={field}
-            value={values[field.id] ?? null}
-            onChange={(value) => onValueChange(field.id, value)}
-          />
-        </View>
-      ))}
+      {fields.map((field) => {
+        const error = errors?.[field.id];
+        return (
+          <View key={field.id} style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>
+              {field.name}
+              {field.required ? " *" : ""}
+            </Text>
+            <FieldRenderer
+              field={field}
+              value={values[field.id] ?? null}
+              onChange={(value) => onValueChange(field.id, value)}
+            />
+            {error && (
+              <Text
+                testID={`${testIDs.texts.fieldError}_${field.id}`}
+                style={styles.fieldError}
+              >
+                {error}
+              </Text>
+            )}
+          </View>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -82,11 +96,18 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 13,
     marginBottom: theme.spacing.one,
   },
+  fieldError: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.half,
+  },
 }));
 
 const testIDs = createComponentTestIDs("CapsuleEditor", {
   containers: ["root"] as const,
   inputs: ["title"] as const,
+  texts: ["fieldError"] as const,
 });
 
 CapsuleEditor.testIDs = testIDs;
