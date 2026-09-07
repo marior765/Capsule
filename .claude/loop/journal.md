@@ -2864,4 +2864,43 @@ today. `docs/DEVELOPMENT_PLAN.md` box stays unchecked. Cursor stays on
 
 ---
 
+## Beat 42 — 2026-09-07 (continuation after a ~17-day session gap)
+
+Picked up mid-turn: the prior session had built and checker-approved
+6.10's route wiring (`validateFields`, `CapsuleEditor`'s new `errors`
+prop, both save flows validating before persisting) but the process was
+interrupted before checkpointing — the working tree was still dirty with
+exactly that work when this beat started, ~17 days after beat 41 closed
+(2026-08-21 → 2026-09-07, per the environment's own date).
+
+Treated this the same way beat 37's mid-beat `/loop` re-invocation was
+handled: read the spine fresh per the contract (never assume the dirty
+tree is trustworthy from memory alone), confirmed the journal's last
+block (beat 41) matched exactly what was sitting uncommitted — logic
+layer done, wiring described as the explicit next step, nothing else in
+flight — then re-ran the full gate from scratch rather than trusting a
+stale checker verdict. Result matched byte-for-byte (57 suites / 707
+tests, same as the pre-interruption run), so finished the step rather
+than discarding real, already-reviewed work or re-doing it from scratch.
+
+No new implementation this beat beyond what the interrupted session
+built — this entry exists mainly to record *that* the resume happened
+and *why* it was safe to trust the dirty tree this time (a matching
+journal entry describing exactly this pending work, not a foreign or
+ambiguous state). Checkpoint `a23d3b6`. **6.10 fully done** — both
+halves landed, box ticked.
+
+**Phase 6 (Capsule data core) is now complete except 6.8's attachment
+half**, which stays genuinely blocked (`state.json` status `blocked`,
+not re-selected) on a picker-library dependency decision — see
+`BLOCKED.md`. Cursor advances to **7.1** (Phase 7 — AI × data: "Spike:
+local embedding model via llama.rn"), the loop's own first explicitly
+`native`-classed spike. Deliberately not started this beat — it's a
+different kind of work (exploratory, real llama.rn integration, likely
+needs its own careful scoping) and this beat is already a resume-after-
+a-gap; better to start it fresh next beat with full context budget than
+rush it at the tail of this one.
+
+---
+
 <!-- Append new beats above this line. -->

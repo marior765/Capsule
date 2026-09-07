@@ -2,12 +2,12 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 41,
+    "beat": 42,
     "status": "running"
   },
   "cursor": {
-    "step": "6.10",
-    "phase": 6
+    "step": "7.1",
+    "phase": 7
   },
   "steps": {
     "1.2": {
@@ -295,12 +295,12 @@
       "notes": "Relation half FULLY done (beats 38-39). Attachment half: entities/attachment built this beat (metadata-only, v17 migration, delete-capsule cascade) but genuinely blocked -- neither expo-image-picker nor expo-document-picker is installed, and adding either is a human dependency decision per CLAUDE.md + this loop own deferred-classification convention (mirrors 1.6.1). Nothing further to implement until that decision is made. See BLOCKED.md \"6.8 -- attachment field type\" entry. docs/DEVELOPMENT_PLAN.md annotated inline, box stays unchecked."
     },
     "6.10": {
-      "status": "in_progress",
+      "status": "done",
       "class": "logic",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "021b4c8",
-      "notes": "Logic layer done: validateFieldValue (required/type/range) + parseNumberRangeConfig. Required a lossless relocation of fieldValueCodec.ts from widgets/FieldRenderer down into entities/field (upward-import layering violation otherwise). No route/UI wiring yet -- new.tsx/edit.tsx do not call validateFieldValue, save is not blocked on an invalid form. docs/DEVELOPMENT_PLAN.md box stays unchecked until wiring lands."
+      "checkpoint": "a23d3b6",
+      "notes": "Both halves done -- validateFieldValue logic layer (021b4c8, beat 41) + validateFields + CapsuleEditor errors prop + new.tsx/[id]/edit.tsx wiring (a23d3b6, beat 42/continuation after a session gap). Both save flows now block on invalid fields."
     }
   },
   "quarantinedThisRun": [],
@@ -308,8 +308,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-08-21T02:45:00Z",
-    "head": "021b4c8",
-    "note": "57 suites, 702 tests passing after 6.10 validateFieldValue logic layer"
+    "at": "2026-09-07T00:00:00Z",
+    "head": "a23d3b6",
+    "note": "57 suites, 707 tests passing after 6.10 completion (field validation wired into create/edit routes)"
   }
 }
