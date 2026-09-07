@@ -72,3 +72,43 @@ export function rowToCapsuleValue(row: CapsuleValueRow): CapsuleValue {
     updatedAt: row.updated_at,
   };
 }
+
+/**
+ * One capsule's embedding vector (7.2: "index capsules into local vector
+ * store"), keyed by `capsuleId` — at most one per capsule, replaced
+ * wholesale on re-index rather than versioned. `content` is the exact
+ * text that was embedded (title + type + every field's name/value,
+ * assembled by `features/capsule-rag`'s `buildCapsuleText`) — kept
+ * alongside the vector so a re-index can cheaply detect "nothing actually
+ * changed" via a plain string comparison, no hashing, no extra
+ * dependency. Lives inside `entities/capsule` rather than its own slice
+ * for the same reason `CapsuleValue` does — this is fundamentally the
+ * capsule's own derived data, not a relation between two entities (unlike
+ * `capsule_tags`/`capsule_links`, which live inside `entities/tag`/
+ * `entities/link` instead).
+ */
+export type CapsuleEmbedding = {
+  capsuleId: string;
+  embedding: number[];
+  content: string;
+  updatedAt: number;
+};
+
+export type CapsuleEmbeddingRow = {
+  capsule_id: string;
+  /** JSON-serialized `number[]` — SQLite has no native array/vector column type. */
+  embedding: string;
+  content: string;
+  updated_at: number;
+};
+
+export function rowToCapsuleEmbedding(
+  row: CapsuleEmbeddingRow,
+): CapsuleEmbedding {
+  return {
+    capsuleId: row.capsule_id,
+    embedding: JSON.parse(row.embedding) as number[],
+    content: row.content,
+    updatedAt: row.updated_at,
+  };
+}

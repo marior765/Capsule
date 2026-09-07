@@ -10,7 +10,11 @@ import { personasMigration } from "@/entities/persona";
 import { auditMigration } from "@/entities/audit";
 import { capsuleTypesMigration } from "@/entities/capsule-type";
 import { capsuleFieldsMigration } from "@/entities/field";
-import { capsulesMigration, capsuleValuesMigration } from "@/entities/capsule";
+import {
+  capsulesMigration,
+  capsuleValuesMigration,
+  capsuleEmbeddingsMigration,
+} from "@/entities/capsule";
 import { capsuleTagsMigration, tagsMigration } from "@/entities/tag";
 import { capsuleLinksFieldIdMigration, linksMigration } from "@/entities/link";
 import { attachmentsMigration } from "@/entities/attachment";
@@ -47,4 +51,5 @@ export const migrations: Migration[] = [
   linksMigration,
   capsuleLinksFieldIdMigration,
   attachmentsMigration,
+  capsuleEmbeddingsMigration,
 ];

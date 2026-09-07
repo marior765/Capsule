@@ -4,8 +4,11 @@ import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
   capsulesMigration,
   capsuleValuesMigration,
+  capsuleEmbeddingsMigration,
   getCapsuleById,
+  getEmbeddingByCapsule,
   getValuesByCapsule,
+  upsertEmbedding,
 } from "@/entities/capsule";
 import {
   capsuleTagsMigration,
@@ -36,6 +39,7 @@ beforeEach(() => {
   runMigrations(db, [
     capsulesMigration,
     capsuleValuesMigration,
+    capsuleEmbeddingsMigration,
     tagsMigration,
     capsuleTagsMigration,
     linksMigration,
@@ -158,5 +162,36 @@ describe("deleteCapsule", () => {
     expect(
       getAttachmentsByCapsuleField(db, b.id, "f-photo").map((att) => att.id),
     ).toEqual(["att-b"]);
+  });
+
+  it("removes the capsule's embedding too (7.2 cascade)", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    upsertEmbedding(db, {
+      capsuleId: capsule.id,
+      embedding: [0.1, 0.2],
+      content: "text",
+      updatedAt: Date.now(),
+    });
+    deleteCapsule(db, capsule.id);
+    expect(getEmbeddingByCapsule(db, capsule.id)).toBeNull();
+  });
+
+  it("leaves another capsule's embedding intact", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    upsertEmbedding(db, {
+      capsuleId: a.id,
+      embedding: [0.1],
+      content: "a",
+      updatedAt: Date.now(),
+    });
+    upsertEmbedding(db, {
+      capsuleId: b.id,
+      embedding: [0.2],
+      content: "b",
+      updatedAt: Date.now(),
+    });
+    deleteCapsule(db, a.id);
+    expect(getEmbeddingByCapsule(db, b.id)?.content).toBe("b");
   });
 });

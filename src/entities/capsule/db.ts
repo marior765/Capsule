@@ -2,8 +2,11 @@ import type { Migration } from "@/shared/db";
 import type { SQLiteDatabase, SQLiteVariadicBindParams } from "expo-sqlite";
 import {
   rowToCapsule,
+  rowToCapsuleEmbedding,
   rowToCapsuleValue,
   type Capsule,
+  type CapsuleEmbedding,
+  type CapsuleEmbeddingRow,
   type CapsuleRow,
   type CapsuleValue,
   type CapsuleValueRow,
@@ -181,4 +184,66 @@ export function deleteValuesByCapsule(
   capsuleId: string,
 ): void {
   db.runSync("DELETE FROM capsule_values WHERE capsule_id = ?;", capsuleId);
+}
+
+// --- CapsuleEmbedding (7.2) ---
+
+export const capsuleEmbeddingsMigration: Migration = {
+  version: 18,
+  up: (db: SQLiteDatabase) => {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS capsule_embeddings (
+        capsule_id TEXT PRIMARY KEY,
+        embedding TEXT NOT NULL,
+        content TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `);
+  },
+};
+
+export function getEmbeddingByCapsule(
+  db: SQLiteDatabase,
+  capsuleId: string,
+): CapsuleEmbedding | null {
+  const row = db.getFirstSync(
+    "SELECT * FROM capsule_embeddings WHERE capsule_id = ?;",
+    capsuleId,
+  ) as CapsuleEmbeddingRow | null;
+  return row ? rowToCapsuleEmbedding(row) : null;
+}
+
+export function getAllEmbeddings(db: SQLiteDatabase): CapsuleEmbedding[] {
+  const rows = db.getAllSync(
+    "SELECT * FROM capsule_embeddings;",
+  ) as CapsuleEmbeddingRow[];
+  return rows.map(rowToCapsuleEmbedding);
+}
+
+/**
+ * Replaces one capsule's embedding wholesale — `PRIMARY KEY(capsule_id)`
+ * plus `ON CONFLICT` means a re-index never leaves a stale second row
+ * behind, mirroring `upsertCapsuleValue`'s own "callers don't need to
+ * check first" ergonomics.
+ */
+export function upsertEmbedding(
+  db: SQLiteDatabase,
+  embedding: CapsuleEmbedding,
+): void {
+  db.runSync(
+    `INSERT INTO capsule_embeddings (capsule_id, embedding, content, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(capsule_id) DO UPDATE SET
+       embedding = excluded.embedding,
+       content = excluded.content,
+       updated_at = excluded.updated_at;`,
+    embedding.capsuleId,
+    JSON.stringify(embedding.embedding),
+    embedding.content,
+    embedding.updatedAt,
+  );
+}
+
+export function deleteEmbedding(db: SQLiteDatabase, capsuleId: string): void {
+  db.runSync("DELETE FROM capsule_embeddings WHERE capsule_id = ?;", capsuleId);
 }

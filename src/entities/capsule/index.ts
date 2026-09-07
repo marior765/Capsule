@@ -1,7 +1,8 @@
-export type { Capsule, CapsuleValue } from "./model";
+export type { Capsule, CapsuleEmbedding, CapsuleValue } from "./model";
 export {
   capsulesMigration,
   capsuleValuesMigration,
+  capsuleEmbeddingsMigration,
   getAllCapsules,
   getCapsulesByType,
   getCapsuleById,
@@ -12,4 +13,8 @@ export {
   getValueByCapsuleAndField,
   upsertCapsuleValue,
   deleteValuesByCapsule,
+  getEmbeddingByCapsule,
+  getAllEmbeddings,
+  upsertEmbedding,
+  deleteEmbedding,
 } from "./db";

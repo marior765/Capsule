@@ -12,7 +12,11 @@
 // specifically so this can be tested at all.
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import { migrations } from "../migrations";
-import { getAllCapsules } from "@/entities/capsule";
+import {
+  getAllCapsules,
+  getEmbeddingByCapsule,
+  upsertEmbedding,
+} from "@/entities/capsule";
 import { getAllCapsuleTypes } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType } from "@/entities/field";
 import { getTagsByCapsule } from "@/entities/tag";
@@ -124,5 +128,24 @@ describe("Providers' registered migrations", () => {
         (a) => a.filename,
       ),
     ).toEqual(["cover.jpg"]);
+  });
+
+  it("lets a capsule embedding actually be stored and retrieved through the real migration set (7.2)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    upsertEmbedding(db, {
+      capsuleId: capsule.id,
+      embedding: [0.1, 0.2, 0.3],
+      content: "Dune",
+      updatedAt: Date.now(),
+    });
+    expect(getEmbeddingByCapsule(db, capsule.id)?.embedding).toEqual([
+      0.1, 0.2, 0.3,
+    ]);
   });
 });
