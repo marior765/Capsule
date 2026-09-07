@@ -137,3 +137,64 @@ export async function releaseLlm(ctx: LlamaContext): Promise<void> {
   if (!ctx) return;
   await ctx.release();
 }
+
+// --- Embeddings (7.1 spike) ---
+//
+// A separate context, not a mode on the completion context returned by
+// `initLlm` — llama.rn's embedding output is meaningless unless the
+// context was loaded with `embedding: true` at init time, and a real
+// embedding model is typically a distinct, much smaller GGUF from
+// whatever's loaded for chat completions (docs/DEVELOPMENT_PLAN.md 7.1:
+// "via llama.rn (or separate small model)"). Keeping the two contexts
+// and their init functions distinct means loading one never risks
+// silently reconfiguring the other's already-working, already-tested
+// completion path.
+
+export type EmbeddingResult = {
+  embedding: number[];
+};
+
+/**
+ * Loads a model into memory in embedding mode. Same validation shape as
+ * `initLlm` — a model path and a real (positive) context length are both
+ * required for the same reasons documented there.
+ */
+export async function initEmbeddingContext(
+  modelPath: string,
+  contextLength: number,
+): Promise<LlamaContext> {
+  if (!modelPath) {
+    throw new Error("Model path is required");
+  }
+  if (contextLength <= 0) {
+    throw new Error("Context length must be greater than zero");
+  }
+  const ctx = await _initLlama({
+    model: modelPath,
+    n_ctx: contextLength,
+    embedding: true,
+  });
+  return ctx;
+}
+
+/**
+ * Computes an embedding vector for one piece of text, via llama.rn's own
+ * `context.embedding()`. `ctx` must come from `initEmbeddingContext`, not
+ * `initLlm` — this function has no way to verify that from the JS side
+ * (llama.rn's `LlamaContext` doesn't expose whether embedding mode is on),
+ * so passing the wrong kind of context is a caller error this wrapper
+ * cannot catch, only document.
+ */
+export async function embedText(
+  ctx: LlamaContext,
+  text: string,
+): Promise<EmbeddingResult> {
+  if (!ctx) {
+    throw new Error("LLM context is not initialized");
+  }
+  if (!text.trim()) {
+    throw new Error("Text is required");
+  }
+  const result = await ctx.embedding(text);
+  return { embedding: result.embedding };
+}

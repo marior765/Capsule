@@ -1,6 +1,14 @@
 // Tests for step 0.5 — written before implementation (TDD)
+// initEmbeddingContext/embedText: new for step 7.1 (embedding spike).
 import * as llamaRn from "llama.rn";
-import { abortCompletion, initLlm, releaseLlm, runCompletion } from "../index";
+import {
+  abortCompletion,
+  embedText,
+  initEmbeddingContext,
+  initLlm,
+  releaseLlm,
+  runCompletion,
+} from "../index";
 import type { LlamaContext } from "../index";
 
 const MOCK_MODEL_PATH = "/models/test-model.gguf";
@@ -201,5 +209,89 @@ describe("shared/llm — releaseLlm", () => {
   it("releases the context without throwing", async () => {
     const ctx = await initLlm(MOCK_MODEL_PATH, CTX_LEN);
     await expect(releaseLlm(ctx)).resolves.not.toThrow();
+  });
+});
+
+// 7.1 — spike: local embeddings via llama.rn's own built-in embedding()
+// support, rather than a separate model. Same two-tier testing split as
+// completions above: initEmbeddingContext (drives llama.rn's real jest
+// mock, asserting OUR call shape) vs. embedText (a fake context stand-in,
+// since what's worth proving is the wrapper's own contract, not llama.rn's).
+describe("shared/llm — initEmbeddingContext", () => {
+  it("returns a context object for a valid model path", async () => {
+    const ctx = await initEmbeddingContext(MOCK_MODEL_PATH, CTX_LEN);
+    expect(ctx).toBeDefined();
+    await releaseLlm(ctx);
+  });
+
+  it("throws if model path is empty", async () => {
+    await expect(initEmbeddingContext("", CTX_LEN)).rejects.toThrow();
+  });
+
+  it("throws rather than loading a model with no usable context", async () => {
+    await expect(initEmbeddingContext(MOCK_MODEL_PATH, 0)).rejects.toThrow(
+      "Context length must be greater than zero",
+    );
+  });
+
+  // Regression risk this test guards against: llama.rn does not error on a
+  // context loaded without `embedding: true` — calling `.embedding()` on
+  // one just returns meaningless output, no exception. This flag is the
+  // one thing standing between a real embedding and silent garbage, so
+  // it's asserted explicitly rather than trusted to "obviously" be there.
+  it("loads the context with embedding mode enabled", async () => {
+    const ctx = await initEmbeddingContext(MOCK_MODEL_PATH, CTX_LEN);
+    expect(mockInitLlama).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: MOCK_MODEL_PATH,
+        n_ctx: CTX_LEN,
+        embedding: true,
+      }),
+    );
+    await releaseLlm(ctx);
+  });
+});
+
+function fakeEmbeddingContext(vector: number[] = [0.1, 0.2, 0.3]) {
+  const ctx = {
+    embedding: jest.fn(async () => ({ embedding: vector })),
+    release: jest.fn(async () => {}),
+  };
+  return { ctx: ctx as unknown as LlamaContext, spies: ctx };
+}
+
+describe("shared/llm — embedText", () => {
+  it("returns the embedding vector for the given text", async () => {
+    const { ctx } = fakeEmbeddingContext([1, 2, 3]);
+    const result = await embedText(ctx, "hello world");
+    expect(result.embedding).toEqual([1, 2, 3]);
+  });
+
+  it("passes the text through to the context's embedding call untouched", async () => {
+    const { ctx, spies } = fakeEmbeddingContext();
+    await embedText(ctx, "some capsule content");
+    expect(spies.embedding).toHaveBeenCalledWith("some capsule content");
+  });
+
+  it("throws without a context, rather than calling into a null native binding", async () => {
+    await expect(
+      embedText(null as unknown as LlamaContext, "text"),
+    ).rejects.toThrow();
+  });
+
+  it("throws on empty text rather than embedding nothing", async () => {
+    const { ctx } = fakeEmbeddingContext();
+    await expect(embedText(ctx, "")).rejects.toThrow("Text is required");
+  });
+
+  it("throws on whitespace-only text", async () => {
+    const { ctx } = fakeEmbeddingContext();
+    await expect(embedText(ctx, "   ")).rejects.toThrow("Text is required");
+  });
+
+  it("propagates a failure from the native layer", async () => {
+    const { ctx, spies } = fakeEmbeddingContext();
+    spies.embedding.mockRejectedValueOnce(new Error("native failure"));
+    await expect(embedText(ctx, "text")).rejects.toThrow("native failure");
   });
 });
