@@ -23,6 +23,11 @@ const ENTRIES = [
     hint: "Reusable system prompts",
     href: "/personas",
   },
+  {
+    label: "Snippets",
+    hint: "Reusable prompt text for chat",
+    href: "/snippets",
+  },
 ] as const;
 
 export default function SettingsScreen() {

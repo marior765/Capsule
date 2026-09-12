@@ -9,6 +9,7 @@ export default function AppLayout() {
       <Tabs.Screen name="settings" options={{ title: "Settings" }} />
       <Tabs.Screen name="models" options={{ href: null }} />
       <Tabs.Screen name="personas" options={{ href: null }} />
+      <Tabs.Screen name="snippets" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />
       <Tabs.Screen name="types" options={{ href: null }} />
     </Tabs>

@@ -25,6 +25,7 @@ import {
   getAttachmentsByCapsuleField,
   insertAttachment,
 } from "@/entities/attachment";
+import { insertSnippet, getAllSnippets } from "@/entities/snippet";
 import { createCapsuleType } from "@/features/manage-schema";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
@@ -147,5 +148,18 @@ describe("Providers' registered migrations", () => {
     expect(getEmbeddingByCapsule(db, capsule.id)?.embedding).toEqual([
       0.1, 0.2, 0.3,
     ]);
+  });
+
+  it("lets a snippet actually be created and listed through the real migration set (8.2)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    insertSnippet(db, {
+      id: "s-1",
+      title: "Summarize",
+      content: "Summarize the following in three bullet points:",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    expect(getAllSnippets(db).map((s) => s.title)).toEqual(["Summarize"]);
   });
 });
