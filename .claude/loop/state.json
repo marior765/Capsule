@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 45,
+    "beat": 46,
     "status": "running"
   },
   "cursor": {
-    "step": "8.2",
+    "step": "8.3",
     "phase": 8
   },
   "steps": {
@@ -327,12 +327,20 @@
       "notes": "Depends on 7.3 existing at all (shows which capsules a RAG response referenced) -- transitively blocked on the same 7.1 device decision. Not attempted."
     },
     "8.2": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
       "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": "7ff00dd",
-      "notes": "Storage+management half done: entities/snippet (CRUD, v19 migration, registered) + snippets/index.tsx (create/edit/list/delete, proper testIDs, linked from settings). Not wired into ChatInput yet -- inserting mid-typing needs a real design change (ChatInput owns its own internal text state, no append prop, only a remount-based initialText seed meant for edit-prefill). Next beat: redesign ChatInput to support external insertion, wire a snippet picker in. docs/DEVELOPMENT_PLAN.md box stays unchecked until both halves land, same pattern as 6.5/6.6/6.7."
+      "checkpoint": "b4d1255",
+      "notes": "Both halves done -- entities/snippet + snippets/index.tsx management screen (7ff00dd, beat 45) + SnippetPicker widget wired into both chat routes via the existing voice-insertion key-remount mechanism, generalized to draftInsertText/draftInsertKey (b4d1255, beat 46)."
+    },
+    "8.1": {
+      "status": "deferred",
+      "class": "ui",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Not started -- real, undefined product/security decisions (which cloud providers, consent UX, key storage, whether entities/audit needs a new action) intersecting the apps core privacy guarantee. Not a hard-rule violation (CLAUDE.md permits opt-in network features) but genuinely needs a human decision, not a guess. Full breakdown in BLOCKED.md. This was decided in beat 45s journal narrative but not recorded here until beat 46 caught the gap -- state.json is the actual input to step selection, prose in journal.md is not."
     }
   },
   "quarantinedThisRun": [],
@@ -340,8 +348,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-12T00:00:00Z",
-    "head": "7ff00dd",
-    "note": "62 suites, 759 tests passing after 8.2 snippet entity+management screen"
+    "at": "2026-09-12T00:30:00Z",
+    "head": "b4d1255",
+    "note": "62 suites, 759 tests passing after 8.2 completion (snippet insertion wired into chat)"
   }
 }

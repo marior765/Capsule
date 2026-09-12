@@ -145,7 +145,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 
 ### Phase 8 — Polish & depth
 - [ ] 8.1 Multiple backends toggle (optional cloud APIs behind consent gate)
-- [ ] 8.2 Prompt/snippet library
+- [x] 8.2 Prompt/snippet library
 - [ ] 8.3 Chat export as markdown
 - [ ] 8.4 Image/vision input (multimodal models)
 - [ ] 8.5 Capsule nesting + version history + bulk operations

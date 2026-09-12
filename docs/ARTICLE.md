@@ -1964,4 +1964,52 @@ lives in a completely different place depending on the answer.
 
 ---
 
+---
+
+### 2026-09-12 — A decision written in prose isn't a decision the system can see
+
+This run has a recurring lesson by now: a fact only counts once it's
+recorded where the thing that actually reads it will find it, not where
+a human (or a future version of the agent) would naturally look. Every
+prior instance was about application code — a migration that existed but
+was never added to the array `Providers` actually iterates, a cascade
+that was implemented but never called from the one function that deletes
+a capsule. This beat found the same failure shape one layer up, inside
+the loop's own bookkeeping.
+
+The previous beat had spent real effort deciding NOT to build a step
+(cloud backend support) unattended, and wrote a thorough explanation of
+why into the journal — the *narrative* record of what happened. But step
+selection, the actual mechanism that decides what the next beat works on,
+reads `state.json`, not journal prose. The decision was real, the
+reasoning was sound, and none of it was visible to the one process that
+needed to see it. Had this beat not re-derived the plan from scratch
+(rather than trusting "I already covered this last time"), the deferred
+step would have been silently re-selected the moment the current one
+finished — not because anyone disagreed with the deferral, but because
+the system had no way to know it had happened.
+
+The deeper pattern: a multi-file system of record (here, `state.json` for
+machine-readable state, `journal.md` for human narrative, `BLOCKED.md` for
+the human-decision queue, `DEVELOPMENT_PLAN.md` for the checklist) creates
+an implicit expectation that writing to *any* of them updates the shared
+truth. It doesn't. Each file is read by a different consumer for a
+different purpose, and a fact that matters to more than one of those
+consumers has to be written to all of them explicitly — writing it
+beautifully in one is worth exactly as much as not writing it at all, to
+every consumer that doesn't read that file.
+
+**Article angle:** "write it down" is not the same instruction as "write
+it where it will be read." An autonomous system with multiple state
+files (or, in a broader sense, any system with a narrative log and a
+separate operational state store) will keep re-deriving decisions it
+already made, in narrative form, until the habit becomes checking not
+just "did I record this" but "did I record this in the specific artifact
+whose job is to prevent me from redoing it." That's a sharper, more
+mechanical question than "did I document my reasoning" — and this run
+needed to hit it at the level of its own control state, not just at the
+level of the code it was writing, before the distinction fully landed.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

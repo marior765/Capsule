@@ -3090,4 +3090,63 @@ wiring next beat.
 
 ---
 
+## Beat 46 — 2026-09-12
+
+Normal start, health check clean, gate green on HEAD (`15028ad`). Cursor
+on 8.2, `in_progress` from beat 45 — the last piece: wire snippet
+insertion into chat.
+
+**Self-caught process gap before starting any new work**: beat 45's
+journal narrated a decision to defer 8.1 (cloud backends) and explained
+why at length — but never actually wrote that decision into `state.json`.
+Since step selection reads `state.json`, not journal prose, 8.1 was still
+`absent` (= pending) and would have been re-selected the moment 8.2
+finished. Caught it before touching 8.3, and it revealed a second gap in
+the same motion: no `BLOCKED.md` entry existed for 8.1 either, despite
+the "needs a decision" framing being exactly what that file exists for —
+a genuinely new category for this file (nothing was ever deferred-before-
+any-code-was-written before; 1.6.1 came closest but got resolved by
+installing the dependency, not left open). Added a new "## Needs a
+decision (not started)" section with the four concrete decisions actually
+blocking 8.1, and properly recorded the `deferred` status in `state.json`
+this time. The lesson from beats 34/37/44 (a decision only counts once
+it's actually where the *mechanism that reads it* looks) applies to the
+loop's own spine files, not just to migrations and cascades.
+
+**The actual wiring turned out much simpler than beat 45 assessed.**
+Re-reading `chat/[id].tsx` and `chat/ephemeral.tsx` fresh (per the
+contract — don't trust a prior beat's conclusion without re-verifying)
+surfaced an already-built, already-documented mechanism: `ChatInput`'s
+`key`+`initialText` remount pattern, built for voice transcription, with
+an existing code comment spelling out exactly why it's a wholesale-
+replace and not an append. Beat 45's "ChatInput needs a real design
+change" was wrong — it needed reuse, not redesign. Generalized
+`voiceText`/`voiceInsertKey` to `draftInsertText`/`draftInsertKey` (one
+shared pair, since both sources mean the identical thing: replace the
+draft) rather than adding a second, parallel insertion mechanism next to
+the first.
+
+New `SnippetPicker` widget (purely controlled, mirrors `TagPicker`/
+`RelationPicker`'s shape exactly) + a "Snippets" toggle in both routes,
+with real testIDs via `createComponentTestIDs` — neither route had any
+before, same scope stance as 8.2's prior beat took on `personas/index.tsx`
+(new elements get testIDs; the pre-existing untouched ones aren't
+retrofitted as a side effect). `ephemeral.tsx` got its first-ever db
+access (`useDb` + `getAllSnippets`, read-only) — its own doc comment
+previously claimed "this route never touches the database," which this
+change would make false; updated it to explain the one, read-only,
+non-session-persisting exception (the same "what does this change make
+newly false elsewhere" check from beat 30/39, applied a third time).
+
+Gate green: tsc clean, 62 suites / 759 tests (unchanged — no route/widget
+tests, matching convention). Checker: pass — traced the full "type
+something, pick a snippet" sequence against `ChatInput`'s actual remount
+semantics, grepped for zero remaining references to the old variable
+names, and ran the full suite itself.
+
+Checkpoint `b4d1255`. **8.2 (Prompt/snippet library) now fully done** —
+box ticked. Cursor advances to **8.3** (chat export as markdown).
+
+---
+
 <!-- Append new beats above this line. -->

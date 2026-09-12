@@ -15,6 +15,38 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ---
 
+## Needs a decision (not started)
+
+### 8.1 — Multiple backends toggle (optional cloud APIs behind consent gate)
+Not started — no code written. This isn't a hard rule violation (CLAUDE.md
+explicitly permits opt-in network features: "Network features must be
+opt-in, user-initiated, clearly isolated"), but the plan text ("optional
+cloud APIs behind consent gate") names no specific provider, no consent
+copy, and no key-storage mechanism. This would be the first place in the
+entire app where a deliberate escape hatch from "fully private" gets
+built — the app's single most sensitive design axis. Building against an
+arbitrary, self-chosen provider risks committing to a design the user
+never asked for.
+
+**Decisions needed before this is buildable:**
+1. Which provider(s) to support — a fixed list (OpenAI, Anthropic, etc.),
+   or a generic OpenAI-compatible-endpoint field the user fills in
+   themselves?
+2. Exact consent-gate copy and flow — what does the user see before their
+   messages leave the device for the first time, and how is that consent
+   re-surfaced (once per provider? every session?).
+3. API key storage — `expo-secure-store`/Keychain (same mechanism as the
+   planned vault key, 4.1), scoped per provider.
+4. Does selecting a cloud backend change any other guarantee elsewhere in
+   the app (e.g. does `entities/audit`, 4.3's privacy log, need a new
+   audit action for "sent to cloud backend" — CLAUDE.md already requires
+   audit entries for privacy-sensitive actions, and this is arguably the
+   most privacy-sensitive action the app could ever take)?
+
+Deferred rather than guessed at (2026-09 — see journal beat 45).
+
+---
+
 ## Needs a device / dev build
 
 ### 4.5 — `features/wipe-data` — secure full wipe (models, chats, settings)
