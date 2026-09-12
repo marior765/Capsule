@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
+import * as Clipboard from "expo-clipboard";
 import { useDb, useLlm, useStt } from "@/app/providers";
 import { getConversationById } from "@/entities/conversation";
 import { getChildren, getMessagePath, type Message } from "@/entities/message";
@@ -10,6 +11,7 @@ import {
   switchBranch,
 } from "@/features/branch-conversation";
 import { getInferenceSettings } from "@/features/configure-inference";
+import { exportConversationAsMarkdown } from "@/features/export-chat";
 import { sendMessage } from "@/features/send-message";
 import {
   createVoiceInputController,
@@ -215,12 +217,48 @@ export default function ChatScreen() {
     refresh();
   };
 
+  // Copies the visible branch as markdown — `expo-clipboard` is a local OS
+  // API (same one `ChatBubble`'s code-block copy already uses), not a
+  // network action. `getConversationById` here (rather than trusting some
+  // already-loaded conversation object) means the exported title is always
+  // whatever's actually saved right now, not a stale render's copy of it.
+  const [exported, setExported] = useState(false);
+  const handleExport = async () => {
+    if (!id) return;
+    const conversation = getConversationById(db, id);
+    if (!conversation) return;
+    try {
+      const markdown = exportConversationAsMarkdown(conversation, messages);
+      const ok = await Clipboard.setStringAsync(markdown);
+      if (ok) {
+        setExported(true);
+        setTimeout(() => setExported(false), 1500);
+      }
+    } catch {
+      // Clipboard access can fail for platform reasons outside this app's
+      // control — the button simply doesn't confirm; nothing to crash on.
+    }
+  };
+
   const contextUsed = messages.reduce((sum, m) => sum + m.tokenCount, 0);
   const canChat = status === "ready" && ctx != null;
 
   return (
     <View style={styles.root}>
-      <InferenceStats contextUsed={contextUsed} />
+      <View style={styles.statsRow}>
+        <InferenceStats contextUsed={contextUsed} />
+        {messages.length > 0 && (
+          <Pressable
+            testID={testIDs.buttons.export}
+            style={styles.exportButton}
+            onPress={handleExport}
+          >
+            <Text style={styles.exportLabel}>
+              {exported ? "Copied!" : "Export"}
+            </Text>
+          </Pressable>
+        )}
+      </View>
       <ChatThread
         messages={messages}
         streamingText={streaming}
@@ -304,6 +342,20 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  exportButton: {
+    paddingHorizontal: theme.spacing.three,
+    paddingVertical: theme.spacing.one,
+  },
+  exportLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
   // ChatInput already applies its own `padding: theme.spacing.three` on all
   // sides — this row only adds space for VoiceRecordButton, which sits
   // outside that padded box, not a second layer of padding around it.
@@ -348,5 +400,5 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("ChatScreen", {
-  buttons: ["snippets"] as const,
+  buttons: ["snippets", "export"] as const,
 });
