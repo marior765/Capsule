@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 46,
+    "beat": 47,
     "status": "running"
   },
   "cursor": {
-    "step": "8.3",
+    "step": "8.4",
     "phase": 8
   },
   "steps": {
@@ -341,6 +341,16 @@
       "failureSignatures": [],
       "checkpoint": null,
       "notes": "Not started -- real, undefined product/security decisions (which cloud providers, consent UX, key storage, whether entities/audit needs a new action) intersecting the apps core privacy guarantee. Not a hard-rule violation (CLAUDE.md permits opt-in network features) but genuinely needs a human decision, not a guess. Full breakdown in BLOCKED.md. This was decided in beat 45s journal narrative but not recorded here until beat 46 caught the gap -- state.json is the actual input to step selection, prose in journal.md is not."
+    },
+    "8.3": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- .trimEnd() on the whole joined document silently stripped trailing whitespace off the LAST messages own content, contradicting the passed through untouched claim"
+      ],
+      "checkpoint": "3df5478",
+      "notes": "exportConversationAsMarkdown (pure) + Export button in chat/[id].tsx (expo-clipboard, mirrors ChatBubbles copy pattern). Not wired into chat/ephemeral.tsx -- no persisted Conversation entity exists there at all (checker-confirmed genuine scope boundary, not an oversight). Self-caught bug via checker round 1 (trimEnd ate real trailing whitespace off the last messages content), fixed + 2 regression tests, checker round 2 pass."
     }
   },
   "quarantinedThisRun": [],
@@ -348,8 +358,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-12T00:30:00Z",
-    "head": "b4d1255",
-    "note": "62 suites, 759 tests passing after 8.2 completion (snippet insertion wired into chat)"
+    "at": "2026-09-13T00:00:00Z",
+    "head": "3df5478",
+    "note": "63 suites, 770 tests passing after 8.3 completion (chat export as markdown)"
   }
 }

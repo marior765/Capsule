@@ -146,7 +146,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 ### Phase 8 — Polish & depth
 - [ ] 8.1 Multiple backends toggle (optional cloud APIs behind consent gate)
 - [x] 8.2 Prompt/snippet library
-- [ ] 8.3 Chat export as markdown
+- [x] 8.3 Chat export as markdown — wired into chat/[id].tsx (persisted chat); chat/ephemeral.tsx has no persisted Conversation entity to export at all, so it's out of scope, not deferred
 - [ ] 8.4 Image/vision input (multimodal models)
 - [ ] 8.5 Capsule nesting + version history + bulk operations
 - [ ] 8.6 Quick capture + command palette

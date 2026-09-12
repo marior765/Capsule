@@ -3149,4 +3149,59 @@ box ticked. Cursor advances to **8.3** (chat export as markdown).
 
 ---
 
+## Beat 47 — 2026-09-13
+
+Normal start, health check clean, gate green on HEAD (`02811b1`). Cursor
+on 8.3 — "Chat export as markdown."
+
+Scoped to `chat/[id].tsx` only, not `chat/ephemeral.tsx` — verified
+before writing anything that ephemeral chat genuinely has no persisted
+`Conversation` entity anywhere (only in-memory `messages` state and a
+`generateId()`'d `sessionId`; `sendEphemeralMessage`'s own doc comment
+already says it never persists). Wiring export there would mean
+inventing a synthetic conversation object with no real backing —
+correctly out of scope, not a deferred gap, and the checker independently
+confirmed this reasoning held rather than taking it on faith.
+
+`exportConversationAsMarkdown` (pure): title heading (falling back to
+"Untitled conversation"), then one `**Role:**` + content block per
+message, all three `MessageRole` variants handled (a `Record<MessageRole,
+string>` makes a missing case a compile error, not a runtime gap).
+Export button wired next to `InferenceStats`, copying via
+`expo-clipboard` — deliberately mirrored `ChatBubble`'s existing
+code-block-copy pattern line-for-line (try/catch, `ok`-gated success
+state, 1.5s timeout) rather than inventing a new clipboard-handling shape
+for what's functionally the same action.
+
+**Self-caught bug, but by the checker this time, not by my own first
+pass** — worth naming honestly rather than glossing over: the first
+implementation called `.trimEnd()` on the whole joined markdown document
+to clean up its own trailing blank-line formatting. That also silently
+stripped trailing whitespace off the LAST message's own content (a
+markdown hard-break, `"text  "`) — directly contradicting the function's
+own docstring claim that content is "passed through completely
+untouched." Every existing test's "untouched" case happened to use a
+code fence with no trailing whitespace, so nothing caught it before
+review. Fixed by restructuring the line-building (blank line BEFORE each
+role label, never after content) so the final newline is safe to append
+unconditionally, no trim needed anywhere. Two new regression tests — one
+for the last message, one for a non-last message, specifically to prove
+the fix removed the bug rather than just relocating it to a spot the
+first fix might have missed. Verified by temporarily reverting the fix
+and watching the new test fail for the right reason before restoring it.
+
+11 tests total. Gate: tsc clean, 63 suites / 770 tests, eslint clean
+after `--fix`. Checker: two passes — round 1 caught the `trimEnd` bug
+with a concrete reproducible case; round 2 independently re-traced the
+fixed line-building logic by hand for zero/one/three-message cases and
+reproduced the original bug itself (reverting, watching it fail, restoring)
+rather than trusting that "a fix was applied" meant it worked.
+
+Checkpoint `3df5478`. **8.3 fully done** — box ticked, annotated with the
+ephemeral-chat scope boundary so a future reader doesn't mistake "not
+wired into ephemeral chat" for an oversight. Cursor advances to **8.4**
+(image/vision input — multimodal models).
+
+---
+
 <!-- Append new beats above this line. -->
