@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 44,
+    "beat": 45,
     "status": "running"
   },
   "cursor": {
-    "step": "8.1",
+    "step": "8.2",
     "phase": 8
   },
   "steps": {
@@ -325,6 +325,14 @@
       "failureSignatures": [],
       "checkpoint": null,
       "notes": "Depends on 7.3 existing at all (shows which capsules a RAG response referenced) -- transitively blocked on the same 7.1 device decision. Not attempted."
+    },
+    "8.2": {
+      "status": "in_progress",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "7ff00dd",
+      "notes": "Storage+management half done: entities/snippet (CRUD, v19 migration, registered) + snippets/index.tsx (create/edit/list/delete, proper testIDs, linked from settings). Not wired into ChatInput yet -- inserting mid-typing needs a real design change (ChatInput owns its own internal text state, no append prop, only a remount-based initialText seed meant for edit-prefill). Next beat: redesign ChatInput to support external insertion, wire a snippet picker in. docs/DEVELOPMENT_PLAN.md box stays unchecked until both halves land, same pattern as 6.5/6.6/6.7."
     }
   },
   "quarantinedThisRun": [],
@@ -332,8 +340,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-07T01:15:00Z",
-    "head": "c52b21d",
-    "note": "61 suites, 750 tests passing after 7.2 capsule-rag mechanism"
+    "at": "2026-09-12T00:00:00Z",
+    "head": "7ff00dd",
+    "note": "62 suites, 759 tests passing after 8.2 snippet entity+management screen"
   }
 }

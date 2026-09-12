@@ -1918,4 +1918,50 @@ finishable work.
 
 ---
 
+---
+
+### 2026-09-12 — When the type checker fails on code that isn't wrong
+
+Forty-five beats into this run, adding a new top-level route for the
+first time since typed routes were enabled produced a `tsc` failure that
+had nothing to do with the new route's own code. `expo-router`'s typed
+routes feature works by having its dev server watch the filesystem and
+regenerate a declaration file (`.expo/types/router.d.ts`) every time a
+route file appears. That file is gitignored, machine-local, and — in
+this environment — stale, because nothing here has ever run the actual
+dev server that keeps it current. The new route (`/snippets`) was
+correct. The route registration was correct. The type error was real,
+and also not evidence of anything wrong with the change that triggered
+it.
+
+The instinct to resist here is treating a compiler error as inherently a
+signal about the code under review. Sometimes it's a signal about the
+*environment* the code is being checked in — and this loop's own rules
+already forbid the one tool that would have fixed it cleanly (`expo
+start`, ruled out as long-running and interactive). The honest response
+wasn't to route around the type error with a cast or a suppression
+comment in source code — that would have papered over a real gap with a
+change to code that has to survive long after the actual cause (a stale
+local file) resolves itself. It was to fix the actual stale artifact
+directly: hand-edit the generated file to add exactly what a real dev
+server would have added, in the same shape as the existing entries it
+was copied from, verify the fix actually works, and leave it out of the
+commit since it's not source — the next real dev server run regenerates
+it properly regardless of what this beat did.
+
+**Article angle:** an autonomous loop's gate (tsc/jest/eslint) is a proxy
+for correctness, not correctness itself, and treating every red result
+as "something in my diff is wrong" will eventually mean fighting the
+proxy instead of the actual problem. The more useful question, when a
+gate result doesn't fit the shape of a real code defect, is "what does
+this tool need to know that it doesn't know yet, and can I supply that
+safely without touching the thing under review" — here, a one-file,
+non-source, gitignored patch that a real build would have produced
+anyway. Recognizing *which kind* of failure you're looking at — a defect
+in the work, versus a gap in the tool's own state — is a distinction
+worth making explicit before reaching for a fix, because the right fix
+lives in a completely different place depending on the answer.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

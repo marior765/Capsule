@@ -3021,4 +3021,73 @@ decision.
 
 ---
 
+## Beat 45 — 2026-09-07/12 (continuation after a session interruption + gap)
+
+Picked up mid-turn again: the prior session had built and checker-approved
+8.2's entity + management-screen half (`entities/snippet`,
+`snippets/index.tsx`, migration registration) but was interrupted before
+checkpointing. Same recovery shape as beat 42's resume: read the spine
+fresh, confirmed the dirty tree matched exactly what a completed,
+reviewed beat would leave behind, re-ran the full gate from scratch
+rather than trusting the stale checker verdict, got byte-identical
+results (62 suites / 759 tests), and finished the step.
+
+**Before finishing**, this beat first weighed and rejected 8.1
+("Multiple backends toggle — optional cloud APIs behind consent gate"):
+CLAUDE.md explicitly permits opt-in network features ("Network features
+must be opt-in, user-initiated, clearly isolated"), so this isn't a hard
+rule violation — but the plan text names no specific provider, no consent
+copy, no key-storage mechanism, and this would be the first place in the
+entire app where a deliberate escape hatch from "fully private" gets
+built. Building against an arbitrary, self-chosen provider risks
+committing to a design the user never asked for, on the app's single most
+sensitive design axis. Deferred rather than guessed — moved to 8.2
+instead, which has no such ambiguity.
+
+**Scope decision for 8.2 itself**: `Persona` has no `features/` layer at
+all — `personas/index.tsx` calls `insertPersona`/`updatePersona`/
+`deletePersona` directly, with `generateId()` inline in the route.
+`Snippet` is architecturally identical (no relations, no cross-entity
+composition), so the same precedent applies: no `features/manage-snippets`
+needed. `entities/snippet` + a `snippets/index.tsx` management screen
+(create/edit/list/delete) modeled on `personas/index.tsx`'s structure —
+**except** `personas/index.tsx` itself has zero testIDs (a known,
+already-tracked pre-existing gap in `BLOCKED.md`), and new code doesn't
+get to inherit that gap just because it copies the screen's structure.
+Added real testIDs via `createComponentTestIDs` throughout.
+
+Applied the migration-registration lesson proactively for the **fifth**
+domain in a row (registered `snippetsMigration`, verified red-then-green)
+— no delete-capsule cascade needed this time, since snippets have no
+relation to capsules at all.
+
+**Process note, worth naming explicitly**: adding a new route
+(`snippets/index.tsx`) broke `tsc --noEmit` — expo-router's typed-routes
+feature generates `.expo/types/router.d.ts` via the Metro dev server, and
+that file was stale (missing the new route), which this loop cannot fix
+by running `expo start` (forbidden — long-running, interactive). Since
+the file is gitignored and purely a local dev-time type-checking aid,
+hand-patched it to add the `/snippets` entries in the same shape as the
+existing `/personas` ones, verified `tsc` goes clean, and left it out of
+the commit entirely — a real dev server will regenerate it correctly the
+next time someone runs one. This is a new failure mode for this run
+(first time a NEW top-level route was added since typed routes were
+enabled) — worth remembering: any future beat adding a brand-new route
+will hit this same stale-generated-file wall and can resolve it the same
+way.
+
+Chat-insertion wiring deliberately NOT attempted: `ChatInput` owns its
+own internal `text` state with no prop for a parent to append into it —
+only a remount-based `initialText` seed, documented as meant for
+edit-message-prefill, not mid-typing insertion. Making a snippet
+insertable is a real, separate design change (lifting text state up, or
+adding an imperative append API), not something to rush as an addendum.
+
+Checkpoint `7ff00dd`. Same split pattern as 6.5/6.6/6.7: storage +
+management half done, `docs/DEVELOPMENT_PLAN.md`'s 8.2 box stays
+unchecked, cursor **stays on 8.2** for the ChatInput redesign + insertion
+wiring next beat.
+
+---
+
 <!-- Append new beats above this line. -->
