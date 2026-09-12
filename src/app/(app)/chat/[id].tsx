@@ -15,9 +15,12 @@ import {
   createVoiceInputController,
   type VoiceInputController,
 } from "@/features/voice-input";
+import { getAllSnippets, type Snippet } from "@/entities/snippet";
+import { createComponentTestIDs } from "@/shared/testing";
 import { ChatInput } from "@/widgets/ChatInput";
 import { ChatThread, type BranchPosition } from "@/widgets/ChatThread";
 import { InferenceStats } from "@/widgets/InferenceStats";
+import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
 
 const STATUS_MESSAGE: Record<string, string> = {
@@ -63,20 +66,42 @@ export default function ChatScreen() {
   // versa — two different failure modes with nothing to do with each other.
   const [isRecording, setIsRecording] = useState(false);
   const voiceControllerRef = useRef<VoiceInputController | null>(null);
-  const [voiceText, setVoiceText] = useState<string | null>(null);
-  const [voiceInsertKey, setVoiceInsertKey] = useState(0);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+
+  // `draftInsertText`/`draftInsertKey`: the shared "replace whatever's
+  // typed" mechanism ChatInput exposes via key-remount — originally built
+  // for voice transcription, now also driving snippet insertion (8.2).
+  // One shared pair, not two parallel ones: both are "wholesale-replace
+  // the draft" in the exact same sense, and a single remount key avoids
+  // two insertion sources racing to decide whose text wins on the same
+  // render.
+  const [draftInsertText, setDraftInsertText] = useState<string | null>(null);
+  const [draftInsertKey, setDraftInsertKey] = useState(0);
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [showSnippetPicker, setShowSnippetPicker] = useState(false);
 
   const refresh = useCallback(() => setMessages(readPath()), [readPath]);
 
   // The only way `editing` ever changes to a non-null value — routes
-  // through here rather than `setEditing` directly so a stale `voiceText`
-  // from an earlier, unrelated recording can never resurface if the user
-  // starts, then cancels, an edit. The button is also disabled while
-  // editing (below), so this is about the *next* time it's used, not this one.
+  // through here rather than `setEditing` directly so stale draft-insert
+  // text from an earlier, unrelated voice recording or snippet pick can
+  // never resurface if the user starts, then cancels, an edit. The button
+  // is also disabled while editing (below), so this is about the *next*
+  // time it's used, not this one.
   const beginEditing = (message: Message) => {
-    setVoiceText(null);
+    setDraftInsertText(null);
     setEditing(message);
+  };
+
+  const handleOpenSnippetPicker = () => {
+    setSnippets(getAllSnippets(db));
+    setShowSnippetPicker(true);
+  };
+
+  const handleInsertSnippet = (snippet: Snippet) => {
+    setDraftInsertText(snippet.content);
+    setDraftInsertKey((k) => k + 1);
+    setShowSnippetPicker(false);
   };
 
   const handleVoiceHoldStart = () => {
@@ -99,8 +124,8 @@ export default function ChatScreen() {
         // This replaces whatever was typed rather than appending to it;
         // ChatInput doesn't expose its live text to the parent, and this
         // matches how the edit flow already reseeds it wholesale.
-        setVoiceText(text);
-        setVoiceInsertKey((k) => k + 1);
+        setDraftInsertText(text);
+        setDraftInsertKey((k) => k + 1);
       }
     } catch (e) {
       setVoiceError(
@@ -221,28 +246,46 @@ export default function ChatScreen() {
         </Pressable>
       )}
       {canChat ? (
-        <View style={styles.inputRow}>
-          <VoiceRecordButton
-            isRecording={isRecording}
-            // Voice input while editing is deliberately not supported —
-            // `initialText` below always shows `editing.content` while
-            // editing is active, so a transcription captured mid-edit would
-            // be silently discarded on the very next render. Disabling the
-            // button avoids that trap rather than papering over it.
-            disabled={!!editing}
-            onHoldStart={handleVoiceHoldStart}
-            onHoldCommit={handleVoiceHoldCommit}
-            onHoldCancel={handleVoiceHoldCancel}
-          />
-          <View style={styles.inputFlex}>
-            <ChatInput
-              key={`${editing?.id ?? "new"}-${voiceInsertKey}`}
-              initialText={editing?.content ?? voiceText ?? ""}
-              sendLabel={editing ? "Resend" : "Send"}
-              onSend={handleSend}
+        <>
+          {showSnippetPicker && (
+            <SnippetPicker snippets={snippets} onSelect={handleInsertSnippet} />
+          )}
+          <View style={styles.inputRow}>
+            <VoiceRecordButton
+              isRecording={isRecording}
+              // Voice input while editing is deliberately not supported —
+              // `initialText` below always shows `editing.content` while
+              // editing is active, so a transcription captured mid-edit would
+              // be silently discarded on the very next render. Disabling the
+              // button avoids that trap rather than papering over it.
+              disabled={!!editing}
+              onHoldStart={handleVoiceHoldStart}
+              onHoldCommit={handleVoiceHoldCommit}
+              onHoldCancel={handleVoiceHoldCancel}
             />
+            <Pressable
+              testID={testIDs.buttons.snippets}
+              style={styles.snippetsButton}
+              onPress={() =>
+                showSnippetPicker
+                  ? setShowSnippetPicker(false)
+                  : handleOpenSnippetPicker()
+              }
+            >
+              <Text style={styles.snippetsLabel}>
+                {showSnippetPicker ? "Close" : "Snippets"}
+              </Text>
+            </Pressable>
+            <View style={styles.inputFlex}>
+              <ChatInput
+                key={`${editing?.id ?? "new"}-${draftInsertKey}`}
+                initialText={editing?.content ?? draftInsertText ?? ""}
+                sendLabel={editing ? "Resend" : "Send"}
+                onSend={handleSend}
+              />
+            </View>
           </View>
-        </View>
+        </>
       ) : status === "loading" ? (
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
@@ -273,6 +316,15 @@ const styles = StyleSheet.create((theme) => ({
   inputFlex: {
     flex: 1,
   },
+  snippetsButton: {
+    paddingHorizontal: theme.spacing.two,
+    paddingVertical: theme.spacing.three,
+  },
+  snippetsLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
   status: {
     padding: theme.spacing.three,
     textAlign: "center",
@@ -294,3 +346,7 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
   },
 }));
+
+const testIDs = createComponentTestIDs("ChatScreen", {
+  buttons: ["snippets"] as const,
+});

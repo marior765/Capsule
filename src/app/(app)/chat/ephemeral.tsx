@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useLlm, useStt } from "@/app/providers";
+import { useDb, useLlm, useStt } from "@/app/providers";
 import type { Message } from "@/entities/message";
 import { getInferenceSettings } from "@/features/configure-inference";
 import { sendEphemeralMessage } from "@/features/send-message";
@@ -10,9 +10,12 @@ import {
   createVoiceInputController,
   type VoiceInputController,
 } from "@/features/voice-input";
+import { getAllSnippets, type Snippet } from "@/entities/snippet";
 import { generateId } from "@/shared/lib";
+import { createComponentTestIDs } from "@/shared/testing";
 import { ChatInput } from "@/widgets/ChatInput";
 import { ChatThread } from "@/widgets/ChatThread";
+import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
 
 const STATUS_MESSAGE: Record<string, string> = {
@@ -23,11 +26,16 @@ const STATUS_MESSAGE: Record<string, string> = {
 };
 
 /**
- * A session-only chat. Everything lives in component state and is discarded
- * when the screen unmounts — this route never touches the database, and
- * `sendEphemeralMessage` has no handle to do so even if it wanted to.
+ * A session-only chat. Messages/streaming live in component state and are
+ * discarded when the screen unmounts — `sendEphemeralMessage` has no db
+ * handle and never persists a message or conversation. The one exception
+ * is reading (never writing) `entities/snippet` for the snippet picker —
+ * snippets are a user-level library, not conversation state, so "nothing
+ * here is saved to disk" (the banner below) still holds for chat content;
+ * only an existing, already-saved snippet gets read, never created here.
  */
 export default function EphemeralChatScreen() {
+  const db = useDb();
   const { ctx, status } = useLlm();
   const { ensureReady } = useStt();
 
@@ -37,9 +45,27 @@ export default function EphemeralChatScreen() {
 
   const [isRecording, setIsRecording] = useState(false);
   const voiceControllerRef = useRef<VoiceInputController | null>(null);
-  const [voiceText, setVoiceText] = useState<string | null>(null);
-  const [voiceInsertKey, setVoiceInsertKey] = useState(0);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+
+  // `draftInsertText`/`draftInsertKey`: the shared "replace whatever's
+  // typed" mechanism ChatInput exposes via key-remount — originally built
+  // for voice transcription, now also driving snippet insertion (8.2). One
+  // shared pair, not two parallel ones — see chat/[id].tsx's identical note.
+  const [draftInsertText, setDraftInsertText] = useState<string | null>(null);
+  const [draftInsertKey, setDraftInsertKey] = useState(0);
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [showSnippetPicker, setShowSnippetPicker] = useState(false);
+
+  const handleOpenSnippetPicker = () => {
+    setSnippets(getAllSnippets(db));
+    setShowSnippetPicker(true);
+  };
+
+  const handleInsertSnippet = (snippet: Snippet) => {
+    setDraftInsertText(snippet.content);
+    setDraftInsertKey((k) => k + 1);
+    setShowSnippetPicker(false);
+  };
 
   const handleVoiceHoldStart = () => {
     setVoiceError(null);
@@ -56,8 +82,8 @@ export default function EphemeralChatScreen() {
     try {
       const { text } = await controller.commit();
       if (text.trim()) {
-        setVoiceText(text);
-        setVoiceInsertKey((k) => k + 1);
+        setDraftInsertText(text);
+        setDraftInsertKey((k) => k + 1);
       }
     } catch (e) {
       setVoiceError(
@@ -116,21 +142,39 @@ export default function EphemeralChatScreen() {
         </Pressable>
       )}
       {canChat ? (
-        <View style={styles.inputRow}>
-          <VoiceRecordButton
-            isRecording={isRecording}
-            onHoldStart={handleVoiceHoldStart}
-            onHoldCommit={handleVoiceHoldCommit}
-            onHoldCancel={handleVoiceHoldCancel}
-          />
-          <View style={styles.inputFlex}>
-            <ChatInput
-              key={voiceInsertKey}
-              initialText={voiceText ?? ""}
-              onSend={handleSend}
+        <>
+          {showSnippetPicker && (
+            <SnippetPicker snippets={snippets} onSelect={handleInsertSnippet} />
+          )}
+          <View style={styles.inputRow}>
+            <VoiceRecordButton
+              isRecording={isRecording}
+              onHoldStart={handleVoiceHoldStart}
+              onHoldCommit={handleVoiceHoldCommit}
+              onHoldCancel={handleVoiceHoldCancel}
             />
+            <Pressable
+              testID={testIDs.buttons.snippets}
+              style={styles.snippetsButton}
+              onPress={() =>
+                showSnippetPicker
+                  ? setShowSnippetPicker(false)
+                  : handleOpenSnippetPicker()
+              }
+            >
+              <Text style={styles.snippetsLabel}>
+                {showSnippetPicker ? "Close" : "Snippets"}
+              </Text>
+            </Pressable>
+            <View style={styles.inputFlex}>
+              <ChatInput
+                key={draftInsertKey}
+                initialText={draftInsertText ?? ""}
+                onSend={handleSend}
+              />
+            </View>
           </View>
-        </View>
+        </>
       ) : status === "loading" ? (
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
@@ -175,6 +219,15 @@ const styles = StyleSheet.create((theme) => ({
   inputFlex: {
     flex: 1,
   },
+  snippetsButton: {
+    paddingHorizontal: theme.spacing.two,
+    paddingVertical: theme.spacing.three,
+  },
+  snippetsLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
   error: {
     paddingHorizontal: theme.spacing.three,
     paddingTop: theme.spacing.two,
@@ -183,3 +236,7 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
   },
 }));
+
+const testIDs = createComponentTestIDs("EphemeralChatScreen", {
+  buttons: ["snippets"] as const,
+});
