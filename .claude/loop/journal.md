@@ -3547,4 +3547,72 @@ operations' UI (multi-select mode + action bar in `capsules/index.tsx`).
 
 ---
 
+## Beat 53 — 8.5 Capsule nesting UI (scoped: nesting only)
+
+Second UI beat for 8.5, following the same pattern as version history's:
+a new purely-controlled widget plus route wiring on the existing capsule
+detail screen, no new tests needed since the route only composes already
+fully-tested feature functions.
+
+`widgets/ParentPicker` mirrors `RelationPicker`'s established pick-to-
+link/tap-to-clear shape almost exactly, just narrowed to a single slot —
+a capsule has at most one parent, so there's no "linked list" to render,
+only a current value (or a "root capsule" empty state) and a clear
+action. The one real design decision: whether to pre-filter the pick-
+list to exclude a capsule's own descendants, preventing a doomed cycle
+attempt before the user even taps it. Decided against it, on purpose,
+and said so directly in the widget's own doc comment — doing that
+correctly would mean re-implementing `wouldCreateCycle`'s ancestor-walk
+a second time in the UI layer, a client-side shadow copy of business
+logic that already lives, tested, one layer down in `features/nest-
+capsule`. Simpler and more honest to let the real rejection happen and
+display whatever error comes back, matching this codebase's general
+preference for one source of truth over a client-side approximation of
+it — the same reasoning bulk operations' beat used for where its own
+logic could live, applied here to a UX trade-off instead of an
+architectural placement.
+
+That decision has a sharp edge worth being explicit about: setting a
+parent can now genuinely fail at the UI layer, for the first time on
+this screen. Every other "apply immediately" handler already here (tags,
+relation links) always succeeds — `setCapsuleParent` can throw. Before
+writing the handler, checked the DB doesn't actually apply symmetrically
+in the failure direction: read `features/nest-capsule`'s own
+`setCapsuleParent` to confirm clearing a parent (`parentId: null`)
+skips the cycle check entirely and can never throw — verified against
+the source, not assumed, before leaving `handleClearParent` unguarded.
+Getting this backwards (guarding the wrong handler, or not guarding the
+one that needs it) would have meant either dead error-handling code or a
+live crash on a common action.
+
+Also added a plain read-only "Children" list directly in the route,
+un-widgeted — a tap-to-navigate list has no interactive state worth a
+dedicated purely-controlled component, matching how this same screen
+already renders its non-relation fields inline rather than through a
+widget for exactly the same reason.
+
+No new tests: everything this beat touches is either trivial JSX
+(`ParentPicker`, matching `RelationPicker`/`TagPicker`/`VersionHistory`'s
+own no-dedicated-test precedent) or a straight composition of already-
+tested feature functions (`setCapsuleParent`, `getChildCapsules`,
+`getCapsuleById`) at the route layer, where this codebase has never put
+tests. Gate: tsc clean, jest 854/854 (67 suites, unchanged), eslint
+clean. Checker: pass on first attempt — independently confirmed the
+null-parent-never-throws claim by reading the same source, traced every
+state-update path (parent set on success via a real re-fetch, not a
+fabricated object; cleared to null; error set on failure and cleared on
+a subsequent success), and confirmed every interactive element's testID
+follows the established dynamic-suffix pattern.
+
+Checkpoint `d405b5a`. Two of 8.5's three sub-features now have complete
+UI — version history and nesting. Only bulk operations remains
+UI-less. `docs/DEVELOPMENT_PLAN.md`'s 8.5 box stays **unchecked**.
+Cursor stays at **8.5** — next beat's natural (and likely final, for
+this plan line) work is bulk operations' UI: a multi-select mode and
+action bar in `capsules/index.tsx`/`CapsuleList`, composed with
+`runBulkOperation` and the existing single-item feature functions
+(`deleteCapsule`, `tagCapsule`) as its first real caller.
+
+---
+
 <!-- Append new beats above this line. -->
