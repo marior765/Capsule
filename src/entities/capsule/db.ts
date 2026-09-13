@@ -49,6 +49,22 @@ export const capsuleValuesMigration: Migration = {
   },
 };
 
+/**
+ * Adds `parent_capsule_id` for 8.5 "capsule nesting" — a plain nullable
+ * column rather than a new table, since (per `model.ts`'s doc comment)
+ * this is a single-parent tree field on the capsule itself, not a
+ * many-to-many relation. No FK constraint, matching every other
+ * capsule-to-capsule reference in this codebase — a parent can be
+ * deleted (see `orphanChildCapsules` in `features/delete-capsule`) and
+ * children degrade gracefully to root-level rather than becoming invalid.
+ */
+export const capsuleParentIdMigration: Migration = {
+  version: 20,
+  up: (db: SQLiteDatabase) => {
+    db.execSync(`ALTER TABLE capsules ADD COLUMN parent_capsule_id TEXT;`);
+  },
+};
+
 // --- Capsule ---
 
 export function getAllCapsules(db: SQLiteDatabase): Capsule[] {
@@ -81,14 +97,27 @@ export function getCapsuleById(db: SQLiteDatabase, id: string): Capsule | null {
 
 export function insertCapsule(db: SQLiteDatabase, capsule: Capsule): void {
   db.runSync(
-    `INSERT INTO capsules (id, capsule_type_id, title, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?);`,
+    `INSERT INTO capsules (id, capsule_type_id, title, parent_capsule_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?);`,
     capsule.id,
     capsule.capsuleTypeId,
     capsule.title,
+    capsule.parentCapsuleId,
     capsule.createdAt,
     capsule.updatedAt,
   );
+}
+
+/** Every capsule whose `parentCapsuleId` is this one — the "children of X" query nesting exists for. */
+export function getChildCapsules(
+  db: SQLiteDatabase,
+  parentId: string,
+): Capsule[] {
+  const rows = db.getAllSync(
+    `SELECT * FROM capsules WHERE parent_capsule_id = ? ORDER BY updated_at DESC;`,
+    parentId,
+  ) as CapsuleRow[];
+  return rows.map(rowToCapsule);
 }
 
 export function updateCapsule(
@@ -102,6 +131,10 @@ export function updateCapsule(
   if (patch.title !== undefined) {
     fields.push("title = ?");
     values.push(patch.title);
+  }
+  if (patch.parentCapsuleId !== undefined) {
+    fields.push("parent_capsule_id = ?");
+    values.push(patch.parentCapsuleId);
   }
   if (patch.createdAt !== undefined) {
     fields.push("created_at = ?");
@@ -123,6 +156,25 @@ export function updateCapsule(
 
 export function deleteCapsule(db: SQLiteDatabase, id: string): void {
   db.runSync("DELETE FROM capsules WHERE id = ?;", id);
+}
+
+/**
+ * Clears `parent_capsule_id` on every direct child of `parentId`, promoting
+ * them back to root-level capsules — called from `features/delete-capsule`'s
+ * cascade before the parent record itself is removed. Active cleanup, not
+ * graceful degradation: unlike cross-entity references (CapsuleType,
+ * CapsuleLink target), nesting is a same-entity structural field, so a
+ * dangling `parent_capsule_id` would silently orphan a child from every
+ * "children of X" query rather than just degrading one display.
+ */
+export function orphanChildCapsules(
+  db: SQLiteDatabase,
+  parentId: string,
+): void {
+  db.runSync(
+    "UPDATE capsules SET parent_capsule_id = NULL WHERE parent_capsule_id = ?;",
+    parentId,
+  );
 }
 
 // --- CapsuleValue ---

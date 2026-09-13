@@ -1,7 +1,11 @@
 // Tests for step 6.5 — written before implementation (TDD)
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
-import { capsulesMigration, capsuleValuesMigration } from "@/entities/capsule";
+import {
+  capsuleParentIdMigration,
+  capsulesMigration,
+  capsuleValuesMigration,
+} from "@/entities/capsule";
 import { createCapsule } from "@/features/create-capsule";
 import { searchCapsules } from "../index";
 
@@ -10,7 +14,11 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [capsulesMigration, capsuleValuesMigration]);
+  runMigrations(db, [
+    capsulesMigration,
+    capsuleValuesMigration,
+    capsuleParentIdMigration,
+  ]);
 });
 
 describe("searchCapsules", () => {

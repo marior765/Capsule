@@ -2,6 +2,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  capsuleParentIdMigration,
   capsulesMigration,
   capsuleValuesMigration,
   getCapsuleById,
@@ -19,7 +20,11 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [capsulesMigration, capsuleValuesMigration]);
+  runMigrations(db, [
+    capsulesMigration,
+    capsuleValuesMigration,
+    capsuleParentIdMigration,
+  ]);
 });
 
 describe("renameCapsule", () => {

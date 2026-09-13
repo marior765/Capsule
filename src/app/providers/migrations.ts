@@ -14,6 +14,7 @@ import {
   capsulesMigration,
   capsuleValuesMigration,
   capsuleEmbeddingsMigration,
+  capsuleParentIdMigration,
 } from "@/entities/capsule";
 import { capsuleTagsMigration, tagsMigration } from "@/entities/tag";
 import { capsuleLinksFieldIdMigration, linksMigration } from "@/entities/link";
@@ -54,4 +55,5 @@ export const migrations: Migration[] = [
   attachmentsMigration,
   capsuleEmbeddingsMigration,
   snippetsMigration,
+  capsuleParentIdMigration,
 ];

@@ -4,6 +4,7 @@ import type { LlamaContext } from "@/shared/llm";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
   capsuleEmbeddingsMigration,
+  capsuleParentIdMigration,
   capsulesMigration,
   capsuleValuesMigration,
   getEmbeddingByCapsule,
@@ -20,6 +21,7 @@ beforeEach(() => {
     capsulesMigration,
     capsuleValuesMigration,
     capsuleEmbeddingsMigration,
+    capsuleParentIdMigration,
   ]);
 });
 

@@ -9,6 +9,8 @@ import { generateId } from "@/shared/lib";
 export type CreateCapsuleInput = {
   capsuleTypeId: string;
   title?: string;
+  /** Nesting (8.5) — omit or pass null for a root-level capsule. */
+  parentCapsuleId?: string | null;
   /** fieldId -> initial value, matching CapsuleValue.value's shape. */
   values?: Record<string, string | null>;
 };
@@ -29,6 +31,7 @@ export function createCapsule(
     id: generateId(),
     capsuleTypeId: input.capsuleTypeId,
     title: input.title ?? "Untitled",
+    parentCapsuleId: input.parentCapsuleId ?? null,
     createdAt: now,
     updatedAt: now,
   };

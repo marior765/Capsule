@@ -30,6 +30,7 @@ import { createCapsuleType } from "@/features/manage-schema";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
+import { setCapsuleParent } from "@/features/nest-capsule";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -148,6 +149,24 @@ describe("Providers' registered migrations", () => {
     expect(getEmbeddingByCapsule(db, capsule.id)?.embedding).toEqual([
       0.1, 0.2, 0.3,
     ]);
+  });
+
+  it("lets a capsule actually be nested under another through the real migration set (8.5)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const parent = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    const child = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Chapter 1",
+    });
+    setCapsuleParent(db, child.id, parent.id);
+    expect(
+      getAllCapsules(db).find((c) => c.id === child.id)?.parentCapsuleId,
+    ).toBe(parent.id);
   });
 
   it("lets a snippet actually be created and listed through the real migration set (8.2)", () => {

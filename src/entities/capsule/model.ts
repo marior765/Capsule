@@ -12,11 +12,20 @@
  * graceful-degradation convention (no FK constraints exist anywhere in
  * this codebase; CLAUDE.md's CapsuleLink rule states the same philosophy
  * explicitly for capsule-to-capsule relations).
+ *
+ * `parentCapsuleId` (8.5, "capsule nesting") is deliberately a plain field
+ * on `Capsule` itself, not a `CapsuleLink` — nesting is a single-parent
+ * tree relationship with real structural meaning (cycle prevention,
+ * "children of X" queries), unlike `CapsuleLink`'s many-to-many, freely
+ * labeled relations. Reusing the link table for it would mean every link
+ * query has to filter out nesting edges by convention (a reserved label
+ * or magic `fieldId`) rather than by the schema itself.
  */
 export type Capsule = {
   id: string;
   capsuleTypeId: string;
   title: string;
+  parentCapsuleId: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -25,6 +34,7 @@ export type CapsuleRow = {
   id: string;
   capsule_type_id: string;
   title: string;
+  parent_capsule_id: string | null;
   created_at: number;
   updated_at: number;
 };
@@ -34,6 +44,7 @@ export function rowToCapsule(row: CapsuleRow): Capsule {
     id: row.id,
     capsuleTypeId: row.capsule_type_id,
     title: row.title,
+    parentCapsuleId: row.parent_capsule_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

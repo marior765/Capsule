@@ -2,6 +2,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  capsuleParentIdMigration,
   capsulesMigration,
   capsuleValuesMigration,
   capsuleEmbeddingsMigration,
@@ -45,6 +46,7 @@ beforeEach(() => {
     linksMigration,
     capsuleLinksFieldIdMigration,
     attachmentsMigration,
+    capsuleParentIdMigration,
   ]);
 });
 
@@ -193,5 +195,28 @@ describe("deleteCapsule", () => {
     });
     deleteCapsule(db, a.id);
     expect(getEmbeddingByCapsule(db, b.id)?.content).toBe("b");
+  });
+
+  it("orphans (never cascade-deletes) child capsules when their parent is deleted (8.5)", () => {
+    const parent = createCapsule(db, { capsuleTypeId: "ct-1", title: "Book" });
+    const child = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      title: "Chapter 1",
+      parentCapsuleId: parent.id,
+    });
+    deleteCapsule(db, parent.id);
+    expect(getCapsuleById(db, child.id)).not.toBeNull();
+    expect(getCapsuleById(db, child.id)?.parentCapsuleId).toBeNull();
+  });
+
+  it("leaves an unrelated capsule's parent untouched when a different capsule is deleted", () => {
+    const parent = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const child = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      parentCapsuleId: parent.id,
+    });
+    const unrelated = createCapsule(db, { capsuleTypeId: "ct-1" });
+    deleteCapsule(db, unrelated.id);
+    expect(getCapsuleById(db, child.id)?.parentCapsuleId).toBe(parent.id);
   });
 });

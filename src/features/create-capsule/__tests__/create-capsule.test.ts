@@ -2,6 +2,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  capsuleParentIdMigration,
   capsulesMigration,
   capsuleValuesMigration,
   getValuesByCapsule,
@@ -13,7 +14,11 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [capsulesMigration, capsuleValuesMigration]);
+  runMigrations(db, [
+    capsulesMigration,
+    capsuleValuesMigration,
+    capsuleParentIdMigration,
+  ]);
 });
 
 describe("createCapsule — happy path", () => {
@@ -73,5 +78,20 @@ describe("createCapsule — edge cases", () => {
     const a = createCapsule(db, { capsuleTypeId: "ct-1" });
     const b = createCapsule(db, { capsuleTypeId: "ct-1" });
     expect(a.id).not.toBe(b.id);
+  });
+
+  it("defaults to a root capsule (null parent) when none is given", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    expect(capsule.parentCapsuleId).toBeNull();
+  });
+
+  it("creates a nested capsule when a parentCapsuleId is given (8.5)", () => {
+    const parent = createCapsule(db, { capsuleTypeId: "ct-1", title: "Book" });
+    const child = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      title: "Chapter 1",
+      parentCapsuleId: parent.id,
+    });
+    expect(child.parentCapsuleId).toBe(parent.id);
   });
 });

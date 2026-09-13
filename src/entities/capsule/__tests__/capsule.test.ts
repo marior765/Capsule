@@ -2,6 +2,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
+  capsuleParentIdMigration,
   capsulesMigration,
   capsuleValuesMigration,
   deleteCapsule,
@@ -9,9 +10,11 @@ import {
   getAllCapsules,
   getCapsuleById,
   getCapsulesByType,
+  getChildCapsules,
   getValueByCapsuleAndField,
   getValuesByCapsule,
   insertCapsule,
+  orphanChildCapsules,
   updateCapsule,
   upsertCapsuleValue,
   type Capsule,
@@ -22,6 +25,7 @@ const makeCapsule = (overrides: Partial<Capsule> = {}): Capsule => ({
   id: `c-${Math.random().toString(36).slice(2)}`,
   capsuleTypeId: "ct-1",
   title: "Dune",
+  parentCapsuleId: null,
   createdAt: 1000,
   updatedAt: 1000,
   ...overrides,
@@ -42,7 +46,11 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [capsulesMigration, capsuleValuesMigration]);
+  runMigrations(db, [
+    capsulesMigration,
+    capsuleValuesMigration,
+    capsuleParentIdMigration,
+  ]);
 });
 
 describe("entities/capsule — Capsule CRUD happy path", () => {
@@ -81,6 +89,93 @@ describe("entities/capsule — Capsule CRUD happy path", () => {
     insertCapsule(db, capsule);
     deleteCapsule(db, capsule.id);
     expect(getCapsuleById(db, capsule.id)).toBeNull();
+  });
+});
+
+describe("entities/capsule — nesting (8.5)", () => {
+  it("inserts and retrieves a capsule with a parent", () => {
+    const parent = makeCapsule({ id: "parent" });
+    const child = makeCapsule({ id: "child", parentCapsuleId: "parent" });
+    insertCapsule(db, parent);
+    insertCapsule(db, child);
+    expect(getCapsuleById(db, "child")?.parentCapsuleId).toBe("parent");
+  });
+
+  it("defaults to a root capsule (null parent) when none is given", () => {
+    insertCapsule(db, makeCapsule({ id: "root" }));
+    expect(getCapsuleById(db, "root")?.parentCapsuleId).toBeNull();
+  });
+
+  it("getChildCapsules returns only capsules whose parent is the given id", () => {
+    insertCapsule(db, makeCapsule({ id: "parent" }));
+    insertCapsule(db, makeCapsule({ id: "other-root" }));
+    insertCapsule(
+      db,
+      makeCapsule({ id: "child-a", parentCapsuleId: "parent" }),
+    );
+    insertCapsule(
+      db,
+      makeCapsule({ id: "child-b", parentCapsuleId: "parent" }),
+    );
+
+    expect(
+      getChildCapsules(db, "parent")
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual(["child-a", "child-b"]);
+  });
+
+  it("getChildCapsules returns an empty array for a capsule with no children", () => {
+    insertCapsule(db, makeCapsule({ id: "childless" }));
+    expect(getChildCapsules(db, "childless")).toEqual([]);
+  });
+
+  it("updateCapsule can reparent a capsule", () => {
+    insertCapsule(db, makeCapsule({ id: "a" }));
+    insertCapsule(db, makeCapsule({ id: "b" }));
+    updateCapsule(db, "b", { parentCapsuleId: "a" });
+    expect(getCapsuleById(db, "b")?.parentCapsuleId).toBe("a");
+  });
+
+  it("updateCapsule can clear a parent, promoting a capsule back to root", () => {
+    insertCapsule(db, makeCapsule({ id: "a" }));
+    insertCapsule(db, makeCapsule({ id: "b", parentCapsuleId: "a" }));
+    updateCapsule(db, "b", { parentCapsuleId: null });
+    expect(getCapsuleById(db, "b")?.parentCapsuleId).toBeNull();
+  });
+
+  it("orphanChildCapsules clears parentCapsuleId on every direct child, promoting them to root", () => {
+    insertCapsule(db, makeCapsule({ id: "parent" }));
+    insertCapsule(
+      db,
+      makeCapsule({ id: "child-a", parentCapsuleId: "parent" }),
+    );
+    insertCapsule(
+      db,
+      makeCapsule({ id: "child-b", parentCapsuleId: "parent" }),
+    );
+
+    orphanChildCapsules(db, "parent");
+
+    expect(getCapsuleById(db, "child-a")?.parentCapsuleId).toBeNull();
+    expect(getCapsuleById(db, "child-b")?.parentCapsuleId).toBeNull();
+  });
+
+  it("orphanChildCapsules leaves unrelated capsules' parent untouched", () => {
+    insertCapsule(db, makeCapsule({ id: "parent" }));
+    insertCapsule(db, makeCapsule({ id: "other-parent" }));
+    insertCapsule(
+      db,
+      makeCapsule({ id: "child", parentCapsuleId: "other-parent" }),
+    );
+
+    orphanChildCapsules(db, "parent");
+
+    expect(getCapsuleById(db, "child")?.parentCapsuleId).toBe("other-parent");
+  });
+
+  it("orphanChildCapsules for a capsule with no children does not throw", () => {
+    expect(() => orphanChildCapsules(db, "childless")).not.toThrow();
   });
 });
 

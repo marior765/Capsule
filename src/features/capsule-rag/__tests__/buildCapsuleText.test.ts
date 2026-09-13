@@ -8,6 +8,7 @@ const capsule: Capsule = {
   id: "c-1",
   capsuleTypeId: "ct-1",
   title: "Dune",
+  parentCapsuleId: null,
   createdAt: 1000,
   updatedAt: 1000,
 };

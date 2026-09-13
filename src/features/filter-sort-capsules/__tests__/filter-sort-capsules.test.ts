@@ -7,6 +7,7 @@ function makeCapsule(overrides: Partial<Capsule>): Capsule {
     id: "c-1",
     capsuleTypeId: "ct-1",
     title: "Untitled",
+    parentCapsuleId: null,
     createdAt: 0,
     updatedAt: 0,
     ...overrides,

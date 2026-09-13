@@ -3,6 +3,7 @@ import {
   deleteCapsule as deleteCapsuleRecord,
   deleteEmbedding,
   deleteValuesByCapsule,
+  orphanChildCapsules,
 } from "@/entities/capsule";
 import { deleteCapsuleTagsByCapsule } from "@/entities/tag";
 import { deleteLinksByCapsule } from "@/entities/link";
@@ -19,6 +20,15 @@ import { deleteAttachmentsByCapsule } from "@/entities/attachment";
  * `manage-conversations`' `deleteConversation` — the entities themselves
  * stay independent.
  *
+ * `orphanChildCapsules` (8.5, nesting) actively clears `parentCapsuleId` on
+ * every direct child rather than leaving it dangling — unlike the
+ * cross-entity references above, nesting is a same-entity structural field
+ * (see `entities/capsule/model.ts`'s doc comment), so a stale pointer here
+ * would silently drop a child from every "children of X" query rather than
+ * just degrading one display. Children themselves are never cascade-deleted
+ * — they remain independently valid capsules, per CLAUDE.md's
+ * "self-contained entities" philosophy — only promoted back to root level.
+ *
  * `deleteAttachmentsByCapsule` only removes the DB rows, not the
  * underlying file bytes at each attachment's `localUri` — `entities/
  * attachment` never touches `expo-file-system` (no picker/writer exists
@@ -32,5 +42,6 @@ export function deleteCapsule(db: SQLiteDatabase, id: string): void {
   deleteLinksByCapsule(db, id);
   deleteAttachmentsByCapsule(db, id);
   deleteEmbedding(db, id);
+  orphanChildCapsules(db, id);
   deleteCapsuleRecord(db, id);
 }
