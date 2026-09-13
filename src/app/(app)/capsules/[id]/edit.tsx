@@ -9,7 +9,8 @@ import {
   getFieldsByCapsuleType,
   type CapsuleField,
 } from "@/entities/field";
-import { saveCapsuleEdits } from "@/features/edit-capsule";
+import { hasCapsuleEdits, saveCapsuleEdits } from "@/features/edit-capsule";
+import { snapshotCapsule } from "@/features/capsule-versioning";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleEditor } from "@/widgets/CapsuleEditor";
 
@@ -62,13 +63,24 @@ export default function EditCapsuleScreen() {
       setErrors(fieldErrors);
       return;
     }
-    saveCapsuleEdits(db, id, {
+    const editInput = {
       title,
       initialTitle,
       values,
       initialValues,
       fieldIds: fields.map((field) => field.id),
-    });
+    };
+    // Snapshot for version history (8.5) BEFORE applying the edit, so the
+    // snapshot captures what's still actually persisted right now — and
+    // only when something will really change, so an unedited "Save" tap
+    // doesn't create a noise history entry. Composed here at the route
+    // layer since `features/edit-capsule` and `features/capsule-
+    // versioning` can't import each other (FSD forbids cross-feature
+    // imports); the route is the one place allowed to reach across both.
+    if (hasCapsuleEdits(editInput)) {
+      snapshotCapsule(db, id);
+    }
+    saveCapsuleEdits(db, id, editInput);
     router.replace(`/capsules/${id}`);
   };
 

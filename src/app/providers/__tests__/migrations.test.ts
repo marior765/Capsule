@@ -35,6 +35,7 @@ import {
   getCapsuleHistory,
   snapshotCapsule,
 } from "@/features/capsule-versioning";
+import { hasCapsuleEdits, saveCapsuleEdits } from "@/features/edit-capsule";
 import { runBulkOperation } from "@/shared/lib";
 
 beforeEach(() => {
@@ -213,6 +214,63 @@ describe("Providers' registered migrations", () => {
     expect(getAllCapsules(db).find((c) => c.id === b.id)?.parentCapsuleId).toBe(
       newParent.id,
     );
+  });
+
+  it("snapshots a capsule's PRE-edit state before saving, matching the edit route's exact composition order (8.5)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+      values: { "f-author": "Frank Herbert" },
+    });
+
+    // Exactly `capsules/[id]/edit.tsx`'s handleSave composition: build the
+    // edit input, snapshot only if it would actually change something,
+    // THEN apply the edit — snapshot must run BEFORE saveCapsuleEdits or
+    // it would capture the wrong (post-edit) state.
+    const editInput = {
+      title: "Dune Messiah",
+      initialTitle: "Dune",
+      values: { "f-author": "Someone Else" },
+      initialValues: { "f-author": "Frank Herbert" },
+      fieldIds: ["f-author"],
+    };
+    expect(hasCapsuleEdits(editInput)).toBe(true);
+    snapshotCapsule(db, capsule.id);
+    saveCapsuleEdits(db, capsule.id, editInput);
+
+    const history = getCapsuleHistory(db, capsule.id);
+    expect(history).toHaveLength(1);
+    expect(history[0].title).toBe("Dune");
+    expect(history[0].values).toEqual({ "f-author": "Frank Herbert" });
+    expect(getAllCapsules(db).find((c) => c.id === capsule.id)?.title).toBe(
+      "Dune Messiah",
+    );
+  });
+
+  it("does not snapshot when the edit changes nothing, avoiding a noise history entry (8.5)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+
+    const editInput = {
+      title: "Dune",
+      initialTitle: "Dune",
+      values: {},
+      initialValues: {},
+      fieldIds: [],
+    };
+    expect(hasCapsuleEdits(editInput)).toBe(false);
+    if (hasCapsuleEdits(editInput)) snapshotCapsule(db, capsule.id);
+    saveCapsuleEdits(db, capsule.id, editInput);
+
+    expect(getCapsuleHistory(db, capsule.id)).toEqual([]);
   });
 
   it("lets a snippet actually be created and listed through the real migration set (8.2)", () => {

@@ -49,6 +49,30 @@ export type SaveCapsuleEditsInput = {
 };
 
 /**
+ * True if applying this edit session would actually change anything —
+ * mirrors `saveCapsuleEdits`'s own diff exactly (same trimmed-title
+ * comparison, same fieldIds-bounded value comparison), so a caller
+ * deciding whether to do something ELSE only when a real edit is about
+ * to happen (8.5's version-history: snapshot the capsule right before
+ * saving, but only when the save will actually change something, so an
+ * unedited "Save" tap doesn't create a noise history entry) never risks
+ * disagreeing with what `saveCapsuleEdits` itself would do. Pure — no db
+ * access, safe to call before deciding whether to touch the db at all.
+ */
+export function hasCapsuleEdits(input: SaveCapsuleEditsInput): boolean {
+  const trimmedTitle = input.title.trim() || "Untitled";
+  if (trimmedTitle !== input.initialTitle) return true;
+
+  for (const fieldId of input.fieldIds) {
+    const current = input.values[fieldId] ?? null;
+    const initial = input.initialValues[fieldId] ?? null;
+    if (current !== initial) return true;
+  }
+
+  return false;
+}
+
+/**
  * Diffs an edit session against what was originally loaded and writes only
  * what actually changed — mirrors `createCapsule`'s "one call, title +
  * values together" shape so a route never has to hand-orchestrate

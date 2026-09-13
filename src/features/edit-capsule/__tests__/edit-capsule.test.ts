@@ -10,6 +10,7 @@ import {
 } from "@/entities/capsule";
 import { createCapsule } from "@/features/create-capsule";
 import {
+  hasCapsuleEdits,
   renameCapsule,
   saveCapsuleEdits,
   setCapsuleFieldValue,
@@ -202,6 +203,92 @@ describe("saveCapsuleEdits", () => {
     });
     expect(getValueByCapsuleAndField(db, capsule.id, "f-new")?.value).toBe(
       "hello",
+    );
+  });
+});
+
+describe("hasCapsuleEdits", () => {
+  it("is false when nothing changed at all", () => {
+    expect(
+      hasCapsuleEdits({
+        title: "Dune",
+        initialTitle: "Dune",
+        values: { "f-author": "Frank Herbert" },
+        initialValues: { "f-author": "Frank Herbert" },
+        fieldIds: ["f-author"],
+      }),
+    ).toBe(false);
+  });
+
+  it("is true when the title changed", () => {
+    expect(
+      hasCapsuleEdits({
+        title: "Dune Messiah",
+        initialTitle: "Dune",
+        values: {},
+        initialValues: {},
+        fieldIds: [],
+      }),
+    ).toBe(true);
+  });
+
+  it("is false when the trimmed title matches the initial title (whitespace-only edit)", () => {
+    expect(
+      hasCapsuleEdits({
+        title: "  Dune  ",
+        initialTitle: "Dune",
+        values: {},
+        initialValues: {},
+        fieldIds: [],
+      }),
+    ).toBe(false);
+  });
+
+  it("is true when a field value changed", () => {
+    expect(
+      hasCapsuleEdits({
+        title: "Dune",
+        initialTitle: "Dune",
+        values: { "f-year": "1966" },
+        initialValues: { "f-year": "1965" },
+        fieldIds: ["f-year"],
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores a value change on a field id outside fieldIds", () => {
+    expect(
+      hasCapsuleEdits({
+        title: "Dune",
+        initialTitle: "Dune",
+        values: { "f-stale": "changed" },
+        initialValues: { "f-stale": "original" },
+        fieldIds: [],
+      }),
+    ).toBe(false);
+  });
+
+  it("agrees with saveCapsuleEdits: whenever it reports true, applying the edit actually changes the db", () => {
+    const capsule = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      title: "Dune",
+      values: { "f-author": "Frank Herbert" },
+    });
+    const before = getCapsuleById(db, capsule.id)!.updatedAt;
+    const input = {
+      title: "Dune",
+      initialTitle: "Dune",
+      values: { "f-author": "Someone Else" },
+      initialValues: { "f-author": "Frank Herbert" },
+      fieldIds: ["f-author"],
+    };
+    expect(hasCapsuleEdits(input)).toBe(true);
+    saveCapsuleEdits(db, capsule.id, input);
+    expect(getCapsuleById(db, capsule.id)!.updatedAt).toBeGreaterThanOrEqual(
+      before,
+    );
+    expect(getValueByCapsuleAndField(db, capsule.id, "f-author")?.value).toBe(
+      "Someone Else",
     );
   });
 });

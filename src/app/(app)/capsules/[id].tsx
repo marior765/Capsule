@@ -9,6 +9,7 @@ import {
   getValuesByCapsule,
   type Capsule,
   type CapsuleValue,
+  type CapsuleVersion,
 } from "@/entities/capsule";
 import { getCapsuleTypeById, type CapsuleType } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
@@ -17,9 +18,14 @@ import { getLinksFromByField } from "@/entities/link";
 import { deleteCapsule } from "@/features/delete-capsule";
 import { tagCapsule, untagCapsule } from "@/features/tag-capsule";
 import { linkCapsules, unlinkCapsules } from "@/features/link-capsules";
+import {
+  getCapsuleHistory,
+  restoreCapsuleVersion,
+} from "@/features/capsule-versioning";
 import { createComponentTestIDs } from "@/shared/testing";
 import { TagPicker } from "@/widgets/TagPicker";
 import { RelationPicker, type RelationEntry } from "@/widgets/RelationPicker";
+import { VersionHistory } from "@/widgets/VersionHistory";
 
 export default function CapsuleDetailScreen() {
   const db = useDb();
@@ -33,6 +39,7 @@ export default function CapsuleDetailScreen() {
   const [relationsByFieldId, setRelationsByFieldId] = useState<
     Record<string, RelationEntry[]>
   >({});
+  const [history, setHistory] = useState<CapsuleVersion[]>([]);
 
   const refreshRelationField = useCallback(
     (fieldId: string) => {
@@ -58,6 +65,7 @@ export default function CapsuleDetailScreen() {
         setValues(getValuesByCapsule(db, found.id));
         setTags(getTagsByCapsule(db, found.id));
         setAllCapsules(getAllCapsules(db));
+        setHistory(getCapsuleHistory(db, found.id));
 
         const relationFields = capsuleFields.filter(
           (field) => field.fieldType === "relation",
@@ -81,6 +89,21 @@ export default function CapsuleDetailScreen() {
   const handleDelete = () => {
     deleteCapsule(db, id);
     router.replace("/capsules");
+  };
+
+  // Restoring rewrites title + field values and (per restoreCapsuleVersion's
+  // own contract) appends a fresh safety-snapshot of what was JUST
+  // overwritten — so every piece of local state this screen shows from the
+  // db needs a full re-fetch, not a hand-patch, mirroring this screen's own
+  // existing "apply immediately, then re-fetch" convention for tags/links.
+  const handleRestore = (versionId: string) => {
+    restoreCapsuleVersion(db, versionId);
+    const refreshed = getCapsuleById(db, id);
+    setCapsule(refreshed);
+    if (refreshed) {
+      setValues(getValuesByCapsule(db, refreshed.id));
+      setHistory(getCapsuleHistory(db, refreshed.id));
+    }
   };
 
   // Tags apply immediately, like SchemaBuilder's field mutations on an
@@ -162,6 +185,8 @@ export default function CapsuleDetailScreen() {
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
       />
+
+      <VersionHistory versions={history} onRestore={handleRestore} />
 
       <Pressable
         testID={testIDs.buttons.edit}
