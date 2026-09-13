@@ -6,6 +6,7 @@ import { useDb } from "@/app/providers";
 import {
   getAllCapsules,
   getCapsuleById,
+  getChildCapsules,
   getValuesByCapsule,
   type Capsule,
   type CapsuleValue,
@@ -18,6 +19,7 @@ import { getLinksFromByField } from "@/entities/link";
 import { deleteCapsule } from "@/features/delete-capsule";
 import { tagCapsule, untagCapsule } from "@/features/tag-capsule";
 import { linkCapsules, unlinkCapsules } from "@/features/link-capsules";
+import { setCapsuleParent } from "@/features/nest-capsule";
 import {
   getCapsuleHistory,
   restoreCapsuleVersion,
@@ -26,6 +28,7 @@ import { createComponentTestIDs } from "@/shared/testing";
 import { TagPicker } from "@/widgets/TagPicker";
 import { RelationPicker, type RelationEntry } from "@/widgets/RelationPicker";
 import { VersionHistory } from "@/widgets/VersionHistory";
+import { ParentPicker } from "@/widgets/ParentPicker";
 
 export default function CapsuleDetailScreen() {
   const db = useDb();
@@ -40,6 +43,9 @@ export default function CapsuleDetailScreen() {
     Record<string, RelationEntry[]>
   >({});
   const [history, setHistory] = useState<CapsuleVersion[]>([]);
+  const [parent, setParent] = useState<Capsule | null>(null);
+  const [children, setChildren] = useState<Capsule[]>([]);
+  const [parentError, setParentError] = useState<string | null>(null);
 
   const refreshRelationField = useCallback(
     (fieldId: string) => {
@@ -66,6 +72,12 @@ export default function CapsuleDetailScreen() {
         setTags(getTagsByCapsule(db, found.id));
         setAllCapsules(getAllCapsules(db));
         setHistory(getCapsuleHistory(db, found.id));
+        setParent(
+          found.parentCapsuleId
+            ? getCapsuleById(db, found.parentCapsuleId)
+            : null,
+        );
+        setChildren(getChildCapsules(db, found.id));
 
         const relationFields = capsuleFields.filter(
           (field) => field.fieldType === "relation",
@@ -132,6 +144,28 @@ export default function CapsuleDetailScreen() {
     refreshRelationField(fieldId);
   };
 
+  // setCapsuleParent (8.5) throws on a cycle (nesting under self or a
+  // descendant) — the ONE handler on this screen that can reject an
+  // otherwise-valid-looking action, so it needs its own try/catch and
+  // error display, unlike every other "apply immediately" handler above.
+  const handleSetParent = (parentId: string) => {
+    try {
+      setCapsuleParent(db, id, parentId);
+      setParent(getCapsuleById(db, parentId));
+      setParentError(null);
+    } catch (error) {
+      setParentError(
+        error instanceof Error ? error.message : "Could not set parent.",
+      );
+    }
+  };
+
+  const handleClearParent = () => {
+    setCapsuleParent(db, id, null);
+    setParent(null);
+    setParentError(null);
+  };
+
   if (!capsule) {
     return (
       <View testID={testIDs.containers.root} style={styles.root}>
@@ -188,6 +222,30 @@ export default function CapsuleDetailScreen() {
 
       <VersionHistory versions={history} onRestore={handleRestore} />
 
+      <ParentPicker
+        parent={parent}
+        availableCapsules={allCapsules.filter((c) => c.id !== capsule.id)}
+        onSetParent={handleSetParent}
+        onClearParent={handleClearParent}
+        error={parentError}
+      />
+
+      {children.length > 0 && (
+        <View testID={testIDs.containers.children} style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Children</Text>
+          {children.map((child) => (
+            <Pressable
+              key={child.id}
+              testID={`${testIDs.pressables.child}_${child.id}`}
+              style={styles.childRow}
+              onPress={() => router.push(`/capsules/${child.id}`)}
+            >
+              <Text style={styles.childLabel}>{child.title}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <Pressable
         testID={testIDs.buttons.edit}
         style={styles.primary}
@@ -239,6 +297,18 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 15,
   },
+  childRow: {
+    backgroundColor: theme.colors.backgroundElement,
+    borderRadius: theme.spacing.two,
+    paddingHorizontal: theme.spacing.two,
+    paddingVertical: theme.spacing.one,
+    marginTop: theme.spacing.one,
+  },
+  childLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+  },
   primary: {
     alignItems: "center",
     paddingVertical: theme.spacing.three,
@@ -262,7 +332,8 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("CapsuleDetailScreen", {
-  containers: ["root"] as const,
+  containers: ["root", "children"] as const,
   buttons: ["edit", "delete"] as const,
   texts: ["notFound"] as const,
+  pressables: ["child"] as const,
 });
