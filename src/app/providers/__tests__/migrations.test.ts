@@ -35,6 +35,7 @@ import {
   getCapsuleHistory,
   snapshotCapsule,
 } from "@/features/capsule-versioning";
+import { runBulkOperation } from "@/shared/lib";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -183,6 +184,35 @@ describe("Providers' registered migrations", () => {
     });
     snapshotCapsule(db, capsule.id);
     expect(getCapsuleHistory(db, capsule.id)).toHaveLength(1);
+  });
+
+  it("lets a bulk reparent be applied across real capsules, isolating a genuine per-item cycle failure (8.5)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const newParent = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Series",
+    });
+    const a = createCapsule(db, { capsuleTypeId: capsuleType.id, title: "A" });
+    const b = createCapsule(db, { capsuleTypeId: capsuleType.id, title: "B" });
+
+    // Bulk-reparent [a, newParent, b] under newParent — newParent nesting
+    // under itself is a genuine cycle, not a synthetic test error, so this
+    // proves runBulkOperation's continue-on-error semantics against real
+    // business-logic rejection, not just a thrown Error in a test double.
+    const result = runBulkOperation([a.id, newParent.id, b.id], (id) =>
+      setCapsuleParent(db, id, newParent.id),
+    );
+
+    expect(result.succeeded.map((s) => s.id)).toEqual([a.id, b.id]);
+    expect(result.failed.map((f) => f.id)).toEqual([newParent.id]);
+    expect(getAllCapsules(db).find((c) => c.id === a.id)?.parentCapsuleId).toBe(
+      newParent.id,
+    );
+    expect(getAllCapsules(db).find((c) => c.id === b.id)?.parentCapsuleId).toBe(
+      newParent.id,
+    );
   });
 
   it("lets a snippet actually be created and listed through the real migration set (8.2)", () => {
