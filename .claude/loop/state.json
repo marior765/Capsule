@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 50,
+    "beat": 51,
     "status": "running"
   },
   "cursor": {
@@ -364,12 +364,12 @@
     "8.5": {
       "status": "in_progress",
       "class": "logic",
-      "attempts": 2,
+      "attempts": 3,
       "failureSignatures": [
         "checker: fail (version-history round) -- restoreCapsuleVersion's doc comment claimed a field absent from the restored version's snapshot is 'left untouched rather than cleared', but no test asserted it; logic was already correct, only the guarantee was untested"
       ],
-      "checkpoint": "825ef3b",
-      "notes": "Compound plan line ('Capsule nesting + version history + bulk operations'), worked across two beats. NESTING (beat 49, checkpoint ecf82bd): entities/capsule gained parentCapsuleId (migration v20, no FK), getChildCapsules, orphanChildCapsules; features/nest-capsule provides setCapsuleParent + wouldCreateCycle (full ancestor-chain walk, rejects self/direct-child/grandchild cycles); delete-capsule's cascade orphans (never cascade-deletes) children. VERSION HISTORY (this beat, checkpoint 825ef3b): entities/capsule gained CapsuleVersion (migration v21, values_json column -- deliberately not named `values` to avoid the SQL keyword), insertCapsuleVersion/getVersionById/getVersionsByCapsule/deleteVersionsByCapsule; features/capsule-versioning (new slice) provides snapshotCapsule (point-in-time title+field-values capture), getCapsuleHistory, restoreCapsuleVersion (takes a safety snapshot of CURRENT state before overwriting, so a restore is itself undoable via the same history; only touches fields the restored version actually recorded, leaving fields added since untouched -- id/createdAt preserved on existing CapsuleValue rows via upsertCapsuleValue's own ON CONFLICT semantics, new rows minted for fields with no live value yet); delete-capsule's cascade now also removes a deleted capsule's version history (active cleanup, same-entity derived data, mirrors the embedding cascade). Both beats proactively registered their new migration in providers/migrations.ts immediately (with real end-to-end regression tests in migrations.test.ts) and wired their delete-cascade addition in the SAME beat as the entity work, applying the lesson from earlier phases (6.6's un-registered capsule migrations) before it could recur a third time. Checker failed the version-history round on ONE real gap: restoreCapsuleVersion's doc comment asserted a specific behavioral guarantee (fields outside the restored snapshot are left untouched) that no test actually proved -- the underlying logic was already correct (verified by both me and the checker via code trace), only the test coverage was missing. Fixed with a real DB-backed test, mutation-tested myself (temporarily broke the guarantee by iterating over ALL existing CapsuleValue rows instead of just version.values, confirmed the new test fails exactly as predicted, restored). Re-review: pass, independently confirmed via diff comparison that only the new test changed (no regression surface elsewhere). Gate: tsc/jest (835/835, 66 suites)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.5 box stays UNCHECKED (in_progress) -- 'bulk operations' (the third sub-feature) not started; no UI/route layer exists for either nesting or version history yet (both are mechanism-only, matching the established two-beat entity+feature-then-widget pattern -- e.g. 7.2 capsule-rag shipped mechanism-only for a full beat before any wiring). Next beat should pick up: bulk operations, or the UI/route wiring for nesting+version-history together (likely the more natural pairing, since both would show up in the same capsule detail screen)."
+      "checkpoint": "dbc887e",
+      "notes": "Compound plan line ('Capsule nesting + version history + bulk operations'), worked across three beats -- all three named sub-features now have complete, checker-passed mechanism layers. NESTING (beat 49, ecf82bd): parentCapsuleId (migration v20), getChildCapsules, orphanChildCapsules; features/nest-capsule's setCapsuleParent + wouldCreateCycle (full ancestor-chain cycle rejection). VERSION HISTORY (beat 50, 825ef3b): CapsuleVersion (migration v21), features/capsule-versioning's snapshotCapsule/getCapsuleHistory/restoreCapsuleVersion (safety-snapshot-before-restore, untouched-field guarantee now test-backed after a checker-caught gap). BULK OPERATIONS (this beat, dbc887e): shared/lib gained runBulkOperation<T>(ids, operation) -- a domain-agnostic continue-on-error batch runner (zero imports, stricter than the shared-layer boundary even requires), NOT a new features/ slice, because eslint-plugin-boundaries forbids features importing other features (from:features allow:[entities,shared] only) and entities can't cross-import each other either (from:entities allow:[shared] only) -- so composing 'apply deleteCapsule/tagCapsule/setCapsuleParent across many ids' can only legitimately happen from the app/widget layer, which this mechanism is built to be composed into. Proved with a real end-to-end regression test in migrations.test.ts: bulk-reparenting 3 real capsules where one hits setCapsuleParent's GENUINE cycle rejection (not a synthetic thrown error), confirming continue-on-error against real business logic and that the succeeding ids were actually persisted. All three beats proactively applied the migration-registration + same-beat-cascade-wiring lesson (from 6.6's original miss) before it could recur. Checker passed all three beats (one round-trip fix needed in the version-history beat; nesting and bulk-operations both passed on first attempt). Gate: tsc/jest (846/846, 67 suites)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.5 box STAYS UNCHECKED -- all three sub-features are mechanism-only, with ZERO UI/route wiring for any of them (no way for a user to nest a capsule, view/restore history, or multi-select capsules yet), matching the established mechanism-first pattern (7.2 capsule-rag shipped a full beat as mechanism-only before any wiring). Next beat's natural work: build the UI/route layer -- likely a capsule detail screen addition for children-list + history-list + restore button (nesting + version history share a natural home there), and a multi-select mode + bulk action bar in CapsuleList/capsules/index.tsx for bulk operations. This is real, substantial UI work, likely spanning more than one beat -- do not assume it collapses into a single beat the way the mechanism layers did."
     }
   },
   "quarantinedThisRun": [],
@@ -377,8 +377,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-14T00:58:00Z",
-    "head": "825ef3b",
-    "note": "66 suites, 835 tests passing after 8.5 version-history sub-scope"
+    "at": "2026-09-14T01:00:00Z",
+    "head": "dbc887e",
+    "note": "67 suites, 846 tests passing after 8.5 bulk-operations sub-scope (all three 8.5 sub-features now mechanism-complete)"
   }
 }

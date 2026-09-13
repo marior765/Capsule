@@ -2127,4 +2127,63 @@ to back it up, and treating its absence as a defect, not a formality.
 
 ---
 
+## 2026-09-14 — When the architecture rule tells you what the feature actually is
+
+"Bulk operations" sounds, at first read, like it should be a `features/
+bulk-capsule-operations` slice — the same shape as every other capsule
+feature in this codebase (`delete-capsule`, `tag-capsule`, `nest-
+capsule`). It would need to call those existing features many times over
+a list of ids: delete many capsules, tag many capsules, reparent many
+capsules. That's the obvious design, and it's also immediately illegal:
+this codebase's `eslint-plugin-boundaries` config enforces, at error
+severity, that a feature can only import from `entities` and `shared` —
+never from another feature. `features/delete-capsule` importing
+`features/tag-capsule` is a lint error before it's anything else.
+
+The instructive part isn't that the obvious design was blocked — it's
+what asking "then what CAN this be" revealed about what "bulk
+operations" actually *is*, as a piece of logic. Stripped of the
+capsule-specific framing, the only genuinely reusable, non-trivial
+decision buried in "apply an action to many things" is the aggregation
+policy: does one failure abort the whole batch, or does it continue and
+report per-item results? That's not capsule logic. It's not even
+persistence logic. It's a pure question about control flow that has
+nothing to do with SQLite, capsules, or this app's domain at all — and
+once framed that way, it was obvious it belonged in `shared/lib`
+alongside `generateId`, not in a new feature slice straining against a
+boundary rule that exists for a good reason.
+
+The architecture rule didn't just block a bad location — it forced a
+better decomposition. "Bulk-delete capsules" isn't one feature; it's two
+completely separate concerns that happen to look fused together in the
+plan's one-line description: a domain-agnostic *aggregation mechanism*
+(continue-on-error, ordered, per-item result reporting) and a domain-
+specific *composition* (which single-item function to call, and from
+where). The mechanism is fully testable in total isolation — no
+database, no capsules, just a list of strings and a function — and the
+composition is trivial once the mechanism exists (`runBulkOperation(ids,
+(id) => deleteCapsule(db, id))`), cheap enough that it doesn't need its
+own dedicated slice; it belongs wherever the multi-select UI eventually
+lives, which is the one layer (app/widgets) actually allowed to reach
+across multiple features by design.
+
+This generalizes past this one feature: a linter rule that blocks the
+"obvious" implementation of a plan-language feature description is
+sometimes just an obstacle to route around, but it's worth first asking
+whether the block is pointing at a wrong assumption in how the feature
+was framed. "Bulk operations" read as one unit because the plan named it
+that way, in English. The codebase's own layering rules — built for
+entirely different reasons, well before this feature existed — cut it
+at a joint that turned out to be the real one.
+
+**Article angle:** a linter error on the "obvious" design is sometimes a
+signal that the feature was mis-decomposed before a line of code was
+written, not that the code needs a workaround. Treat a boundary
+violation as a question ("why does the codebase's structure disagree
+with how I just carved this feature up?") before treating it as friction
+to engineer past — the answer is sometimes a genuinely better design,
+not a compromise.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

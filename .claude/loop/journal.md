@@ -3411,4 +3411,76 @@ share a screen — a capsule's detail view is the natural home for both
 
 ---
 
+## Beat 51 — 8.5 Bulk operations (scoped: bulk operations only)
+
+Third and final sub-feature of 8.5's compound plan line. The design
+question here wasn't what the mechanism does — it's *where it can live
+at all*, given a real architectural constraint: `eslint-plugin-
+boundaries` forbids a feature from importing another feature (`from:
+features, allow: [entities, shared]`), and entities can't cross-import
+each other either (`from: entities, allow: [shared]`). "Bulk operations"
+conceptually means "apply an existing single-capsule action — delete,
+tag, reparent — across many ids," but each of those actions already
+lives in its own `features/*` slice (`delete-capsule`, `tag-capsule`,
+`nest-capsule`). A new `features/bulk-*` slice importing all three would
+be a straightforward, immediately-lint-rejected boundary violation.
+
+Resolved by recognizing that the piece of *this* step's logic worth
+extracting and testing isn't "delete many capsules" (that's just calling
+an already-tested function in a loop) — it's the **aggregation
+semantics**: does one failure abort the whole batch, or does it continue
+and report per-item results? That question is genuinely domain-agnostic,
+which is exactly what `shared/lib` is for (already home to `generateId`,
+per `docs/ARCHITECTURE.md`'s own "pure utils" description). So
+`runBulkOperation<T>(ids, operation)` landed in `shared/lib`, with zero
+imports of its own — stricter than even the `shared -> allow: []`
+boundary rule requires. A future app/widget-layer caller (the one place
+allowed to reach across multiple `features/*` slices) composes it with
+whichever single-item feature function it needs:
+`runBulkOperation(ids, (id) => deleteCapsule(db, id))`. The generic
+utility is the correct level of abstraction for what this beat can prove
+in isolation; the actual multi-select UI is real, separate, later work,
+not implied to arrive "for free."
+
+To prove this wasn't just an abstract exercise, the regression test
+added to `migrations.test.ts` deliberately composes `runBulkOperation`
+with a REAL feature function against a REAL failure mode: bulk-
+reparenting three capsules under a new parent, where one of the three
+*is* that new parent — a genuine self-nesting cycle that
+`setCapsuleParent`'s existing `wouldCreateCycle` logic (built in beat 49)
+rejects on its own. Not a synthetic `throw new Error("boom")` in a test
+double — an actual business-logic rejection, continue-on-error verified
+against it, and the two capsules that *did* succeed confirmed
+persisted correctly in the database afterward.
+
+10 tests in the new `shared/lib/bulk.test.ts` (continue-past-failure
+verified via `jest.fn()` call-count, not just output shape; both an
+`Error` and a plain string thrown value preserved unchanged; order
+preservation; non-mutation; empty-input short-circuit verified via a
+mock never being called), plus the 1 real-cycle regression test. Gate:
+tsc clean, jest 846/846 (67 suites), eslint clean (one unused
+`eslint-disable` comment self-caught and removed before the gate run —
+the underlying rule wasn't actually triggered by that line, so the
+suppression was dead weight). Checker: pass on first attempt — explicitly
+verified the architectural reasoning against the real boundaries config
+itself (not just trusting the diff's own justification), confirmed every
+behavioral claim in the test file was actually backed by a real
+assertion rather than a shape check, and traced `wouldCreateCycle`'s
+source to confirm the regression test's cycle really is genuine business
+logic, not staged.
+
+Checkpoint `dbc887e`. This closes out plan line 8.5's third named
+sub-feature — nesting, version history, and bulk operations now all have
+complete, checker-passed, entity+feature mechanism layers. None has any
+UI or route wiring. `docs/DEVELOPMENT_PLAN.md`'s 8.5 box stays
+**unchecked** — there is currently no way for an actual user to nest a
+capsule, view or restore its history, or multi-select capsules for a
+bulk action; all of that is real, substantial UI work still ahead,
+likely spanning more than one beat (a capsule detail screen addition for
+children+history, and a multi-select mode + action bar in
+`CapsuleList`/`capsules/index.tsx`). Cursor stays at **8.5** for that
+UI work to begin.
+
+---
+
 <!-- Append new beats above this line. -->
