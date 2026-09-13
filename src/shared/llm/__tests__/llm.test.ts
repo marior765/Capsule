@@ -1,12 +1,19 @@
 // Tests for step 0.5 — written before implementation (TDD)
 // initEmbeddingContext/embedText: new for step 7.1 (embedding spike).
+// initMultimodalSupport/isMultimodalEnabled/getMultimodalSupport/
+// releaseMultimodalSupport, and runCompletion's image-message handling:
+// new for step 8.4 (image/vision input spike).
 import * as llamaRn from "llama.rn";
 import {
   abortCompletion,
   embedText,
+  getMultimodalSupport,
   initEmbeddingContext,
   initLlm,
+  initMultimodalSupport,
+  isMultimodalEnabled,
   releaseLlm,
+  releaseMultimodalSupport,
   runCompletion,
 } from "../index";
 import type { LlamaContext } from "../index";
@@ -115,6 +122,64 @@ describe("shared/llm — runCompletion happy path", () => {
     const { ctx, calls } = fakeContext();
     await runCompletion(ctx, { messages: HELLO, maxTokens: 10 }, () => {});
     expect(calls[0].jinja).toBe(true);
+  });
+
+  // 8.4 — spike: a message with `imageUrl` set needs llama.rn's multi-part
+  // content shape (`[{type: "text", ...}, {type: "image_url", ...}]`), not
+  // a plain string — that's the one thing distinguishing a vision message
+  // from every other message this wrapper has sent until now.
+  it("sends a message's content as a plain string when it has no image", async () => {
+    const { ctx, calls } = fakeContext();
+    await runCompletion(
+      ctx,
+      { messages: [{ role: "user", content: "Hello" }], maxTokens: 10 },
+      () => {},
+    );
+    expect(calls[0].messages).toEqual([{ role: "user", content: "Hello" }]);
+  });
+
+  it("sends a message's content as text+image_url parts when imageUrl is set", async () => {
+    const { ctx, calls } = fakeContext();
+    await runCompletion(
+      ctx,
+      {
+        messages: [
+          {
+            role: "user",
+            content: "What's in this photo?",
+            imageUrl: "file:///photo.jpg",
+          },
+        ],
+        maxTokens: 10,
+      },
+      () => {},
+    );
+    expect(calls[0].messages).toEqual([
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "What's in this photo?" },
+          { type: "image_url", image_url: { url: "file:///photo.jpg" } },
+        ],
+      },
+    ]);
+  });
+
+  it("leaves messages without an image untouched even when other messages in the same call have one", async () => {
+    const { ctx, calls } = fakeContext();
+    await runCompletion(
+      ctx,
+      {
+        messages: [
+          { role: "system", content: "Be terse." },
+          { role: "user", content: "Look at this", imageUrl: "file:///a.jpg" },
+        ],
+        maxTokens: 10,
+      },
+      () => {},
+    );
+    const sentMessages = calls[0].messages as unknown[];
+    expect(sentMessages[0]).toEqual({ role: "system", content: "Be terse." });
   });
 
   it("maps wrapper params onto llama.rn's sampling fields", async () => {
@@ -293,5 +358,99 @@ describe("shared/llm — embedText", () => {
     const { ctx, spies } = fakeEmbeddingContext();
     spies.embedding.mockRejectedValueOnce(new Error("native failure"));
     await expect(embedText(ctx, "text")).rejects.toThrow("native failure");
+  });
+});
+
+// 8.4 — spike: image/vision input. Multimodal support is initialized on
+// the SAME completion context `initLlm` already returns (unlike
+// embeddings, which need a wholly separate context loaded with a
+// different flag) — llama.rn's `initMultimodal`/`isMultimodalEnabled`/
+// `getMultimodalSupport`/`releaseMultimodal` are all methods on the one
+// `LlamaContext` interface already in use for completions.
+function fakeMultimodalContext() {
+  const ctx = {
+    initMultimodal: jest.fn(async () => true),
+    isMultimodalEnabled: jest.fn(async () => true),
+    getMultimodalSupport: jest.fn(async () => ({
+      vision: true,
+      audio: false,
+    })),
+    releaseMultimodal: jest.fn(async () => {}),
+  };
+  return { ctx: ctx as unknown as LlamaContext, spies: ctx };
+}
+
+describe("shared/llm — initMultimodalSupport", () => {
+  it("initializes multimodal support with the given projector path", async () => {
+    const { ctx, spies } = fakeMultimodalContext();
+    const result = await initMultimodalSupport(ctx, "/models/mmproj.gguf");
+    expect(result).toBe(true);
+    expect(spies.initMultimodal).toHaveBeenCalledWith({
+      path: "/models/mmproj.gguf",
+    });
+  });
+
+  it("throws without a context", async () => {
+    await expect(
+      initMultimodalSupport(null as unknown as LlamaContext, "/mmproj.gguf"),
+    ).rejects.toThrow();
+  });
+
+  it("throws when no projector path is given", async () => {
+    const { ctx } = fakeMultimodalContext();
+    await expect(initMultimodalSupport(ctx, "")).rejects.toThrow(
+      "Multimodal projector path is required",
+    );
+  });
+
+  it("propagates a failure from the native layer", async () => {
+    const { ctx, spies } = fakeMultimodalContext();
+    spies.initMultimodal.mockRejectedValueOnce(new Error("native failure"));
+    await expect(initMultimodalSupport(ctx, "/mmproj.gguf")).rejects.toThrow(
+      "native failure",
+    );
+  });
+});
+
+describe("shared/llm — isMultimodalEnabled", () => {
+  it("returns the context's own reported state", async () => {
+    const { ctx } = fakeMultimodalContext();
+    await expect(isMultimodalEnabled(ctx)).resolves.toBe(true);
+  });
+
+  it("returns false without a context, rather than throwing", async () => {
+    await expect(
+      isMultimodalEnabled(null as unknown as LlamaContext),
+    ).resolves.toBe(false);
+  });
+});
+
+describe("shared/llm — getMultimodalSupport", () => {
+  it("returns the context's reported vision/audio support", async () => {
+    const { ctx } = fakeMultimodalContext();
+    await expect(getMultimodalSupport(ctx)).resolves.toEqual({
+      vision: true,
+      audio: false,
+    });
+  });
+
+  it("returns no support without a context, rather than throwing", async () => {
+    await expect(
+      getMultimodalSupport(null as unknown as LlamaContext),
+    ).resolves.toEqual({ vision: false, audio: false });
+  });
+});
+
+describe("shared/llm — releaseMultimodalSupport", () => {
+  it("releases multimodal support on the context", async () => {
+    const { ctx, spies } = fakeMultimodalContext();
+    await releaseMultimodalSupport(ctx);
+    expect(spies.releaseMultimodal).toHaveBeenCalled();
+  });
+
+  it("is a no-op without a context", async () => {
+    await expect(
+      releaseMultimodalSupport(null as unknown as LlamaContext),
+    ).resolves.not.toThrow();
   });
 });

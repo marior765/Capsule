@@ -7,7 +7,45 @@ export type ChatRole = "system" | "user" | "assistant";
 export type ChatMessage = {
   role: ChatRole;
   content: string;
+  /**
+   * A local file path or data URI for an image attached to this message
+   * (8.4 spike). Only meaningful once the context has multimodal support
+   * initialized via `initMultimodalSupport` — a context without it has
+   * nowhere to route the image, and llama.rn's own behavior in that case
+   * is undocumented from the JS side; this wrapper doesn't guess at it.
+   */
+  imageUrl?: string;
 };
+
+type NativeMessagePart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+type NativeChatMessage = {
+  role: ChatRole;
+  content: string | NativeMessagePart[];
+};
+
+/**
+ * llama.rn expects a plain string `content` for a text-only turn, or an
+ * array of typed parts (`{type: "text", ...}`/`{type: "image_url", ...}`)
+ * once an image is attached — this is the one shape difference between a
+ * message with `imageUrl` and one without. Messages without an image are
+ * passed through as `{role, content}` exactly as before this function
+ * existed, so nothing about the pre-8.4 completion path changes shape.
+ */
+function toNativeMessage(message: ChatMessage): NativeChatMessage {
+  if (!message.imageUrl) {
+    return { role: message.role, content: message.content };
+  }
+  return {
+    role: message.role,
+    content: [
+      { type: "text", text: message.content },
+      { type: "image_url", image_url: { url: message.imageUrl } },
+    ],
+  };
+}
 
 /**
  * Wrapper-level completion params. Names are ours (camelCase); the mapping to
@@ -73,12 +111,14 @@ export async function runCompletion(
     throw new Error("At least one message is required");
   }
 
+  const nativeMessages = params.messages.map(toNativeMessage);
+
   // TEMPORARY DIAGNOSTIC — remove once the empty-reply bug is settled.
   // The prompt is rendered by native code from the template inside the GGUF,
   // so it is invisible from JS unless we ask for it explicitly.
   if (__DEV__) {
     try {
-      const formatted = await ctx.getFormattedChat(params.messages, undefined, {
+      const formatted = await ctx.getFormattedChat(nativeMessages, undefined, {
         jinja: true,
       });
       console.log("[llm] rendered prompt >>>", JSON.stringify(formatted));
@@ -90,7 +130,7 @@ export async function runCompletion(
   let streamed = 0;
   const result = await ctx.completion(
     {
-      messages: params.messages,
+      messages: nativeMessages,
       // Render via the template embedded in the GGUF rather than any format of
       // our own — this is what makes the wrapper model-agnostic.
       jinja: true,
@@ -197,4 +237,60 @@ export async function embedText(
   }
   const result = await ctx.embedding(text);
   return { embedding: result.embedding };
+}
+
+// --- Multimodal / vision (8.4 spike) ---
+//
+// Unlike embeddings, this is NOT a separate context — `initMultimodal`/
+// `isMultimodalEnabled`/`getMultimodalSupport`/`releaseMultimodal` are all
+// methods on the same `LlamaContext` `initLlm` already returns. A vision
+// model still needs a second file loaded alongside the base GGUF (the
+// "mmproj" projector), so this is an additional init step on an
+// already-loaded completion context, not a wholly separate model load.
+
+export type MultimodalSupport = {
+  vision: boolean;
+  audio: boolean;
+};
+
+/**
+ * Initializes multimodal (vision/audio) support on an already-loaded
+ * completion context, given a path to its projector ("mmproj") model
+ * file. Returns whatever llama.rn itself reports for success — this
+ * wrapper doesn't second-guess that with its own follow-up check.
+ */
+export async function initMultimodalSupport(
+  ctx: LlamaContext,
+  mmprojPath: string,
+): Promise<boolean> {
+  if (!ctx) {
+    throw new Error("LLM context is not initialized");
+  }
+  if (!mmprojPath) {
+    throw new Error("Multimodal projector path is required");
+  }
+  return ctx.initMultimodal({ path: mmprojPath });
+}
+
+/** `false` without a context, rather than throwing — a natural "not enabled" answer, not an error condition. */
+export async function isMultimodalEnabled(ctx: LlamaContext): Promise<boolean> {
+  if (!ctx) return false;
+  return ctx.isMultimodalEnabled();
+}
+
+/** No support reported without a context, rather than throwing — same reasoning as `isMultimodalEnabled`. */
+export async function getMultimodalSupport(
+  ctx: LlamaContext,
+): Promise<MultimodalSupport> {
+  if (!ctx) {
+    return { vision: false, audio: false };
+  }
+  return ctx.getMultimodalSupport();
+}
+
+export async function releaseMultimodalSupport(
+  ctx: LlamaContext,
+): Promise<void> {
+  if (!ctx) return;
+  await ctx.releaseMultimodal();
 }
