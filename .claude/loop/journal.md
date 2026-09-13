@@ -3346,4 +3346,69 @@ history, or bulk operations.
 
 ---
 
+## Beat 50 — 8.5 Version history (scoped: version history only)
+
+Continuing 8.5's compound plan line. Nesting shipped last beat
+(`ecf82bd`); this beat picked the next sub-feature — version history —
+leaving "bulk operations" for later, same scoping discipline as before.
+
+Modeled `CapsuleVersion` inside `entities/capsule`, not as its own slice
+— deliberately mirroring `CapsuleEmbedding`'s own precedent (a capsule's
+own derived data, not a relation between two entities). A version is a
+full point-in-time snapshot (title + every field value, JSON-serialized
+into one `values_json` column — named that instead of the more obvious
+`values` specifically to sidestep `VALUES` being a real SQL keyword, not
+just a style preference), not a diff — the simplest thing that supports
+both "show me the history" and "restore this one," and diffing can be
+computed from two full snapshots later if display ever wants it, without
+changing the storage shape retroactively.
+
+New `features/capsule-versioning` slice: `snapshotCapsule` (capture),
+`getCapsuleHistory` (list), `restoreCapsuleVersion` (revert). The
+interesting design decision is what restore does to the *current* state
+before overwriting it: rather than a destructive jump with no way back,
+`restoreCapsuleVersion` takes a snapshot of the current state first, so
+restoring is itself just one more entry in the same history — undo has
+an undo, for free, from the same mechanism. `deleteVersionsByCapsule`
+wired into `delete-capsule`'s cascade in the same beat as the entity
+work (proactive, not a later addendum) — same reasoning as nesting's
+`orphanChildCapsules` last beat: a capsule's own derived data gets active
+cleanup on delete, not graceful degradation.
+
+Checker caught one real gap, worth recording precisely because the
+underlying *logic* was never wrong: `restoreCapsuleVersion`'s doc comment
+asserted a specific guarantee — a field added to the capsule after a
+version was taken (so absent from that version's `values` map) survives
+a restore untouched, rather than getting cleared. The code already did
+exactly this (the restore loop can only ever touch keys present in
+`version.values`, structurally). But nothing tested it. A comment stating
+a behavioral contract with no test proving it is the same failure shape
+this run has hit before at the level of BLOCKED.md citations — a
+true-sounding claim sitting next to code that happens to satisfy it by
+accident of implementation, not by anything holding it in place. Fixed
+by writing the test the checker asked for (create a capsule, snapshot it,
+add a NEW field afterward, restore the old snapshot, assert the new
+field survives) — then mutation-tested it myself before resubmitting:
+temporarily rewrote the restore loop to iterate over every existing
+`CapsuleValue` row instead of just `version.values` (the exact regression
+this guarantee exists to prevent), confirmed the new test caught it
+immediately, reverted. Re-review: pass, independently confirmed via diff
+comparison that the fix was the only change and nothing else regressed.
+
+13 new tests in `capsule-versioning` (12 + the checker-mandated one), 9
+in the new entity test file, 2 more in `delete-capsule`'s cascade suite,
+1 new end-to-end regression case in `migrations.test.ts`. Gate: tsc
+clean, jest 835/835 (66 suites), eslint clean after one `--fix` pass.
+
+Checkpoint `825ef3b`. Logic-classed — `docs/DEVELOPMENT_PLAN.md`'s 8.5
+box stays **unchecked**, still `in_progress`: nesting and version
+history both have complete entity+feature layers now, neither has a
+UI/route, and "bulk operations" hasn't been started. Cursor stays at
+**8.5** — next beat's natural options are bulk operations, or building
+the UI/route layer for nesting+version-history together (they'd likely
+share a screen — a capsule's detail view is the natural home for both
+"show children" and "show history").
+
+---
+
 <!-- Append new beats above this line. -->

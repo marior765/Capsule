@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 49,
+    "beat": 50,
     "status": "running"
   },
   "cursor": {
@@ -364,10 +364,12 @@
     "8.5": {
       "status": "in_progress",
       "class": "logic",
-      "attempts": 1,
-      "failureSignatures": [],
-      "checkpoint": "ecf82bd",
-      "notes": "Compound plan line ('Capsule nesting + version history + bulk operations') scoped down to CAPSULE NESTING ONLY this beat -- the other two sub-features are separate, not-yet-started work. Nesting done: entities/capsule gained parentCapsuleId (migration v20, no FK, matching this codebase's convention), getChildCapsules, orphanChildCapsules; features/nest-capsule (new slice) provides setCapsuleParent + wouldCreateCycle, walking the full ancestor chain to reject self-parenting and any-depth descendant cycles (hand-traced by both me and the checker for self/direct-child/grandchild cases); features/delete-capsule's cascade now orphans (never cascade-deletes) children on parent delete, per CLAUDE.md's self-contained-entities philosophy -- explicitly a same-entity structural field getting ACTIVE cleanup, unlike the graceful-degradation convention for cross-entity references (CapsuleType/CapsuleLink target) elsewhere in this same cascade. Proactively applied two past-lesson fixes in the SAME beat rather than as a later addendum: migration registered in providers/migrations.ts immediately (with a real end-to-end regression test in migrations.test.ts), and the cascade wired in immediately alongside the entity work. Also found and fixed a real compile break the new required field caused: every raw `Capsule` object-literal builder in the codebase (create-capsule feature + several test fixtures) needed `parentCapsuleId` added, and every OTHER test file whose own migration array feeds `insertCapsule`/`createCapsule` needed `capsuleParentIdMigration` added or it would fail at runtime with 'no such column' -- found via a grep sweep of every 'capsulesMigration' test usage, not just the files I happened to be editing already. Gate: tsc/jest (810/810, 64 suites)/eslint all green. Checker: pass on first attempt, ran the gate itself rather than trusting the claim, hand-traced the cycle algorithm, confirmed the migration-registration and cascade-wiring lessons both actually held this time. docs/DEVELOPMENT_PLAN.md 8.5 box stays UNCHECKED (in_progress, not done) -- 'version history' and 'bulk operations' remain; no UI/route layer for nesting itself exists yet either (matches the established two-beat entity+feature-then-widget pattern from 6.5/6.6/6.7), left for a follow-up beat to decide whether nesting needs its own widget or can ride along with version-history's UI."
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail (version-history round) -- restoreCapsuleVersion's doc comment claimed a field absent from the restored version's snapshot is 'left untouched rather than cleared', but no test asserted it; logic was already correct, only the guarantee was untested"
+      ],
+      "checkpoint": "825ef3b",
+      "notes": "Compound plan line ('Capsule nesting + version history + bulk operations'), worked across two beats. NESTING (beat 49, checkpoint ecf82bd): entities/capsule gained parentCapsuleId (migration v20, no FK), getChildCapsules, orphanChildCapsules; features/nest-capsule provides setCapsuleParent + wouldCreateCycle (full ancestor-chain walk, rejects self/direct-child/grandchild cycles); delete-capsule's cascade orphans (never cascade-deletes) children. VERSION HISTORY (this beat, checkpoint 825ef3b): entities/capsule gained CapsuleVersion (migration v21, values_json column -- deliberately not named `values` to avoid the SQL keyword), insertCapsuleVersion/getVersionById/getVersionsByCapsule/deleteVersionsByCapsule; features/capsule-versioning (new slice) provides snapshotCapsule (point-in-time title+field-values capture), getCapsuleHistory, restoreCapsuleVersion (takes a safety snapshot of CURRENT state before overwriting, so a restore is itself undoable via the same history; only touches fields the restored version actually recorded, leaving fields added since untouched -- id/createdAt preserved on existing CapsuleValue rows via upsertCapsuleValue's own ON CONFLICT semantics, new rows minted for fields with no live value yet); delete-capsule's cascade now also removes a deleted capsule's version history (active cleanup, same-entity derived data, mirrors the embedding cascade). Both beats proactively registered their new migration in providers/migrations.ts immediately (with real end-to-end regression tests in migrations.test.ts) and wired their delete-cascade addition in the SAME beat as the entity work, applying the lesson from earlier phases (6.6's un-registered capsule migrations) before it could recur a third time. Checker failed the version-history round on ONE real gap: restoreCapsuleVersion's doc comment asserted a specific behavioral guarantee (fields outside the restored snapshot are left untouched) that no test actually proved -- the underlying logic was already correct (verified by both me and the checker via code trace), only the test coverage was missing. Fixed with a real DB-backed test, mutation-tested myself (temporarily broke the guarantee by iterating over ALL existing CapsuleValue rows instead of just version.values, confirmed the new test fails exactly as predicted, restored). Re-review: pass, independently confirmed via diff comparison that only the new test changed (no regression surface elsewhere). Gate: tsc/jest (835/835, 66 suites)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.5 box stays UNCHECKED (in_progress) -- 'bulk operations' (the third sub-feature) not started; no UI/route layer exists for either nesting or version history yet (both are mechanism-only, matching the established two-beat entity+feature-then-widget pattern -- e.g. 7.2 capsule-rag shipped mechanism-only for a full beat before any wiring). Next beat should pick up: bulk operations, or the UI/route wiring for nesting+version-history together (likely the more natural pairing, since both would show up in the same capsule detail screen)."
     }
   },
   "quarantinedThisRun": [],
@@ -375,8 +377,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-14T00:00:00Z",
-    "head": "ecf82bd",
-    "note": "64 suites, 810 tests passing after 8.5 capsule-nesting sub-scope"
+    "at": "2026-09-14T00:58:00Z",
+    "head": "825ef3b",
+    "note": "66 suites, 835 tests passing after 8.5 version-history sub-scope"
   }
 }

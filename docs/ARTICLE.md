@@ -2063,4 +2063,68 @@ running it."
 
 ---
 
+## 2026-09-14 — A comment can be true by accident, and that's not the same as being backed
+
+Building `restoreCapsuleVersion` for step 8.5's version-history feature,
+one design decision needed writing down: restoring an old snapshot should
+only touch the fields that snapshot actually recorded. A field added to a
+capsule *after* the snapshot was taken has no opinion expressed in that
+snapshot, so restoring should leave it alone rather than clearing it. The
+code naturally does this — the restore loop iterates over
+`Object.entries(version.values)`, so it structurally cannot reach a field
+absent from that map. Confident this was both correct and self-evident
+from the code, the doc comment stated it as a guarantee and the diff went
+to the independent checker.
+
+The checker failed it anyway, for a reason worth sitting with: the
+guarantee was *true*, but nothing made it stay true. Grep every test file
+touching this feature — no test constructs the scenario the comment
+describes (a field added after the snapshot, restore an earlier one,
+confirm the new field survives). The logic was correct today by the
+shape of the loop, not by any test that would notice if a future change
+altered that shape — say, a well-intentioned refactor that switches the
+restore loop to iterate over the capsule's *current* fields instead of
+the version's recorded ones, to "make sure nothing is missed." That
+refactor reads as an improvement. It would also silently break exactly
+the guarantee the comment claims, and nothing in the test suite would
+turn red to say so.
+
+This is the same failure shape this run already met once this month, at
+a different layer: a code comment citing `BLOCKED.md` for content that
+was never actually written there. Both cases are a sentence that reads
+as documentation of a fact, sitting next to something that happens to
+make the sentence true right now, with no mechanism keeping the two
+connected. The BLOCKED.md version was caught by literally checking
+whether the cited file had the cited content — a fact about the
+*filesystem*. This version needed a different check: whether a claimed
+*behavior* has a test that would fail if the behavior stopped holding.
+Same shape of gap, different tool needed to catch it — grep for the
+cited file's content in one case, grep for a test asserting the specific
+scenario in the other.
+
+Mutation testing was the mechanism that turned "this is probably fine"
+into a checked claim, on both sides of the fix: before resubmitting, the
+restore loop was temporarily rewritten to do the exact wrong thing the
+guarantee forbids (iterate over the capsule's live fields, clearing
+anything absent from the snapshot) — and the new test caught it
+immediately, then the correct code was restored. That's the concrete
+difference between a comment that's true and a comment that's *enforced*:
+one survives only until someone edits the code around it without
+re-reading the prose; the other fails a test the moment it stops being
+true.
+
+**Article angle:** "the code already does this, so the comment is
+accurate" is a weaker claim than it sounds — accuracy today says nothing
+about tomorrow's refactor. A doc comment asserting a specific behavioral
+guarantee is a promise to every future editor of that function, and a
+promise with no test behind it is enforced by nothing but the current
+author's memory of why the code looks the way it does. The fix isn't "be
+more careful writing comments" — it's mechanical: every sentence in a
+doc comment that makes a falsifiable claim about behavior should have a
+test that would fail if the claim stopped being true, checked the same
+way you'd check a citation — by trying to find the thing that's supposed
+to back it up, and treating its absence as a defect, not a formality.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
