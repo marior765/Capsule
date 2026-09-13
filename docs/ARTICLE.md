@@ -2012,4 +2012,55 @@ level of the code it was writing, before the distinction fully landed.
 
 ---
 
+## 2026-09-14 — A type system's blast radius is not the same as a runtime's
+
+Adding one field to a shared entity — `parentCapsuleId: string | null` on
+`Capsule`, for step 8.5's capsule-nesting work — should be a small,
+contained change. TypeScript made the compile-time part of that true: it
+immediately flagged every raw `Capsule` object literal missing the new
+field, three test fixtures plus one real production call site
+(`features/create-capsule`, which builds a `Capsule` by hand rather than
+through a helper). Each was fixed, `tsc --noEmit` went clean, and it felt
+done.
+
+It wasn't. Seven other test files were still red at runtime, all with the
+same error: "no such column: parent_capsule_id." Every one of them had a
+`beforeEach` that builds its own hand-picked migration array —
+`runMigrations(db, [capsulesMigration, capsuleValuesMigration])` — and
+every one of them, transitively, calls `insertCapsule` (via
+`createCapsule`), whose `INSERT` statement now lists the new column.
+TypeScript has no way to see this: a `Migration` object and a SQL
+`INSERT` string are both just data to the type checker, connected only by
+a runtime contract this codebase enforces by convention, not by types.
+The compiler's blast radius (every place that *shapes* a `Capsule`) and
+the runtime's actual blast radius (every place that *persists* one
+through a specific migration path) aren't the same set, and nothing
+forces them to be.
+
+The fix was mechanical once found — grep every test file that imports
+`capsulesMigration` at all, not just the ones already open from planning
+the nesting feature, and add `capsuleParentIdMigration` to each array.
+But finding it required treating "tsc is clean" as a necessary check, not
+a sufficient one, and running the actual test suite before considering
+the field addition finished. This is the same shape of lesson this run
+already learned once at the level of its own control files (state.json
+vs. journal.md — writing a fact down doesn't help the process that
+doesn't read that file) — here it shows up one layer down, in the gap
+between a type system's static guarantees and a database migration's
+runtime ones. A required field is enforced everywhere the type checker
+looks; a required *column* is enforced only everywhere someone remembered
+to run the migration that creates it, and only a real test run — not a
+type check — will find the places that forgot.
+
+**Article angle:** static types and runtime schema are two separate
+promise systems that happen to describe the same data, and a change that
+satisfies one silently says nothing about the other. The habit worth
+having isn't "the compiler is clean, so this is done" — it's "find every
+consumer of the thing I changed, by the mechanism that thing actually
+uses at runtime (here: `grep` for the migration import, not just for the
+type name), and verify each one the way it will actually fail: by
+running it."
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

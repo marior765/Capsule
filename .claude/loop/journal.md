@@ -3258,4 +3258,92 @@ cross-referencing 6.8's entry rather than duplicating it, since resolving
 
 ---
 
+## Beat 49 — 8.5 Capsule nesting (scoped: nesting only)
+
+Plan line 8.5 is a compound of three sub-features — "Capsule nesting +
+version history + bulk operations." Scoped this beat to nesting alone;
+version history and bulk operations are separate, unstarted work, not
+silently folded in or forgotten.
+
+`entities/capsule` gained `parentCapsuleId: string | null` — a plain
+field, migration v20 (`ALTER TABLE capsules ADD COLUMN
+parent_capsule_id TEXT`), no FK, matching this codebase's universal
+no-FK convention. Deliberately *not* modeled as a `CapsuleLink`: nesting
+is a single-parent tree with real structural meaning (cycle prevention,
+"children of X" queries), unlike `CapsuleLink`'s many-to-many, freely
+labeled relations — reusing the link table would mean every link query
+has to filter out nesting edges by convention rather than by the schema
+itself. Reasoning recorded directly in `model.ts`'s doc comment, not
+just here.
+
+New `features/nest-capsule` slice: `setCapsuleParent` +
+`wouldCreateCycle`, the latter walking the *full* ancestor chain from
+the proposed parent (with a `seen`-set guard against an already-corrupt
+chain looping forever) to reject self-parenting and a cycle at any
+depth, not just a direct-child check. Hand-traced by both me and the
+checker for the self/direct-child/grandchild cases before trusting it.
+
+`features/delete-capsule`'s cascade gained `orphanChildCapsules` —
+active cleanup, not graceful degradation. This distinction matters
+enough to spell out: every *other* reference this cascade tolerates
+dangling (CapsuleType, Persona, a `CapsuleLink` target) is a
+cross-entity pointer, where "the other thing might not exist" is already
+a fact of life the read side handles. Nesting is a same-entity
+structural field on `Capsule` itself — a stale `parent_capsule_id` after
+a delete wouldn't just degrade one display, it would silently drop a
+child from *every* "children of X" query forever. So children are never
+cascade-deleted (they stay independently valid, per CLAUDE.md's
+self-contained-entities philosophy) but their `parentCapsuleId` is
+actively cleared, promoting them to root.
+
+Applied two past-session lessons *proactively* this time, in the same
+beat rather than as a later addendum once a checker or a future-me
+noticed the gap: the new migration was registered in
+`providers/migrations.ts` immediately, with a real end-to-end regression
+test in `migrations.test.ts` proving nesting works through the actual
+boot-time array (not just a test's own hand-picked migration list) —
+this exact class of gap (a migration existing but never wired into real
+boot) has bitten this run before (6.6's capsule-domain migrations). And
+the delete-cascade call was wired in during the same beat as the entity
+work, not deferred.
+
+Article-worthy gotcha: adding a required `parentCapsuleId` field broke
+compilation and tests far outside the files I'd planned to touch.
+`features/create-capsule` builds a raw `Capsule` object literal (not
+through a helper), so it needed the field added — plus a new optional
+`parentCapsuleId` on its own input type. And *every* other test file
+whose own `beforeEach` builds a hand-picked `runMigrations(db, [...])`
+array that transitively calls `insertCapsule`/`createCapsule` needed
+`capsuleParentIdMigration` added to that array, or it fails at runtime
+with "no such column" — TypeScript can't catch a missing migration the
+way it catches a missing struct field. Found every instance by grepping
+every test file that imports `capsulesMigration` at all (7 files: entity
+test, create-capsule, search-capsules, capsule-rag, delete-capsule,
+edit-capsule, migrations.test.ts) rather than trusting the ones I
+happened to already have open — a type-level change to a widely-used
+entity has a blast radius the compiler only partly reveals.
+
+13 new tests in `features/nest-capsule`, ~15 new/updated across the
+entity and cascade test files. Gate: tsc clean, jest 810/810 (64
+suites), eslint clean after one `--fix` pass for prettier formatting on
+the new multi-line assertions. Checker: pass on first attempt — ran the
+gate itself rather than trusting the claim, hand-traced the cycle
+algorithm for all three cycle shapes, independently confirmed via a
+version-number check that v20 doesn't collide with anything and that
+`runMigrations` sorts by version not array position, and grepped for
+every other raw `Capsule`-literal call site itself to confirm nothing
+was missed.
+
+Checkpoint `ecf82bd`. Logic-classed (no native surface) — but
+`docs/DEVELOPMENT_PLAN.md`'s 8.5 box stays **unchecked**, annotated
+inline: this is `in_progress`, not `done` — nesting's own entity+feature
+layer is complete, but it has no UI/route yet (no widget or screen
+change was in scope this beat, matching the established two-beat
+entity+feature-then-widget pattern from 6.5/6.6/6.7), and "version
+history" + "bulk operations" haven't been started at all. Cursor stays
+at **8.5** for the next beat to pick up one of: nesting's UI, version
+history, or bulk operations.
+
+---
+
 <!-- Append new beats above this line. -->
