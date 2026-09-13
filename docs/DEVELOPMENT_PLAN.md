@@ -148,7 +148,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 8.2 Prompt/snippet library
 - [x] 8.3 Chat export as markdown — wired into chat/[id].tsx (persisted chat); chat/ephemeral.tsx has no persisted Conversation entity to export at all, so it's out of scope, not deferred
 - [ ] 8.4 Image/vision input (multimodal models)
-- [ ] 8.5 Capsule nesting + version history + bulk operations — all three sub-features have complete entity+feature mechanism layers (parentCapsuleId + features/nest-capsule; CapsuleVersion snapshot/restore + features/capsule-versioning; shared/lib's runBulkOperation); no UI/route wiring exists yet for any of the three
+- [ ] 8.5 Capsule nesting + version history + bulk operations — version history has full UI now (capsule detail screen shows history + restore, auto-snapshots on edit); nesting and bulk operations still have complete mechanism layers (features/nest-capsule; shared/lib's runBulkOperation) but no UI/route wiring yet
 - [ ] 8.6 Quick capture + command palette
 - [ ] 8.7 Multiple capsule views (card / board)
 - [ ] 8.8 Local reminders (on-device notifications)

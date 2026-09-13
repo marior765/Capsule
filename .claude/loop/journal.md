@@ -3483,4 +3483,68 @@ UI work to begin.
 
 ---
 
+## Beat 52 — 8.5 Version history UI (scoped: version history only)
+
+First UI beat for 8.5. Of the three sub-features (nesting, version
+history, bulk operations), version history was the most self-contained
+to wire up — no new picker component needed, no multi-select mode, just
+a list + a restore action on the existing capsule detail screen.
+
+The interesting piece wasn't the widget (`widgets/VersionHistory` is a
+straight copy of `TagPicker`/`RelationPicker`'s "purely controlled, no
+dedicated test" shape — its only branch is a trivial empty-state early
+return, nothing worth extracting) — it was making snapshot capture
+*happen* at all. `snapshotCapsule` existed since beat 50 but nothing
+ever called it; the entire mechanism was inert until something in the
+save path actually invoked it. Two decisions there: (1) snapshot only
+when the edit will actually change something — added `hasCapsuleEdits`
+to `features/edit-capsule`, a pure function mirroring `saveCapsuleEdits`'
+own diff logic exactly, so an unedited "Save" tap doesn't leave a
+pointless entry in the history; (2) call order matters in a way that's
+easy to get backwards without noticing in casual testing — snapshotting
+*after* `saveCapsuleEdits` would silently capture the post-edit state,
+making every "restore" a no-op that quietly does nothing while looking
+like it worked. Both live at the route layer (`capsules/[id]/edit.tsx`),
+composing `features/edit-capsule` and `features/capsule-versioning`
+together — the one place allowed to, since features can't import each
+other.
+
+Wrote the regression test to specifically catch an order regression, not
+just prove a snapshot exists: it asserts the captured snapshot's title
+and values are the OLD ones while the live capsule already holds the
+NEW ones — a test that would only pass if snapshot-then-save runs in
+that order, and would fail cleanly (not vacuously) if someone later
+swapped the two calls. A companion test proves the negative case: an
+edit that changes nothing produces zero history entries, so the
+`hasCapsuleEdits` gate is doing real work, not just always returning
+true.
+
+`capsules/[id].tsx` (detail screen) now fetches history alongside
+everything else it already loads, renders `VersionHistory`, and on
+restore re-fetches capsule + values + history together — restoring
+doesn't just change the live capsule, it also appends its own safety
+snapshot (per `restoreCapsuleVersion`'s beat-50 design), so all three
+pieces of local state need refreshing, not just the obvious one or two.
+
+6 new tests in `edit-capsule.test.ts` (`hasCapsuleEdits`, plus one
+proving it agrees with `saveCapsuleEdits` on a real db), 2 new end-to-end
+regression tests in `migrations.test.ts`. Gate: tsc clean, jest 854/854
+(67 suites), eslint clean. Checker: pass on first attempt — traced
+`hasCapsuleEdits` against `saveCapsuleEdits` line by line to confirm they
+genuinely match (not just similar), verified the call order in the route
+directly, and raised one non-blocking note (the agreement test only
+exercises the true-branch, not a full case table) worth remembering but
+not acted on this beat, since the two functions are literal duplicated
+logic with no live path to diverge yet.
+
+Checkpoint `9ed110c`. Version history is the first of 8.5's three
+sub-features with a complete, working UI — a user can genuinely see and
+restore a capsule's history now. `docs/DEVELOPMENT_PLAN.md`'s 8.5 box
+stays **unchecked**: nesting and bulk operations still have zero UI.
+Cursor stays at **8.5** — next beat's natural pick is nesting's UI (a
+capsule picker for "move to parent" plus a children list) or bulk
+operations' UI (multi-select mode + action bar in `capsules/index.tsx`).
+
+---
+
 <!-- Append new beats above this line. -->
