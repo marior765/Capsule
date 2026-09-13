@@ -4,6 +4,7 @@ import { createComponentTestIDs } from "@/shared/testing";
 import type { Capsule } from "@/entities/capsule";
 import type { CapsuleType } from "@/entities/capsule-type";
 import { CapsuleCard } from "@/widgets/CapsuleCard";
+import { toggleSelection } from "./toggleSelection";
 
 type CapsuleListProps = {
   capsules: Capsule[];
@@ -16,6 +17,17 @@ type CapsuleListProps = {
    */
   capsuleTypesById: Record<string, CapsuleType>;
   onPressCapsule?: (capsule: Capsule) => void;
+  /**
+   * Bulk-select mode (8.5). Like `FilterSheet`'s own `sortKey`/
+   * `sortDirection`, this is fully controlled — the caller
+   * (`capsules/index.tsx`) owns `selectedIds` — but the tap-to-toggle
+   * transition itself is computed HERE via `toggleSelection` (mirroring
+   * `FilterSheet`'s own `toggleSort` usage) and handed up whole via
+   * `onSelectionChange`, so the caller never has to know the toggle rule.
+   */
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (nextSelectedIds: Set<string>) => void;
 };
 
 /** Renders every capsule as a `CapsuleCard`, or an empty-state message. */
@@ -23,6 +35,9 @@ export function CapsuleList({
   capsules,
   capsuleTypesById,
   onPressCapsule,
+  selectionMode = false,
+  selectedIds,
+  onSelectionChange,
 }: CapsuleListProps) {
   if (capsules.length === 0) {
     return (
@@ -34,6 +49,16 @@ export function CapsuleList({
     );
   }
 
+  const handlePress = (capsule: Capsule) => {
+    if (selectionMode) {
+      onSelectionChange?.(
+        toggleSelection(selectedIds ?? new Set(), capsule.id),
+      );
+    } else {
+      onPressCapsule?.(capsule);
+    }
+  };
+
   return (
     <FlatList
       testID={testIDs.containers.root}
@@ -43,7 +68,9 @@ export function CapsuleList({
         <CapsuleCard
           capsule={item}
           capsuleTypeName={capsuleTypesById[item.capsuleTypeId]?.name ?? null}
-          onPress={() => onPressCapsule?.(item)}
+          onPress={() => handlePress(item)}
+          selectionMode={selectionMode}
+          selected={selectedIds?.has(item.id) ?? false}
         />
       )}
       contentContainerStyle={styles.content}

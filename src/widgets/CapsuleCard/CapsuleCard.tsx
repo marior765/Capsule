@@ -1,4 +1,4 @@
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
 import type { Capsule } from "@/entities/capsule";
@@ -15,6 +15,14 @@ type CapsuleCardProps = {
    */
   capsuleTypeName: string | null;
   onPress?: () => void;
+  /**
+   * True while the list is in bulk-select mode (8.5) — this component has
+   * no opinion on what a press MEANS (navigate vs. toggle selection,
+   * decided by the caller); it only changes what gets rendered, so a
+   * selection checkbox never appears outside select mode.
+   */
+  selectionMode?: boolean;
+  selected?: boolean;
 };
 
 /**
@@ -28,26 +36,51 @@ export function CapsuleCard({
   capsule,
   capsuleTypeName,
   onPress,
+  selectionMode = false,
+  selected = false,
 }: CapsuleCardProps) {
   return (
     <Pressable
       testID={`${testIDs.pressables.root}_${capsule.id}`}
-      style={styles.root}
+      style={[styles.root, selectionMode && selected && styles.selected]}
       onPress={onPress}
     >
-      <Text style={styles.title}>{capsule.title}</Text>
-      <Text style={styles.typeName}>{capsuleTypeName ?? "Unknown type"}</Text>
+      {selectionMode && (
+        <Text
+          testID={`${testIDs.texts.checkbox}_${capsule.id}`}
+          style={styles.checkbox}
+        >
+          {selected ? "●" : "○"}
+        </Text>
+      )}
+      <View style={styles.info}>
+        <Text style={styles.title}>{capsule.title}</Text>
+        <Text style={styles.typeName}>{capsuleTypeName ?? "Unknown type"}</Text>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
   root: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: theme.spacing.three,
     paddingHorizontal: theme.spacing.three,
     borderRadius: theme.spacing.two,
     backgroundColor: theme.colors.backgroundElement,
     marginBottom: theme.spacing.two,
+  },
+  selected: {
+    backgroundColor: theme.colors.backgroundSelected,
+  },
+  checkbox: {
+    color: theme.colors.accent,
+    fontSize: 16,
+    marginRight: theme.spacing.two,
+  },
+  info: {
+    flex: 1,
   },
   title: {
     color: theme.colors.text,
@@ -64,6 +97,7 @@ const styles = StyleSheet.create((theme) => ({
 
 const testIDs = createComponentTestIDs("CapsuleCard", {
   pressables: ["root"] as const,
+  texts: ["checkbox"] as const,
 });
 
 CapsuleCard.testIDs = testIDs;

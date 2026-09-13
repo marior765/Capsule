@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import { getAllCapsules, type Capsule } from "@/entities/capsule";
+import type { BulkOperationResult } from "@/shared/lib";
 import { getAllCapsuleTypes, type CapsuleType } from "@/entities/capsule-type";
 import {
   filterCapsulesByType,
@@ -16,6 +17,7 @@ import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleList } from "@/widgets/CapsuleList";
 import { FilterSheet } from "@/widgets/FilterSheet";
 import { SearchBar } from "@/widgets/SearchBar";
+import { BulkActionBar } from "@/widgets/BulkActionBar";
 
 export default function CapsuleListScreen() {
   const db = useDb();
@@ -26,6 +28,8 @@ export default function CapsuleListScreen() {
   const [sortKey, setSortKey] = useState<CapsuleSortKey>("updatedAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [filterVisible, setFilterVisible] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -46,6 +50,29 @@ export default function CapsuleListScreen() {
   const filtered = filterCapsulesByType(searched, selectedTypeId);
   const visibleCapsules = sortCapsules(filtered, sortKey, sortDirection);
 
+  // Toggling selection mode off also clears the selection — re-entering
+  // select mode later should never resurrect a stale, possibly-deleted
+  // set of ids from a previous session.
+  const handleToggleSelectionMode = () => {
+    setSelectionMode((mode) => !mode);
+    setSelectedIds(new Set());
+  };
+
+  // A partial failure must stay visible: narrowing selection to just the
+  // failed ids (rather than always clearing it) keeps BulkActionBar
+  // mounted with its own error message shown, instead of unmounting it in
+  // the same commit and silently discarding the message it just computed.
+  // Selection mode only exits, and selection only fully clears, once
+  // nothing is left to retry.
+  const handleDeleted = (result: BulkOperationResult<void>) => {
+    setCapsules(getAllCapsules(db));
+    const failedIds = new Set(result.failed.map((f) => f.id));
+    setSelectedIds(failedIds);
+    if (failedIds.size === 0) {
+      setSelectionMode(false);
+    }
+  };
+
   return (
     <View style={styles.root}>
       {capsuleTypes.length === 0 && (
@@ -63,15 +90,26 @@ export default function CapsuleListScreen() {
         </View>
       )}
       <SearchBar value={query} onChangeText={setQuery} />
-      <Pressable
-        testID={testIDs.pressables.toggleFilter}
-        style={styles.filterToggle}
-        onPress={() => setFilterVisible((visible) => !visible)}
-      >
-        <Text style={styles.filterToggleLabel}>
-          {filterVisible ? "Hide filters" : "Filter & sort"}
-        </Text>
-      </Pressable>
+      <View style={styles.toggleRow}>
+        <Pressable
+          testID={testIDs.pressables.toggleFilter}
+          style={styles.filterToggle}
+          onPress={() => setFilterVisible((visible) => !visible)}
+        >
+          <Text style={styles.filterToggleLabel}>
+            {filterVisible ? "Hide filters" : "Filter & sort"}
+          </Text>
+        </Pressable>
+        <Pressable
+          testID={testIDs.pressables.toggleSelectionMode}
+          style={styles.filterToggle}
+          onPress={handleToggleSelectionMode}
+        >
+          <Text style={styles.filterToggleLabel}>
+            {selectionMode ? "Cancel" : "Select"}
+          </Text>
+        </Pressable>
+      </View>
       {filterVisible && (
         <FilterSheet
           capsuleTypes={capsuleTypes}
@@ -85,10 +123,20 @@ export default function CapsuleListScreen() {
           }}
         />
       )}
+      {selectionMode && selectedIds.size > 0 && (
+        <BulkActionBar
+          db={db}
+          selectedIds={Array.from(selectedIds)}
+          onDeleted={handleDeleted}
+        />
+      )}
       <CapsuleList
         capsules={visibleCapsules}
         capsuleTypesById={capsuleTypesById}
         onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
     </View>
   );
@@ -113,6 +161,10 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.rounded,
     fontSize: 13,
   },
+  toggleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   filterToggle: {
     alignSelf: "flex-start",
     paddingHorizontal: theme.spacing.three,
@@ -126,5 +178,5 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("CapsuleListScreen", {
-  pressables: ["createType", "toggleFilter"] as const,
+  pressables: ["createType", "toggleFilter", "toggleSelectionMode"] as const,
 });
