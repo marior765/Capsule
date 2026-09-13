@@ -4,12 +4,15 @@ import {
   rowToCapsule,
   rowToCapsuleEmbedding,
   rowToCapsuleValue,
+  rowToCapsuleVersion,
   type Capsule,
   type CapsuleEmbedding,
   type CapsuleEmbeddingRow,
   type CapsuleRow,
   type CapsuleValue,
   type CapsuleValueRow,
+  type CapsuleVersion,
+  type CapsuleVersionRow,
 } from "./model";
 
 export const capsulesMigration: Migration = {
@@ -298,4 +301,73 @@ export function upsertEmbedding(
 
 export function deleteEmbedding(db: SQLiteDatabase, capsuleId: string): void {
   db.runSync("DELETE FROM capsule_embeddings WHERE capsule_id = ?;", capsuleId);
+}
+
+// --- CapsuleVersion (8.5, "version history") ---
+
+/**
+ * Column is `values_json`, not `values` — SQLite tolerates `VALUES` as an
+ * identifier in most contexts, but it's a real SQL keyword and not worth
+ * the ambiguity risk for a column name that will live in raw SQL strings
+ * for the life of this table.
+ */
+export const capsuleVersionsMigration: Migration = {
+  version: 21,
+  up: (db: SQLiteDatabase) => {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS capsule_versions (
+        id TEXT PRIMARY KEY,
+        capsule_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        values_json TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+    `);
+  },
+};
+
+export function insertCapsuleVersion(
+  db: SQLiteDatabase,
+  version: CapsuleVersion,
+): void {
+  db.runSync(
+    `INSERT INTO capsule_versions (id, capsule_id, title, values_json, created_at)
+     VALUES (?, ?, ?, ?, ?);`,
+    version.id,
+    version.capsuleId,
+    version.title,
+    JSON.stringify(version.values),
+    version.createdAt,
+  );
+}
+
+export function getVersionById(
+  db: SQLiteDatabase,
+  id: string,
+): CapsuleVersion | null {
+  const row = db.getFirstSync(
+    "SELECT * FROM capsule_versions WHERE id = ?;",
+    id,
+  ) as CapsuleVersionRow | null;
+  return row ? rowToCapsuleVersion(row) : null;
+}
+
+/** Every past version of one capsule, most recent first. */
+export function getVersionsByCapsule(
+  db: SQLiteDatabase,
+  capsuleId: string,
+): CapsuleVersion[] {
+  const rows = db.getAllSync(
+    `SELECT * FROM capsule_versions WHERE capsule_id = ? ORDER BY created_at DESC;`,
+    capsuleId,
+  ) as CapsuleVersionRow[];
+  return rows.map(rowToCapsuleVersion);
+}
+
+/** Removes every version belonging to one capsule — e.g. before deleting the capsule itself (composed by the feature layer, not automatic here). */
+export function deleteVersionsByCapsule(
+  db: SQLiteDatabase,
+  capsuleId: string,
+): void {
+  db.runSync("DELETE FROM capsule_versions WHERE capsule_id = ?;", capsuleId);
 }

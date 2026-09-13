@@ -1,9 +1,15 @@
-export type { Capsule, CapsuleEmbedding, CapsuleValue } from "./model";
+export type {
+  Capsule,
+  CapsuleEmbedding,
+  CapsuleValue,
+  CapsuleVersion,
+} from "./model";
 export {
   capsulesMigration,
   capsuleValuesMigration,
   capsuleEmbeddingsMigration,
   capsuleParentIdMigration,
+  capsuleVersionsMigration,
   getAllCapsules,
   getCapsulesByType,
   getCapsuleById,
@@ -20,4 +26,8 @@ export {
   getAllEmbeddings,
   upsertEmbedding,
   deleteEmbedding,
+  getVersionById,
+  getVersionsByCapsule,
+  insertCapsuleVersion,
+  deleteVersionsByCapsule,
 } from "./db";

@@ -3,6 +3,7 @@ import {
   deleteCapsule as deleteCapsuleRecord,
   deleteEmbedding,
   deleteValuesByCapsule,
+  deleteVersionsByCapsule,
   orphanChildCapsules,
 } from "@/entities/capsule";
 import { deleteCapsuleTagsByCapsule } from "@/entities/tag";
@@ -29,6 +30,12 @@ import { deleteAttachmentsByCapsule } from "@/entities/attachment";
  * — they remain independently valid capsules, per CLAUDE.md's
  * "self-contained entities" philosophy — only promoted back to root level.
  *
+ * `deleteVersionsByCapsule` (8.5, version history) removes a deleted
+ * capsule's own snapshot history — like the embedding above, this is the
+ * capsule's own derived data (per `entities/capsule/model.ts`'s doc
+ * comment on `CapsuleVersion`), not a cross-entity reference, so it's
+ * actively cleaned up rather than left dangling.
+ *
  * `deleteAttachmentsByCapsule` only removes the DB rows, not the
  * underlying file bytes at each attachment's `localUri` — `entities/
  * attachment` never touches `expo-file-system` (no picker/writer exists
@@ -42,6 +49,7 @@ export function deleteCapsule(db: SQLiteDatabase, id: string): void {
   deleteLinksByCapsule(db, id);
   deleteAttachmentsByCapsule(db, id);
   deleteEmbedding(db, id);
+  deleteVersionsByCapsule(db, id);
   orphanChildCapsules(db, id);
   deleteCapsuleRecord(db, id);
 }

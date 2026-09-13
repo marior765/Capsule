@@ -6,9 +6,11 @@ import {
   capsulesMigration,
   capsuleValuesMigration,
   capsuleEmbeddingsMigration,
+  capsuleVersionsMigration,
   getCapsuleById,
   getEmbeddingByCapsule,
   getValuesByCapsule,
+  getVersionsByCapsule,
   upsertEmbedding,
 } from "@/entities/capsule";
 import {
@@ -30,6 +32,7 @@ import {
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
+import { snapshotCapsule } from "@/features/capsule-versioning";
 import { deleteCapsule } from "../index";
 
 let db: SQLiteDatabase;
@@ -47,6 +50,7 @@ beforeEach(() => {
     capsuleLinksFieldIdMigration,
     attachmentsMigration,
     capsuleParentIdMigration,
+    capsuleVersionsMigration,
   ]);
 });
 
@@ -218,5 +222,22 @@ describe("deleteCapsule", () => {
     const unrelated = createCapsule(db, { capsuleTypeId: "ct-1" });
     deleteCapsule(db, unrelated.id);
     expect(getCapsuleById(db, child.id)?.parentCapsuleId).toBe(parent.id);
+  });
+
+  it("removes the capsule's version history too (8.5 cascade)", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    snapshotCapsule(db, capsule.id);
+    snapshotCapsule(db, capsule.id);
+    deleteCapsule(db, capsule.id);
+    expect(getVersionsByCapsule(db, capsule.id)).toEqual([]);
+  });
+
+  it("leaves another capsule's version history intact", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    snapshotCapsule(db, a.id);
+    snapshotCapsule(db, b.id);
+    deleteCapsule(db, a.id);
+    expect(getVersionsByCapsule(db, b.id)).toHaveLength(1);
   });
 });

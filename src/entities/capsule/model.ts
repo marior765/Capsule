@@ -123,3 +123,46 @@ export function rowToCapsuleEmbedding(
     updatedAt: row.updated_at,
   };
 }
+
+/**
+ * A point-in-time snapshot of one capsule's title + every field value
+ * (8.5, "version history") — a full snapshot, not a diff, mirroring
+ * `CapsuleEmbedding`'s own "capture the whole thing, not a delta" shape.
+ * Lives inside `entities/capsule` for the same reason `CapsuleEmbedding`
+ * does: this is fundamentally the capsule's own derived history, not a
+ * relation between two entities. `values` is keyed by `fieldId`, matching
+ * `CapsuleValue`'s own shape, so a version can be replayed straight back
+ * onto the live capsule without any translation step.
+ *
+ * No FK on `capsuleId` — same graceful-degradation convention as every
+ * other capsule-to-capsule reference in this codebase (a version whose
+ * capsule has since been deleted is unreachable through normal queries,
+ * since `features/delete-capsule` actively removes a capsule's own
+ * versions on delete, mirroring how it removes its embedding).
+ */
+export type CapsuleVersion = {
+  id: string;
+  capsuleId: string;
+  title: string;
+  values: Record<string, string | null>;
+  createdAt: number;
+};
+
+export type CapsuleVersionRow = {
+  id: string;
+  capsule_id: string;
+  title: string;
+  /** JSON-serialized `Record<string, string | null>`. */
+  values_json: string;
+  created_at: number;
+};
+
+export function rowToCapsuleVersion(row: CapsuleVersionRow): CapsuleVersion {
+  return {
+    id: row.id,
+    capsuleId: row.capsule_id,
+    title: row.title,
+    values: JSON.parse(row.values_json) as Record<string, string | null>,
+    createdAt: row.created_at,
+  };
+}

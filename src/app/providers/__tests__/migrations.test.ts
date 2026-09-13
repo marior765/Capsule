@@ -31,6 +31,10 @@ import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
 import { setCapsuleParent } from "@/features/nest-capsule";
+import {
+  getCapsuleHistory,
+  snapshotCapsule,
+} from "@/features/capsule-versioning";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -167,6 +171,18 @@ describe("Providers' registered migrations", () => {
     expect(
       getAllCapsules(db).find((c) => c.id === child.id)?.parentCapsuleId,
     ).toBe(parent.id);
+  });
+
+  it("lets a capsule version snapshot actually be taken and retrieved through the real migration set (8.5)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+    snapshotCapsule(db, capsule.id);
+    expect(getCapsuleHistory(db, capsule.id)).toHaveLength(1);
   });
 
   it("lets a snippet actually be created and listed through the real migration set (8.2)", () => {
