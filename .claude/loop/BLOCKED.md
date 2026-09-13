@@ -572,6 +572,45 @@ attachment field can do anything a user would notice:
 Not fixed now: both require the dependency decision above first; there's
 nothing to implement yet, only something to remember.
 
+### 8.4 — image/vision input: same picker decision as 6.8, plus a model pair decision
+Implemented and green: `shared/llm` gained `initMultimodalSupport`/
+`isMultimodalEnabled`/`getMultimodalSupport`/`releaseMultimodalSupport`
+(all methods on the same completion context `initLlm` returns, unlike
+7.1's embedding context) and `ChatMessage`/`runCompletion` support an
+optional `imageUrl`, mapped to llama.rn's `image_url` message-part shape.
+Tested against llama.rn's real jest mock and hand-rolled fake contexts —
+llama.rn's mock cannot process a real image any more than it can produce
+a real embedding, so nothing here proves a vision model actually works.
+**Nothing here has run against a real model.**
+
+**Two separate decisions block this, not one:**
+1. **The exact same picker-library decision as 6.8**, above — neither
+   `expo-image-picker` nor `expo-document-picker` is installed, so there's
+   no way to let a user actually pick an image to send. Resolving 6.8's
+   decision resolves this half of 8.4 too, for free.
+2. **A model-pair decision, structurally like 7.1's**: a vision model
+   needs a base GGUF *and* a matching "mmproj" projector file — which
+   pair to bundle/support, and whether the projector is small enough to
+   ship alongside a reasonably-sized base model on a phone, can only be
+   judged empirically (load both on a real device, confirm
+   `getMultimodalSupport()` actually reports `vision: true`, then send a
+   real image and judge whether the model's description of it is
+   remotely accurate — a vector of the right *shape* proved nothing for
+   7.1's embeddings, and a boolean flag being `true` here proves just as
+   little about whether the model can actually see).
+
+**Device check, once both decisions are made:**
+1. `initMultimodalSupport` with a real mmproj file doesn't crash/OOM
+   alongside an already-loaded base model, at a reasonable context length.
+2. `getMultimodalSupport()` reports `vision: true` after a successful init.
+3. A real image, sent via a message's `imageUrl`, produces a completion
+   that's actually about the image's contents — not just non-empty text.
+4. Rough timing/memory budget for one image on a mid-range device.
+
+Not wired into `LlmProvider`, `ChatInput`, or any route — deliberately
+out of scope for a spike, and largely moot without the picker library
+from decision 1 to trigger it with anyway.
+
 ### `src/app/` routes have no testID coverage at all
 CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
 always via the component's `testIDs` object, never a hardcoded string

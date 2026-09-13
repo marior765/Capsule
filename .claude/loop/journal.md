@@ -3204,4 +3204,58 @@ wired into ephemeral chat" for an oversight. Cursor advances to **8.4**
 
 ---
 
+## Beat 48 — 2026-09-13
+
+Normal start, health check clean, gate green on HEAD (`d46c923`). Cursor
+on 8.4 — "Image/vision input (multimodal models)," another native-classed
+step.
+
+Checked llama.rn's actual type declarations before assuming anything:
+multimodal support turned out to be real, existing API on `LlamaContext`
+(`initMultimodal`/`isMultimodalEnabled`/`getMultimodalSupport`/
+`releaseMultimodal`) — and, unlike 7.1's embedding context, it's an
+*additional init step on the same completion context* `initLlm` already
+returns, not a separate load. Also confirmed — the same way 6.8 already
+did — that `expo-image-picker`/`expo-document-picker` are still not
+installed, so this step is blocked on the identical picker-library
+decision as 6.8, in addition to a fresh, structurally-7.1-shaped decision
+of its own (which vision model + mmproj projector pair to actually
+support, judgeable only on a real device).
+
+Scoped the same way 7.1 was: build the wrapper, prove its own contract
+against mocks, and be explicit in `BLOCKED.md` about the exact two things
+that can't be resolved here rather than picking one arbitrarily.
+`ChatMessage` gained an optional `imageUrl`; a new `toNativeMessage`
+helper maps a message to llama.rn's real content shape (a plain string
+when there's no image, a `[text, image_url]` part array when there is) —
+applied to BOTH the existing `__DEV__` diagnostic call and the actual
+completion call, so the diagnostic log can never show a different shape
+than what's genuinely sent (an easy place for a "fixed the real path,
+forgot the debug path" bug to hide, so checked explicitly rather than
+assuming updating one call site was enough).
+
+Cross-referenced llama.rn's actual *compiled* source, not just its type
+declarations, before trusting the shape — a discipline this run first
+used for 7.1's `embedding: true` flag and applied again here: confirmed
+`getFormattedChat`'s real implementation genuinely branches on
+`Array.isArray(content)` and handles an `image_url` part identical to
+what this wrapper constructs, not just something that happens to
+type-check.
+
+18 new tests (40 total in the file). Gate: tsc clean, 63 suites / 783
+tests, eslint clean after `--fix`. Checker: pass — re-verified the
+missing-dependency claim directly against `package.json` rather than
+trusting the journal's own memory of 6.8, confirmed both `__DEV__` and
+the real completion call site use the mapped messages, and cross-checked
+llama.rn's real source the same way this beat did.
+
+Checkpoint `8bd5090`. Native-classed, blocked on two distinct decisions
+(not conflated into one) — full breakdown added to `BLOCKED.md`,
+cross-referencing 6.8's entry rather than duplicating it, since resolving
+6.8's picker decision resolves half of this step for free.
+`docs/DEVELOPMENT_PLAN.md`'s 8.4 box stays unchecked. Cursor advances to
+**8.5** (capsule nesting + version history + bulk operations).
+
+---
+
 <!-- Append new beats above this line. -->

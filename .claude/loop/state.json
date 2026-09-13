@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 47,
+    "beat": 48,
     "status": "running"
   },
   "cursor": {
-    "step": "8.4",
+    "step": "8.5",
     "phase": 8
   },
   "steps": {
@@ -351,6 +351,14 @@
       ],
       "checkpoint": "3df5478",
       "notes": "exportConversationAsMarkdown (pure) + Export button in chat/[id].tsx (expo-clipboard, mirrors ChatBubbles copy pattern). Not wired into chat/ephemeral.tsx -- no persisted Conversation entity exists there at all (checker-confirmed genuine scope boundary, not an oversight). Self-caught bug via checker round 1 (trimEnd ate real trailing whitespace off the last messages content), fixed + 2 regression tests, checker round 2 pass."
+    },
+    "8.4": {
+      "status": "done",
+      "class": "native",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "8bd5090",
+      "notes": "Implemented against mocked natives only -- shared/llm gained initMultimodalSupport/isMultimodalEnabled/getMultimodalSupport/releaseMultimodalSupport (same context as initLlm, not separate like embeddings) + ChatMessage.imageUrl support in runCompletion. Blocked on TWO decisions: the same missing image-picker dependency as 6.8, and a separate vision-model+mmproj-pair choice structurally like 7.1s. Full breakdown in BLOCKED.md. docs/DEVELOPMENT_PLAN.md box stays unchecked per native-class convention."
     }
   },
   "quarantinedThisRun": [],
@@ -358,8 +366,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-13T00:00:00Z",
-    "head": "3df5478",
-    "note": "63 suites, 770 tests passing after 8.3 completion (chat export as markdown)"
+    "at": "2026-09-13T00:45:00Z",
+    "head": "8bd5090",
+    "note": "63 suites, 783 tests passing after 8.4 vision wrapper spike"
   }
 }
