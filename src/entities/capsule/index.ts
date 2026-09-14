@@ -20,6 +20,7 @@ export {
   orphanChildCapsules,
   getValuesByCapsule,
   getValueByCapsuleAndField,
+  getValuesByField,
   upsertCapsuleValue,
   deleteValuesByCapsule,
   getEmbeddingByCapsule,

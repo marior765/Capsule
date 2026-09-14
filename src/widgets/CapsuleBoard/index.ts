@@ -1,0 +1,1 @@
+export { CapsuleBoard } from "./CapsuleBoard";

@@ -207,6 +207,25 @@ export function getValueByCapsuleAndField(
 }
 
 /**
+ * Every value set for one field, across every capsule that has one —
+ * the symmetric counterpart to `getValuesByCapsule` ("one capsule, every
+ * field" vs. this: "one field, every capsule"). Added for 8.7's board
+ * view: grouping capsules into columns by a single_select field's value
+ * needs exactly this shape in one query, rather than one
+ * `getValueByCapsuleAndField` call per capsule.
+ */
+export function getValuesByField(
+  db: SQLiteDatabase,
+  fieldId: string,
+): CapsuleValue[] {
+  const rows = db.getAllSync(
+    "SELECT * FROM capsule_values WHERE field_id = ?;",
+    fieldId,
+  ) as CapsuleValueRow[];
+  return rows.map(rowToCapsuleValue);
+}
+
+/**
  * Sets a field's value on a capsule — inserts a new row if none exists yet
  * for this (capsule, field) pair, otherwise updates the existing row's
  * `value`/`updated_at` in place. The existing row's own `id` and

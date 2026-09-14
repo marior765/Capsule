@@ -3,11 +3,17 @@ import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
-import { getAllCapsules, type Capsule } from "@/entities/capsule";
+import {
+  getAllCapsules,
+  getValuesByField,
+  type Capsule,
+} from "@/entities/capsule";
 import type { BulkOperationResult } from "@/shared/lib";
 import { getAllCapsuleTypes, type CapsuleType } from "@/entities/capsule-type";
+import { getFieldsByCapsuleType, parseSelectOptions } from "@/entities/field";
 import {
   filterCapsulesByType,
+  groupCapsulesBySelectField,
   sortCapsules,
   type CapsuleSortKey,
   type SortDirection,
@@ -16,6 +22,7 @@ import { searchCapsules } from "@/features/search-capsules";
 import { createCapsule } from "@/features/create-capsule";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleList } from "@/widgets/CapsuleList";
+import { CapsuleBoard } from "@/widgets/CapsuleBoard";
 import { FilterSheet } from "@/widgets/FilterSheet";
 import { SearchBar } from "@/widgets/SearchBar";
 import { BulkActionBar } from "@/widgets/BulkActionBar";
@@ -33,7 +40,7 @@ export default function CapsuleListScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [captureVisible, setCaptureVisible] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [viewMode, setViewMode] = useState<"list" | "card" | "board">("list");
 
   useFocusEffect(
     useCallback(() => {
@@ -53,6 +60,30 @@ export default function CapsuleListScreen() {
   const searched = query.trim() ? searchCapsules(db, query) : capsules;
   const filtered = filterCapsulesByType(searched, selectedTypeId);
   const visibleCapsules = sortCapsules(filtered, sortKey, sortDirection);
+
+  // Board view (8.7) only makes sense scoped to ONE capsule type — a
+  // single_select field's options are defined per-type, so grouping
+  // across types would mix unrelated option sets. Groups by the type's
+  // FIRST single_select field; a type with none, or no type selected at
+  // all, has nothing to group by (handled in the render below, not here).
+  const boardField =
+    viewMode === "board" && selectedTypeId
+      ? (getFieldsByCapsuleType(db, selectedTypeId).find(
+          (field) => field.fieldType === "single_select",
+        ) ?? null)
+      : null;
+  const boardColumns = boardField
+    ? groupCapsulesBySelectField(
+        visibleCapsules,
+        parseSelectOptions(boardField.config),
+        Object.fromEntries(
+          getValuesByField(db, boardField.id).map((v) => [
+            v.capsuleId,
+            v.value,
+          ]),
+        ),
+      )
+    : [];
 
   // Toggling selection mode off also clears the selection — re-entering
   // select mode later should never resurrect a stale, possibly-deleted
@@ -138,12 +169,10 @@ export default function CapsuleListScreen() {
         <Pressable
           testID={testIDs.pressables.toggleViewMode}
           style={styles.filterToggle}
-          onPress={() =>
-            setViewMode((mode) => (mode === "list" ? "card" : "list"))
-          }
+          onPress={() => setViewMode((mode) => NEXT_VIEW_MODE[mode])}
         >
           <Text style={styles.filterToggleLabel}>
-            {viewMode === "list" ? "Card view" : "List view"}
+            {VIEW_MODE_LABEL[viewMode]}
           </Text>
         </Pressable>
       </View>
@@ -170,18 +199,49 @@ export default function CapsuleListScreen() {
           onDeleted={handleDeleted}
         />
       )}
-      <CapsuleList
-        capsules={visibleCapsules}
-        capsuleTypesById={capsuleTypesById}
-        onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
-        selectionMode={selectionMode}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        viewMode={viewMode}
-      />
+      {viewMode === "board" ? (
+        !selectedTypeId ? (
+          <Text testID={testIDs.texts.boardHint} style={styles.boardHint}>
+            Select a capsule type above (Filter & sort) to use board view.
+          </Text>
+        ) : !boardField ? (
+          <Text testID={testIDs.texts.boardHint} style={styles.boardHint}>
+            {capsuleTypesById[selectedTypeId]?.name ?? "This type"} has no
+            single-select field to group by.
+          </Text>
+        ) : (
+          <CapsuleBoard
+            columns={boardColumns}
+            capsuleTypeName={capsuleTypesById[selectedTypeId]?.name ?? null}
+            onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
+          />
+        )
+      ) : (
+        <CapsuleList
+          capsules={visibleCapsules}
+          capsuleTypesById={capsuleTypesById}
+          onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          viewMode={viewMode}
+        />
+      )}
     </View>
   );
 }
+
+const NEXT_VIEW_MODE = {
+  list: "card",
+  card: "board",
+  board: "list",
+} as const;
+
+const VIEW_MODE_LABEL = {
+  list: "List view",
+  card: "Card view",
+  board: "Board view",
+} as const;
 
 const styles = StyleSheet.create((theme) => ({
   root: {
@@ -217,6 +277,13 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 13,
   },
+  boardHint: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    textAlign: "center",
+    padding: theme.spacing.four,
+  },
 }));
 
 const testIDs = createComponentTestIDs("CapsuleListScreen", {
@@ -227,4 +294,5 @@ const testIDs = createComponentTestIDs("CapsuleListScreen", {
     "toggleCapture",
     "toggleViewMode",
   ] as const,
+  texts: ["boardHint"] as const,
 });

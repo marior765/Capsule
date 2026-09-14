@@ -15,10 +15,12 @@ import { migrations } from "../migrations";
 import {
   getAllCapsules,
   getEmbeddingByCapsule,
+  getValuesByField,
   upsertEmbedding,
 } from "@/entities/capsule";
 import { getAllCapsuleTypes } from "@/entities/capsule-type";
-import { getFieldsByCapsuleType } from "@/entities/field";
+import { getFieldsByCapsuleType, parseSelectOptions } from "@/entities/field";
+import { groupCapsulesBySelectField } from "@/features/filter-sort-capsules";
 import { getTagsByCapsule } from "@/entities/tag";
 import { getLinksFrom, getLinksFromByField } from "@/entities/link";
 import {
@@ -271,6 +273,57 @@ describe("Providers' registered migrations", () => {
     saveCapsuleEdits(db, capsule.id, editInput);
 
     expect(getCapsuleHistory(db, capsule.id)).toEqual([]);
+  });
+
+  it("lets capsules be grouped into real board columns by a real single_select field's value (8.7)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, {
+      name: "Task",
+      fields: [
+        {
+          name: "Status",
+          fieldType: "single_select",
+          config: JSON.stringify({ options: ["Todo", "Done"] }),
+        },
+      ],
+    });
+    const statusField = getFieldsByCapsuleType(db, capsuleType.id)[0];
+
+    const todo = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Write beat",
+      values: { [statusField.id]: "Todo" },
+    });
+    const done = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Plan beat",
+      values: { [statusField.id]: "Done" },
+    });
+    const unset = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Someday",
+    });
+
+    const options = parseSelectOptions(statusField.config);
+    const valueByCapsuleId = Object.fromEntries(
+      getValuesByField(db, statusField.id).map((v) => [v.capsuleId, v.value]),
+    );
+    const columns = groupCapsulesBySelectField(
+      getAllCapsules(db),
+      options,
+      valueByCapsuleId,
+    );
+
+    expect(
+      columns.find((c) => c.key === "Todo")?.capsules.map((c) => c.id),
+    ).toEqual([todo.id]);
+    expect(
+      columns.find((c) => c.key === "Done")?.capsules.map((c) => c.id),
+    ).toEqual([done.id]);
+    expect(
+      columns.find((c) => c.key === "unset")?.capsules.map((c) => c.id),
+    ).toEqual([unset.id]);
   });
 
   it("lets a snippet actually be created and listed through the real migration set (8.2)", () => {

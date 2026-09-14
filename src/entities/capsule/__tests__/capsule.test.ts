@@ -13,6 +13,7 @@ import {
   getChildCapsules,
   getValueByCapsuleAndField,
   getValuesByCapsule,
+  getValuesByField,
   insertCapsule,
   orphanChildCapsules,
   updateCapsule,
@@ -325,5 +326,27 @@ describe("entities/capsule — CapsuleValue reads and cleanup", () => {
 
   it("deleteValuesByCapsule for a capsule with no values does not throw", () => {
     expect(() => deleteValuesByCapsule(db, "no-values")).not.toThrow();
+  });
+
+  it("getValuesByField returns every value set for that field, across every capsule (8.7)", () => {
+    upsertCapsuleValue(
+      db,
+      makeValue({ capsuleId: "c-1", fieldId: "f-status" }),
+    );
+    upsertCapsuleValue(
+      db,
+      makeValue({ capsuleId: "c-2", fieldId: "f-status" }),
+    );
+    upsertCapsuleValue(db, makeValue({ capsuleId: "c-1", fieldId: "f-other" }));
+
+    expect(
+      getValuesByField(db, "f-status")
+        .map((v) => v.capsuleId)
+        .sort(),
+    ).toEqual(["c-1", "c-2"]);
+  });
+
+  it("getValuesByField returns an empty array when no capsule has a value for that field", () => {
+    expect(getValuesByField(db, "f-status")).toEqual([]);
   });
 });

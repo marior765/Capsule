@@ -1,6 +1,10 @@
 // Tests for step 6.5 — written before implementation (TDD)
 import type { Capsule } from "@/entities/capsule";
-import { filterCapsulesByType, sortCapsules } from "../index";
+import {
+  filterCapsulesByType,
+  groupCapsulesBySelectField,
+  sortCapsules,
+} from "../index";
 
 function makeCapsule(overrides: Partial<Capsule>): Capsule {
   return {
@@ -123,5 +127,86 @@ describe("sortCapsules", () => {
 
   it("does not throw on an empty array", () => {
     expect(sortCapsules([], "title", "asc")).toEqual([]);
+  });
+});
+
+describe("groupCapsulesBySelectField — 8.7 board view", () => {
+  const options = ["Todo", "In Progress", "Done"];
+
+  it("groups each capsule into the column matching its value", () => {
+    const capsules = [
+      makeCapsule({ id: "a" }),
+      makeCapsule({ id: "b" }),
+      makeCapsule({ id: "c" }),
+    ];
+    const valueByCapsuleId = { a: "Todo", b: "Done", c: "Todo" };
+
+    const columns = groupCapsulesBySelectField(
+      capsules,
+      options,
+      valueByCapsuleId,
+    );
+
+    expect(
+      columns.find((c) => c.key === "Todo")?.capsules.map((c) => c.id),
+    ).toEqual(["a", "c"]);
+    expect(
+      columns.find((c) => c.key === "Done")?.capsules.map((c) => c.id),
+    ).toEqual(["b"]);
+  });
+
+  it("produces one column per option, in the option's own order, even when empty", () => {
+    const columns = groupCapsulesBySelectField([], options, {});
+    expect(columns.map((c) => c.key)).toEqual([
+      "Todo",
+      "In Progress",
+      "Done",
+      "unset",
+    ]);
+    expect(columns.every((c) => c.capsules.length === 0)).toBe(true);
+  });
+
+  it("puts a capsule with no value into the trailing 'unset' column", () => {
+    const capsules = [makeCapsule({ id: "a" })];
+    const columns = groupCapsulesBySelectField(capsules, options, {});
+    expect(
+      columns.find((c) => c.key === "unset")?.capsules.map((c) => c.id),
+    ).toEqual(["a"]);
+  });
+
+  it("puts a capsule whose value no longer matches any option into 'unset' — graceful degradation for a stale value", () => {
+    const capsules = [makeCapsule({ id: "a" })];
+    const valueByCapsuleId = { a: "Archived" }; // not one of `options`
+    const columns = groupCapsulesBySelectField(
+      capsules,
+      options,
+      valueByCapsuleId,
+    );
+    expect(
+      columns.find((c) => c.key === "unset")?.capsules.map((c) => c.id),
+    ).toEqual(["a"]);
+  });
+
+  it("never drops a capsule — every input capsule appears in exactly one column", () => {
+    const capsules = [
+      makeCapsule({ id: "a" }),
+      makeCapsule({ id: "b" }),
+      makeCapsule({ id: "c" }),
+    ];
+    const valueByCapsuleId = { a: "Todo", b: "Nonsense" };
+    const columns = groupCapsulesBySelectField(
+      capsules,
+      options,
+      valueByCapsuleId,
+    );
+    const totalPlaced = columns.reduce((sum, c) => sum + c.capsules.length, 0);
+    expect(totalPlaced).toBe(3);
+  });
+
+  it("does not mutate the input capsules array", () => {
+    const capsules = [makeCapsule({ id: "a" })];
+    const original = [...capsules];
+    groupCapsulesBySelectField(capsules, options, { a: "Todo" });
+    expect(capsules).toEqual(original);
   });
 });
