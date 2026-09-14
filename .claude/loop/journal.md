@@ -3825,4 +3825,57 @@ Checkpoint `7f25b31`. **This closes out 8.6** —
 
 ---
 
+## Beat 57 — 8.7 Card view (scoped: card only)
+
+First beat on 8.7. Scoped to "card" — a 2-column grid alternative to the
+existing single-column list — leaving "board" (kanban-style, grouped
+into columns by some dimension) for later. Unlike command palette last
+beat, this deferral isn't a stalled decision waiting to be revisited —
+board genuinely needs its own design call (group by what? CapsuleType?
+a user-picked select field? something configurable?) before a line of
+code makes sense, and nothing about building card view answers that
+question for free.
+
+The actual implementation is almost entirely "make `CapsuleCard` and
+`CapsuleList` accept one more prop and branch on it" — the interesting
+part was getting a specific, easy-to-get-wrong React Native detail
+right rather than assuming it. `FlatList`'s `numColumns` can't change on
+a live instance; passing a new value without remounting produces broken
+layout, not a graceful re-render. This isn't something to take on faith
+from a blog post or half-remembered docs — checked directly against the
+`FlatList` source shipped in this project's own `node_modules`, and it
+spells out the exact fix in its own invariant message: change the `key`
+prop to force a fresh mount. Same story for `columnWrapperStyle` — RN's
+own source throws if it's supplied for a single-column list, which is
+why it's conditionally `undefined` rather than always present with an
+empty gap. Two real platform constraints, both verified against the
+actual shipped code before writing a line that depended on either being
+true — the same discipline this run has applied to llama.rn's compiled
+source in earlier phases, here applied to React Native itself.
+
+No new tests. The one new piece of logic (`numColumns = viewMode ===
+"card" ? 2 : 1`) sits at exactly the same triviality level as
+`CapsuleCard`'s own pre-existing, already-untested `capsuleTypeName ??
+"Unknown type"` fallback — a one-line ternary with no real branching
+worth a test double for. The one piece that genuinely mattered (the
+remount requirement) isn't app logic to unit test at all; it's a
+platform contract, documented with a comment explaining why, which is
+the right artifact for a fact about the framework rather than a fact
+about this app's own behavior.
+
+Gate: tsc clean, jest 874/874 (70 suites, unchanged), eslint clean.
+Checker: pass on first attempt — independently re-verified both RN
+constraints against the same installed source rather than trusting the
+comments' claims, and confirmed no half-started "board" code leaked in
+anywhere.
+
+Checkpoint `98702e1`. `docs/DEVELOPMENT_PLAN.md`'s 8.7 box stays
+**unchecked** — card view works, board view hasn't started. Cursor
+stays at **8.7**; board is a genuine design question for whichever beat
+picks it up next, closer in kind to a real product decision than most
+of this run's other UI calls, since the grouping dimension determines
+the whole shape of the view before any code gets written.
+
+---
+
 <!-- Append new beats above this line. -->
