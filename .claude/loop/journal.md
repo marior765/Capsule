@@ -3878,4 +3878,70 @@ the whole shape of the view before any code gets written.
 
 ---
 
+## Beat 58 — 8.7 Board view (completes 8.7)
+
+Picked up the design question the last beat's own notes deferred: what
+does a capsule grouped into columns actually mean here? The answer
+followed almost mechanically once framed the right way. A board's
+columns need a shared, finite set of labels every visible capsule can be
+sorted into — that's exactly what a `single_select` field's `options`
+already are, nothing new to invent. The one real constraint that
+decision surfaces: options are defined *per capsule type*, so a board
+spanning multiple types would be grouping by columns that don't mean
+the same thing for every card on it. Board view therefore only makes
+sense scoped to one type — which the app already has a mechanism for
+(the existing type filter in "Filter & sort"), so the feature didn't
+need new UI to express its own prerequisite, just a check for whether
+that prerequisite is already met.
+
+Kept deliberately narrow past that: group by the type's *first*
+`single_select` field, not a user-chosen one. A type could in principle
+have several such fields, and letting someone pick which one drives the
+board is a real, separate UI decision (a picker, a saved preference,
+per-type memory) that doesn't need solving today to ship something
+useful — the deterministic default is honest about being a default, not
+a permanent design, and costs nothing to build past whenever a second
+select field on the same type actually becomes a live conflict for a
+real type in real use.
+
+The `"unset"` bucket carries the same graceful-degradation reflex this
+codebase applies everywhere else to a stale or missing reference: a
+capsule whose field was never set, and a capsule whose recorded value no
+longer matches any of the field's CURRENT options (because someone
+edited the field's config after the fact), land in the same place rather
+than one of them silently vanishing from the board. Tested both paths
+distinctly, at two different layers — the feature-level unit tests cover
+"value present but doesn't match anything," while the new end-to-end
+regression test in `migrations.test.ts` specifically creates a capsule
+with *no value set at all* to prove that separate path through the real
+db, not just the same case restated.
+
+Added `getValuesByField` to `entities/capsule` as the deliberate mirror
+image of the entity's own existing `getValuesByCapsule` — "one capsule,
+every field" already existed; "one field, every capsule" is exactly
+what grouping by a field's value needs, and the codebase didn't have it
+yet because nothing had needed it yet. A small, honest example of
+building the data-access shape a feature actually calls for, rather than
+reaching for N calls to an existing narrower function because that
+happened to already exist.
+
+New tests: 2 for `getValuesByField`, 6 for `groupCapsulesBySelectField`,
+1 end-to-end regression proving the whole chain composes for real. No
+test for `CapsuleBoard` itself — pure layout composition over
+already-computed columns, the same bucket `RelationPicker`/
+`VersionHistory` already established. Gate: tsc clean, jest 883/883 (70
+suites), eslint clean after one `--fix` pass. Checker: pass on first
+attempt, with two minor edge cases surfaced and consciously left
+as-is: a capsule whose value happens to literally be the text `"unset"`
+would collide with the sentinel bucket's own key (an unlikely real
+option name, not worth defending against pre-emptively), and the two
+"board unavailable" hint messages share one testID since only one is
+ever mounted at once.
+
+Checkpoint `d6e371b`. **This closes out 8.7** —
+`docs/DEVELOPMENT_PLAN.md`'s box is **ticked**. Cursor advances to
+**8.8** (local reminders — on-device notifications).
+
+---
+
 <!-- Append new beats above this line. -->

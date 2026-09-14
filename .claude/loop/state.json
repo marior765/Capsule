@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 57,
+    "beat": 58,
     "status": "running"
   },
   "cursor": {
-    "step": "8.7",
+    "step": "8.8",
     "phase": 8
   },
   "steps": {
@@ -381,12 +381,12 @@
       "notes": "DONE -- compound plan line ('Quick capture + command palette'), both sub-features complete across two beats. QUICK CAPTURE (55: eaa09cb) -- widgets/QuickCapture (filled a pre-existing empty scaffold stub) + a Capture toggle on capsules/index.tsx. COMMAND PALETTE (this beat, 7f25b31) -- rather than continuing to defer on 'no established mobile pattern,' made a concrete design call: 'jump to anything' via one text input filtering two sources at once (a static COMMANDS list of navigation shortcuts, each path typed as expo-router's real Href union so a typo fails tsc not a live 404; and live capsule results via the already-tested searchCapsules), in a single combined tappable list. New widgets/CommandPalette (db-taking widget, mirrors WipeDataSettings/BulkActionBar's shape) + filterCommands.ts (pure, TDD, case-insensitive substring match). Filled TWO pre-existing empty scaffold stubs discovered this beat: search.tsx (already registered as a hidden tab route, href:null, in (app)/_layout.tsx -- now a thin route just mounting CommandPalette) and (app)/index.tsx, the Home tab (docs/ARCHITECTURE.md envisions it as 'recent conversations + pinned capsules', but pinning/favorites doesn't exist as a data concept anywhere yet -- confirmed by grep, and is its own separate not-yet-started app-wide feature -- so Home got a deliberately minimal, honest placeholder: a heading + one search-trigger button, NOT a fake version of the real future dashboard). COMMANDS also resolves beat 55's discovered orphaned /capsules/new route -- gets a real, honest, secondary entry point ('New capsule (full form)') now that quick capture is the primary creation path, folded into this beat rather than requiring a dedicated fix. Checker passed on first attempt: independently cross-checked every COMMANDS path against the real generated router.d.ts union (none typo'd/aspirational), verified the discriminated-union branch in handleSelect can't swap capsule/command handling, traced that both query AND capsuleResults clear together (no stale-results race), confirmed testID collision-safety between capsule and command results, and independently grepped for pinned/favorite to corroborate the Home-scope-boundary claim rather than trusting it. Gate: tsc/jest (874/874, 70 suites)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.6 box TICKED. Cursor advances to 8.7."
     },
     "8.7": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
-      "attempts": 1,
+      "attempts": 2,
       "failureSignatures": [],
-      "checkpoint": "98702e1",
-      "notes": "Compound plan line ('Multiple capsule views (card / board)'), scoped this beat to CARD VIEW ONLY -- 'board' (kanban-style, column-grouped) is a meaningfully larger feature needing its own grouping-dimension design decision (group by CapsuleType? by a select field? user-configurable?), deferred rather than folded in. widgets/CapsuleCard gained viewMode: 'list'|'card' (column-flex, 2-line-title grid tile in card mode, no new interactive elements). widgets/CapsuleList gained viewMode, driving FlatList's numColumns (1 or 2) with key={viewMode} forcing a remount on change -- verified against React Native's OWN FlatList source (node_modules/react-native/Libraries/Lists/FlatList.js) that changing numColumns on a live instance throws an invariant literally naming key-prop-change as the fix, not an invented constraint -- and columnWrapperStyle only supplied when numColumns>1 (RN's own source throws otherwise too, same verification). capsules/index.tsx gained a Card view/List view toggle (mirrors the existing three toggles) + flexWrap on the toggle row to avoid crowding with a 4th button. No new tests -- the only new logic (numColumns ternary) is exactly as trivial as existing untested inline conditionals elsewhere in the same files; the one genuinely non-obvious piece (key-forces-remount) is a real RN platform constraint, not app logic, documented via comment rather than tested. Checker passed on first attempt: independently verified BOTH RN FlatList constraints (numColumns remount, columnWrapperStyle guard) directly against RN's own installed source rather than trusting the doc-comment claims -- the same discipline this run has applied to llama.rn's real compiled source in earlier phases. Gate: tsc/jest (874/874, 70 suites, unchanged)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.7 box STAYS UNCHECKED -- card view works, board view not started. Cursor stays at 8.7 for a future beat to design board view (needs a grouping-dimension decision first -- likely closer to a real product-design call than nesting/bulk-ops's UI decisions were, since it determines the view's whole shape)."
+      "checkpoint": "d6e371b",
+      "notes": "DONE -- compound plan line ('Multiple capsule views (card / board)'), both sub-features complete across two beats. CARD VIEW (57: 98702e1) -- CapsuleCard/CapsuleList gained viewMode: 'list'|'card', FlatList numColumns 1/2 with key={viewMode} forcing a remount (verified against RN's own FlatList source). BOARD VIEW (this beat, d6e371b) -- made the required grouping-dimension design decision: board only makes sense scoped to ONE capsule type (a single_select field's options are per-type), requires a type filter already active, groups by that type's FIRST single_select field (no per-user field-choice UI yet -- deterministic default). New entities/capsule getValuesByField (symmetric counterpart to getValuesByCapsule: one field across every capsule, TDD) + features/filter-sort-capsules groupCapsulesBySelectField (pure, one column per option in defined order + trailing 'unset' bucket for no-value-or-stale-value, never drops a capsule, TDD) + new widgets/CapsuleBoard (outer horizontal ScrollView of columns, inner vertical ScrollViews of CapsuleCards -- safe opposite-direction nesting, no dedicated test per RelationPicker/VersionHistory's pure-composition precedent). capsules/index.tsx's viewMode became a 3-way list/card/board cycle via a lookup table; shows an explanatory hint instead of an empty board when no type is selected or the type has no single_select field. New end-to-end regression test in migrations.test.ts proves the whole chain (real CapsuleType+field -> real capsules+values -> getValuesByField -> groupCapsulesBySelectField) through the real migration set, including the genuinely distinct 'no value at all' path (a capsule created with zero values), not just the 'stale value' path already covered by the unit tests. SCOPED to read-only (tap-to-navigate, same as list/card) -- no drag-and-drop, no bulk-select participation; moving a capsule between columns means editing its field value directly via the already-complete edit screen. Checker passed on first attempt with two acknowledged-low-risk non-blocking notes: a capsule whose value is literally the string 'unset' would collide with the sentinel column key (deemed unlikely in practice, not acted on); the two board-unavailable hint messages share one testID since only one is ever mounted at a time. Gate: tsc/jest (883/883, 70 suites)/eslint all green across the whole 8.7 arc. docs/DEVELOPMENT_PLAN.md 8.7 box TICKED. Cursor advances to 8.8."
     }
   },
   "quarantinedThisRun": [],
@@ -394,8 +394,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-14T02:35:00Z",
-    "head": "98702e1",
-    "note": "70 suites, 874 tests passing after 8.7 card-view sub-scope"
+    "at": "2026-09-15T00:10:00Z",
+    "head": "d6e371b",
+    "note": "70 suites, 883 tests passing -- 8.7 fully complete (card + board views)"
   }
 }

@@ -150,7 +150,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 8.4 Image/vision input (multimodal models)
 - [x] 8.5 Capsule nesting + version history + bulk operations — all three complete end-to-end: capsule detail screen shows parent picker + children list + history/restore; capsules list has a multi-select mode with confirmation-gated bulk delete (scoped to delete only — bulk tag/reparent are natural low-cost future extensions of the same runBulkOperation mechanism)
 - [x] 8.6 Quick capture + command palette — quick capture (capsules list Capture toggle) + command palette (Home's search trigger → one input filtering navigation shortcuts and live capsule search) both complete
-- [ ] 8.7 Multiple capsule views (card / board) — card view done (List/Card toggle on the capsules list, 2-column grid); board view not started, needs a grouping-dimension design decision first
+- [x] 8.7 Multiple capsule views (card / board) — card (2-column grid) and board (kanban columns grouped by a type's first single_select field, requires an active type filter) both complete; board is read-only this round, moving a capsule between columns means editing its field directly
 - [ ] 8.8 Local reminders (on-device notifications)
 - [ ] 8.9 Accessibility pass
 
