@@ -13,11 +13,13 @@ import {
   type SortDirection,
 } from "@/features/filter-sort-capsules";
 import { searchCapsules } from "@/features/search-capsules";
+import { createCapsule } from "@/features/create-capsule";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleList } from "@/widgets/CapsuleList";
 import { FilterSheet } from "@/widgets/FilterSheet";
 import { SearchBar } from "@/widgets/SearchBar";
 import { BulkActionBar } from "@/widgets/BulkActionBar";
+import { QuickCapture } from "@/widgets/QuickCapture";
 
 export default function CapsuleListScreen() {
   const db = useDb();
@@ -30,6 +32,7 @@ export default function CapsuleListScreen() {
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [captureVisible, setCaptureVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -73,6 +76,17 @@ export default function CapsuleListScreen() {
     }
   };
 
+  // Deliberately does NOT navigate away or close the capture panel — a
+  // quick capture is meant to cost one tap per capsule, not a full
+  // round trip through the detail screen each time (that's still one tap
+  // away via the freshly captured card itself, whenever more detail is
+  // actually wanted). Re-fetching puts the new capsule at the top of the
+  // (default updatedAt-desc-sorted) list immediately.
+  const handleCapture = (input: { capsuleTypeId: string; title: string }) => {
+    createCapsule(db, input);
+    setCapsules(getAllCapsules(db));
+  };
+
   return (
     <View style={styles.root}>
       {capsuleTypes.length === 0 && (
@@ -109,7 +123,21 @@ export default function CapsuleListScreen() {
             {selectionMode ? "Cancel" : "Select"}
           </Text>
         </Pressable>
+        {capsuleTypes.length > 0 && (
+          <Pressable
+            testID={testIDs.pressables.toggleCapture}
+            style={styles.filterToggle}
+            onPress={() => setCaptureVisible((visible) => !visible)}
+          >
+            <Text style={styles.filterToggleLabel}>
+              {captureVisible ? "Hide capture" : "Capture"}
+            </Text>
+          </Pressable>
+        )}
       </View>
+      {captureVisible && (
+        <QuickCapture capsuleTypes={capsuleTypes} onCapture={handleCapture} />
+      )}
       {filterVisible && (
         <FilterSheet
           capsuleTypes={capsuleTypes}
@@ -178,5 +206,10 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("CapsuleListScreen", {
-  pressables: ["createType", "toggleFilter", "toggleSelectionMode"] as const,
+  pressables: [
+    "createType",
+    "toggleFilter",
+    "toggleSelectionMode",
+    "toggleCapture",
+  ] as const,
 });
