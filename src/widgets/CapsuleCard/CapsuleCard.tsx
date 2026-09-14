@@ -23,11 +23,18 @@ type CapsuleCardProps = {
    */
   selectionMode?: boolean;
   selected?: boolean;
+  /**
+   * "list" (default, a single-column full-width row) or "card" (8.7 —
+   * a 2-column grid tile). Purely a rendering choice, same shape either
+   * way — this component has no opinion on layout beyond its own
+   * styling; `CapsuleList` decides `numColumns`.
+   */
+  viewMode?: "list" | "card";
 };
 
 /**
- * One capsule's summary row — title + its type's name (or a fallback).
- * The root testID appends `capsule.id` (a stable domain id, not a
+ * One capsule's summary — title + its type's name (or a fallback). The
+ * root testID appends `capsule.id` (a stable domain id, not a
  * render-order index) — mirrors `ChatBubble`'s own established pattern,
  * necessary here because `CapsuleList` renders many of these at once and
  * each one needs a distinct, stable testID to be individually targetable.
@@ -38,11 +45,17 @@ export function CapsuleCard({
   onPress,
   selectionMode = false,
   selected = false,
+  viewMode = "list",
 }: CapsuleCardProps) {
+  const isCard = viewMode === "card";
   return (
     <Pressable
       testID={`${testIDs.pressables.root}_${capsule.id}`}
-      style={[styles.root, selectionMode && selected && styles.selected]}
+      style={[
+        styles.root,
+        isCard && styles.cardRoot,
+        selectionMode && selected && styles.selected,
+      ]}
       onPress={onPress}
     >
       {selectionMode && (
@@ -54,7 +67,12 @@ export function CapsuleCard({
         </Text>
       )}
       <View style={styles.info}>
-        <Text style={styles.title}>{capsule.title}</Text>
+        <Text
+          style={[styles.title, isCard && styles.cardTitle]}
+          numberOfLines={isCard ? 2 : 1}
+        >
+          {capsule.title}
+        </Text>
         <Text style={styles.typeName}>{capsuleTypeName ?? "Unknown type"}</Text>
       </View>
     </Pressable>
@@ -74,6 +92,12 @@ const styles = StyleSheet.create((theme) => ({
   selected: {
     backgroundColor: theme.colors.backgroundSelected,
   },
+  cardRoot: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    minHeight: 96,
+  },
   checkbox: {
     color: theme.colors.accent,
     fontSize: 16,
@@ -86,6 +110,9 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.text,
     fontFamily: theme.fonts.sans,
     fontSize: 15,
+  },
+  cardTitle: {
+    fontFamily: theme.fonts.rounded,
   },
   typeName: {
     color: theme.colors.textSecondary,

@@ -33,6 +33,7 @@ export default function CapsuleListScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [captureVisible, setCaptureVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "card">("list");
 
   useFocusEffect(
     useCallback(() => {
@@ -134,6 +135,17 @@ export default function CapsuleListScreen() {
             </Text>
           </Pressable>
         )}
+        <Pressable
+          testID={testIDs.pressables.toggleViewMode}
+          style={styles.filterToggle}
+          onPress={() =>
+            setViewMode((mode) => (mode === "list" ? "card" : "list"))
+          }
+        >
+          <Text style={styles.filterToggleLabel}>
+            {viewMode === "list" ? "Card view" : "List view"}
+          </Text>
+        </Pressable>
       </View>
       {captureVisible && (
         <QuickCapture capsuleTypes={capsuleTypes} onCapture={handleCapture} />
@@ -165,6 +177,7 @@ export default function CapsuleListScreen() {
         selectionMode={selectionMode}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
+        viewMode={viewMode}
       />
     </View>
   );
@@ -191,6 +204,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   toggleRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
   },
   filterToggle: {
@@ -211,5 +225,6 @@ const testIDs = createComponentTestIDs("CapsuleListScreen", {
     "toggleFilter",
     "toggleSelectionMode",
     "toggleCapture",
+    "toggleViewMode",
   ] as const,
 });

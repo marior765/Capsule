@@ -28,6 +28,15 @@ type CapsuleListProps = {
   selectionMode?: boolean;
   selectedIds?: Set<string>;
   onSelectionChange?: (nextSelectedIds: Set<string>) => void;
+  /**
+   * "list" (default, one column) or "card" (8.7 — a 2-column grid).
+   * Drives `FlatList`'s own `numColumns` here rather than in the caller —
+   * `numColumns` can't change on a live `FlatList` without remounting it
+   * (a real React Native constraint, not a stylistic choice), so `key`
+   * is set from `viewMode` too, forcing exactly that remount when it
+   * changes and never otherwise.
+   */
+  viewMode?: "list" | "card";
 };
 
 /** Renders every capsule as a `CapsuleCard`, or an empty-state message. */
@@ -38,6 +47,7 @@ export function CapsuleList({
   selectionMode = false,
   selectedIds,
   onSelectionChange,
+  viewMode = "list",
 }: CapsuleListProps) {
   if (capsules.length === 0) {
     return (
@@ -59,10 +69,17 @@ export function CapsuleList({
     }
   };
 
+  const numColumns = viewMode === "card" ? 2 : 1;
+
   return (
     <FlatList
+      // Forces a remount on a numColumns change — FlatList doesn't
+      // support changing it on a live instance.
+      key={viewMode}
       testID={testIDs.containers.root}
       data={capsules}
+      numColumns={numColumns}
+      columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
       keyExtractor={(capsule) => capsule.id}
       renderItem={({ item }) => (
         <CapsuleCard
@@ -71,6 +88,7 @@ export function CapsuleList({
           onPress={() => handlePress(item)}
           selectionMode={selectionMode}
           selected={selectedIds?.has(item.id) ?? false}
+          viewMode={viewMode}
         />
       )}
       contentContainerStyle={styles.content}
@@ -81,6 +99,9 @@ export function CapsuleList({
 const styles = StyleSheet.create((theme) => ({
   content: {
     padding: theme.spacing.three,
+  },
+  row: {
+    gap: theme.spacing.two,
   },
   empty: {
     flex: 1,
