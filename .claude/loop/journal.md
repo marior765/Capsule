@@ -3694,4 +3694,68 @@ palette).
 
 ---
 
+## Beat 55 — 8.6 Quick capture (scoped: quick capture only)
+
+First beat on 8.6. Scoped down to "quick capture," leaving "command
+palette" for later — not because it's less important, but because it's
+a genuinely different kind of problem: a desktop command palette has an
+obvious trigger (⌘K) and an obvious shape (a searchable overlay list).
+Neither has an established answer on mobile in this codebase yet — no
+keyboard, no existing global-action-launcher pattern to extend. Guessing
+at that shape felt like exactly the kind of premature commitment this
+run has avoided elsewhere (the 8.1 cloud-backends deferral, the "don't
+pre-filter descendants" call in nesting's UI) rather than a productive
+use of a beat.
+
+Before writing anything, searched the codebase for where the existing
+full "new capsule" screen (`capsules/new.tsx` — a complete, working,
+field-by-field creation flow) gets navigated to. Nowhere. Zero results
+for `/capsules/new` anywhere in `src`. It's been sitting there,
+fully built and fully unreachable, since whichever earlier beat shipped
+it. That's the kind of gap that's easy to walk past — the screen exists,
+the tests (if any existed for it) would pass, `tsc`/`eslint` see nothing
+wrong, and nothing short of actually tracing every navigation call site
+would surface it.
+
+Rather than just wiring a button to the orphaned screen (the minimal
+fix) or building quick capture as a wholly separate, additional feature
+sitting alongside it (the maximal, most literal reading of the plan
+line), landed in between: build the actual lightweight `QuickCapture`
+widget `docs/ARCHITECTURE.md` already named for this slot — title +
+type, no full field-by-field form — and let it become the capsule
+list's real, working creation path. `new.tsx` stays orphaned, on
+purpose, flagged here and in `state.json` rather than silently ignored:
+quick capture now gets you to a real capsule fast, and that capsule's
+own edit screen (already complete, from earlier beats) gives you every
+field `new.tsx` ever would have. The heavier screen isn't wrong, it's
+just redundant with what this beat now provides a faster path to.
+
+One small design choice worth naming: `QuickCapture` deliberately never
+closes or resets itself after a capture. It clears the title and stays
+open, ready for the next one. A capture flow that requires re-opening a
+panel for every single item defeats its own purpose — "quick" has to
+mean the SECOND capsule in a session costs as little as the first, not
+just that the first one was fast to reach.
+
+No new tests — pure widget/route composition over `createCapsule`
+(already fully tested since 6.4), the same "no dedicated test" bucket
+`TagPicker`/`RelationPicker`/`VersionHistory`/`ParentPicker` already
+established. Gate: tsc clean, jest 867/867 (69 suites, unchanged),
+eslint clean. Checker: pass on first attempt — independently verified
+the orphaned-route claim via its own grep, traced that `selectedTypeId`
+survives a capture untouched (so picking a non-default type doesn't
+silently revert on the next entry), and confirmed the chip picker
+genuinely mirrors `FieldRenderer`'s existing precedent rather than
+inventing a new one.
+
+Checkpoint `eaa09cb`. `docs/DEVELOPMENT_PLAN.md`'s 8.6 box stays
+**unchecked** — quick capture is done, command palette isn't started.
+Cursor stays at **8.6**; a future beat needs to actually decide what a
+mobile command palette even is here before building it — closer to a
+genuine product-design question than a routine implementation, worth a
+`BLOCKED.md` entry if that beat can't make a confident, well-justified
+call on its own.
+
+---
+
 <!-- Append new beats above this line. -->

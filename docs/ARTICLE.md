@@ -2236,4 +2236,56 @@ and check whether the right thing is still on screen when it matters."
 
 ---
 
+## 2026-09-14 — A screen with zero defects and zero users
+
+Before writing `widgets/QuickCapture` for step 8.6, the natural first
+question was whether a faster creation flow was even needed — maybe the
+existing full-form screen, `capsules/new.tsx`, was already good enough
+and just wanted a lighter alternative alongside it. Checking meant
+finding where it gets opened from. A `grep` for `/capsules/new` across
+the whole `src` tree came back empty. Not "hard to find" — empty. No
+button, no link, no deep link, nothing anywhere in the app puts a user
+on that screen. It compiles. Its imports resolve. `tsc` and `eslint`
+have nothing to say about it. It is, by every automated signal this
+project's own gate checks, completely fine. It is also, for any actual
+user of the app, exactly as real as a screen that was never written —
+because no path in the running app ever reaches it.
+
+This is a blind spot specific to how routers like `expo-router` work:
+a file under `app/` becomes a real, navigable route purely by existing
+at the right path — no import, no registration, no explicit wiring
+required. That's a genuine convenience most of the time. It's also
+exactly the property that lets a screen go quietly unreachable: nothing
+in the build ever asks "does anything actually navigate here?" A type
+checker verifies that code which runs would run correctly; it has
+nothing to say about whether that code is ever reached from a real user
+gesture. A missing navigation call is invisible to every check this
+project's gate runs, because from the compiler's point of view there is
+no missing call — the screen simply exists as a valid, well-typed,
+never-invoked destination.
+
+The fix here wasn't to wire the orphaned screen back in — a genuinely
+lighter creation flow made it redundant rather than broken, so it stays
+exactly as unreachable as before, just now for a better reason (a faster
+path exists) instead of an accidental one (nobody wired the button). But
+the finding itself is the reusable part: "does every screen this app
+defines have at least one real path that reaches it" is a question no
+automated check in this codebase's gate (`tsc`, `jest`, `eslint`) can
+answer, and it's cheap to ask by hand — one `grep` for the route's own
+path string across every file that might plausibly navigate to it.
+
+**Article angle:** a codebase's automated gate proves that the code
+which exists is internally consistent — every type checks out, every
+import resolves, every test that runs passes. It says nothing about
+whether the code is *reachable* from outside itself, and a file-based
+router makes "define a screen" and "make a screen reachable" two
+genuinely separate actions that nothing enforces stay paired. Worth
+treating "trace real navigation, not just presence of a route file" as
+its own explicit check — done rarely, but done deliberately — the same
+way this run already treats "did I actually verify the claim, not just
+that the code around it looks plausible" as a habit worth having at
+every other layer.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
