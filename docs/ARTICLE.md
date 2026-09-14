@@ -2288,4 +2288,53 @@ every other layer.
 
 ---
 
+## 2026-09-14 — A deferred decision, revisited by asking what the feature actually does
+
+Step 8.6's "command palette" got deferred once already, in the prior
+beat, with a specific stated reason: no established mobile pattern to
+build against, unlike a desktop ⌘K overlay with its obvious trigger and
+obvious shape. That reasoning was sound at the time. It was also, on a
+second look, reasoning that stayed stuck on the wrong question. "How do
+I build a command palette on mobile" has no good answer, because a
+command palette isn't really a *thing* — it's a UI convention that grew
+around a specific input method (a keyboard shortcut) that mobile simply
+doesn't have. Asking "what does a command palette actually let a user
+*do*" has a much easier answer: find something, or jump somewhere, fast,
+from one input. That's not keyboard-shaped at all. It translates
+directly: one search box, searching everything at once — real content
+and navigation shortcuts alike — ranked so a specific match beats a
+generic one.
+
+The useful move wasn't cleverness, it was refusing to let "no
+established pattern for the surface form" block "no established pattern
+for the underlying job, either" — those are different claims, and only
+the first one was actually true. A feature described in product-speak
+("command palette," "quick capture," "bulk operations" from a few beats
+back) usually carries an implicit platform assumption baked into the
+name itself, inherited from wherever the term is most commonly used.
+Stripping the name back down to the verb it's actually describing —
+find/jump fast; capture with minimal friction; act on many at once —
+tends to reveal an implementation that was never actually blocked, just
+mis-framed as needing an answer to the wrong question.
+
+This doesn't mean every deferral was wrong to make, or that revisiting
+one always finds an easy answer — 8.1's cloud-backend deferral stayed
+deferred, correctly, because its blocker (a real privacy/consent
+decision with actual stakes) doesn't dissolve under this kind of
+reframing; some decisions are genuinely someone else's to make. The
+difference is diagnostic, not procedural: before accepting "this needs a
+human decision" or "this needs a pattern that doesn't exist yet" as a
+stopping point, it's worth checking whether the thing actually blocking
+progress is the feature itself, or just the specific vocabulary the plan
+happened to describe it in.
+
+**Article angle:** a deferred feature is worth a second look through a
+specific lens — not "is this ready to build now" but "was the original
+block about the feature, or about an assumed platform-specific form the
+feature doesn't actually require." The two look identical from the
+outside (both read as "not started, blocked"), and only one of them is
+actually still blocked once you ask the question directly.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

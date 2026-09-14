@@ -3758,4 +3758,71 @@ call on its own.
 
 ---
 
+## Beat 56 — 8.6 Command palette (completes 8.6)
+
+Picked up exactly where the last beat's own notes left off: "needs a
+genuine UX decision first." Rather than deferring a second time, made
+one. A desktop command palette's shape follows from its trigger (⌘K
+opens an overlay); a mobile app has no keyboard to hang that on, so the
+question isn't "how do I build a command palette" but "what is a command
+palette, here, without one." Settled on the plainest honest answer: one
+search box that searches everything — real capsule content AND
+navigation shortcuts to every app area — in a single list, ranked
+capsule-results-first since a specific record match is usually more
+useful than a same-labeled shortcut. Not a UI trick, just "search," but
+applied across the whole app rather than one list — which is arguably
+the actual job a command palette does on desktop too, once you strip
+away the keyboard-triggered chrome.
+
+Two more empty scaffold stubs turned up while wiring this in, on top of
+`capsules/new.tsx` from the previous beat — `search.tsx` itself (already
+registered as a hidden tab route, `href: null`, sitting there waiting)
+and, more surprisingly, the entire Home tab (`(app)/index.tsx`) —
+rendering a bare `<View />` since presumably the app's original
+scaffolding. `docs/ARCHITECTURE.md` already has an opinion on what Home
+should eventually be ("recent conversations + pinned capsules"), which
+immediately raised the scope question this run has hit a few times now:
+build the real thing, or something smaller. Checked whether "pinned"
+exists anywhere as a real concept first — it doesn't, not as an entity
+field, not as a migration, nothing — confirming the full dashboard
+would mean inventing an entire unstarted feature (pinning/favorites,
+itself separately named in the plan) as a side effect of wiring a search
+trigger. Gave Home a minimal, explicitly-temporary placeholder instead:
+a heading and one button. Two sentences of doc comment say plainly that
+this isn't the intended final screen, so nobody — future beat or human
+reader — mistakes a placeholder for a finished decision.
+
+The `COMMANDS` list itself closes a loop from last beat almost for free:
+`/capsules/new`, discovered orphaned when building quick capture, earns
+a real entry point here — "New capsule (full form)," a legitimate,
+secondary way to create a capsule now that quick capture is the fast
+path. Each command's `path` is typed as expo-router's own generated
+`Href` union (not a bare `string`), so a typo'd or renamed route fails
+`tsc` immediately rather than becoming a silent dead button discovered
+only by tapping it — the same class of "unreachable and nothing notices"
+failure the last beat's `ARTICLE.md` entry was about, this time closed
+by the type system instead of a manual grep.
+
+7 new tests for `filterCommands` (case-insensitive substring match,
+non-mutating, whitespace-trimmed) — caught two of my own wrong test
+expectations before they ever reached the checker (I'd written "chat"
+as a substring match against "New conversation," which doesn't actually
+contain "chat"; fixed by re-reading my own fixture data rather than
+loosening the assertion). No dedicated test for `CommandPalette.tsx`
+itself, matching `WipeDataSettings`/`BulkActionBar`'s precedent — the
+real logic is the extracted, tested helper; the widget is composition.
+Gate: tsc clean, jest 874/874 (70 suites), eslint clean after one
+`--fix` pass. Checker: pass on first attempt — independently
+cross-checked every `COMMANDS` path against the real generated route
+file rather than trusting the type system's silence, traced the
+discriminated-union branch for a capsule/command mix-up, and confirmed
+via its own grep (not just accepting the claim) that no pinned/favorite
+concept exists anywhere yet.
+
+Checkpoint `7f25b31`. **This closes out 8.6** —
+`docs/DEVELOPMENT_PLAN.md`'s box is **ticked**. Cursor advances to
+**8.7** (multiple capsule views — card / board).
+
+---
+
 <!-- Append new beats above this line. -->
