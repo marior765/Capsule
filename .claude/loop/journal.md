@@ -3615,4 +3615,83 @@ action bar in `capsules/index.tsx`/`CapsuleList`, composed with
 
 ---
 
+## Beat 54 — 8.5 Bulk operations UI (scoped: bulk delete) — completes 8.5
+
+Final beat for plan line 8.5. Multi-select mode + a confirmation-gated
+bulk delete, closing out the last of the three sub-features started six
+beats ago.
+
+Followed the two shapes this codebase had already established for
+exactly this kind of problem, rather than inventing a third: `CapsuleList`
+computes its own next selection state internally via a new
+`toggleSelection.ts` and hands the whole result up through
+`onSelectionChange` — the same "compute the transition with a pure
+helper, hand up the result" shape `FilterSheet` already uses for
+`toggleSort`. And the actual delete action became a new `BulkActionBar`
+widget built as a near-literal copy of `WipeDataSettings`: a widget that
+takes `db` as a prop, wraps `Alert.alert` in a promise for confirmation,
+and delegates the actual "never without confirmation" rule to an
+injected-dependency-tested orchestrator (`bulkDeleteWithConfirmation`,
+composing `runBulkOperation` from beat 51). A bulk delete earns exactly
+the same "never without confirmation" discipline as a full wipe — it's
+the same shape of mistake at a smaller radius.
+
+One placement decision worth recording: `bulkDeleteWithConfirmation`
+went into `widgets/BulkActionBar`, not `widgets/CapsuleList` — even
+though `CapsuleList` is arguably "more about" bulk operations, and
+already holds `toggleSelection`. The deciding fact wasn't which widget
+felt more thematically appropriate, it was CLAUDE.md's literal rule:
+"never import from internal files of another slice." `BulkActionBar` is
+the widget that actually calls the helper; putting it in `CapsuleList`
+would have forced a cross-widget deep import the moment `BulkActionBar`
+needed it. A pure helper belongs wherever it's actually consumed, not
+wherever its subject matter seems to best fit.
+
+The checker earned its keep again, catching a real bug that only shows
+up on the *unhappy* path — exactly the kind of thing that's invisible in
+a quick manual click-through of the happy case. `BulkActionBar` computed
+a partial-failure error message and set it as local state, then
+unconditionally called `onDeleted()` — which the route used to clear
+selection and exit selection mode. Combined with the render guard
+(`selectionMode && selectedIds.size > 0`), that unmounted `BulkActionBar`
+in the very same commit that would have painted the error. The message
+was computed correctly and then thrown away before a user could ever see
+it — a silent "it looks like it worked" for a case where it partially
+didn't. Fixed by changing what "done" means for a partial failure:
+`onDeleted` now receives the full result, and the route narrows
+`selectedIds` down to just the ids that failed (rather than always
+clearing to empty), only exiting selection mode once nothing is left to
+retry. The fix has a pleasant side effect neither the bug report nor the
+first draft was aiming for: narrowing to the failed subset also
+re-selects exactly the capsules still worth deleting, so a retry is one
+tap away rather than requiring the user to re-select from scratch.
+
+6 new tests (`toggleSelection`, `bulkDeleteWithConfirmation` — moved
+alongside the widget that actually calls it after the placement
+decision above). No tests for `BulkActionBar.tsx`/`CapsuleCard.tsx`/
+`CapsuleList.tsx`/the route themselves, matching this codebase's
+established precedent for this class of widget (`WipeDataSettings.tsx`
+has the same shape: real logic extracted and tested, the widget itself
+isn't). Gate: tsc clean, jest 867/867 (69 suites), eslint clean after one
+`--fix` pass. Checker: fail → fix → pass — the SAME two-round shape as
+version history's beat, and for a structurally similar reason: an
+edge case (a field outside the snapshot, then; a partial bulk failure,
+now) that a straight-line happy-path read of the code doesn't surface,
+caught specifically because the checker was told to try to refute rather
+than confirm.
+
+Checkpoint `368270f`. **This closes out 8.5 entirely** —
+`docs/DEVELOPMENT_PLAN.md`'s box is **ticked**. All three named
+sub-features (nesting, version history, bulk operations) now work
+end-to-end: a user can nest a capsule under another and browse its
+children, see and restore a capsule's edit history, and multi-select
+capsules for a confirmed bulk delete. Bulk operations is scoped to
+delete only — an explicit, named boundary, not a hidden gap, since the
+exact same `runBulkOperation` mechanism this beat already proved out
+makes bulk-tag or bulk-reparent a low-cost addition whenever a real need
+for one shows up. Cursor advances to **8.6** (quick capture + command
+palette).
+
+---
+
 <!-- Append new beats above this line. -->

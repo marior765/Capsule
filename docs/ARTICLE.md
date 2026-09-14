@@ -2186,4 +2186,54 @@ not a compromise.
 
 ---
 
+## 2026-09-14 — Computing an error message is not the same as showing one
+
+The last piece of step 8.5 ("bulk operations") was a multi-select mode
+in the capsule list with a bulk-delete action. The delete itself uses
+`runBulkOperation`'s continue-on-error semantics — one failing id
+shouldn't lose the whole batch — so the natural UI feedback for a
+partial failure is a short message: "2 capsule(s) could not be deleted."
+The widget computed that message correctly, set it as local `useState`
+error text, and then — on the very next line — called a callback the
+parent screen used to clear the current selection and exit multi-select
+mode.
+
+That callback's side effect, three files away, was to make the widget's
+own render condition go false. The widget doing the reporting and the
+condition controlling whether it existed on screen at all were governed
+by the same event, and nothing connected the two facts that they'd
+collide. React doesn't warn about this — `setError("...")` and the
+subsequent parent-state update both happen, in order, inside the same
+handler; React just doesn't paint the intermediate frame where the error
+was visible, because the component holding it is gone by the time the
+commit actually happens. The code was not wrong in isolation. `setError`
+really did get called with the right string. The bug lived entirely in
+the *interaction* between two pieces of state living in two different
+components, neither of which was incorrect on its own terms.
+
+This is a sharper, more specific version of a lesson this run has
+learned in other clothes before: correctness of a value and the value's
+actual visibility to whoever needs to see it are different properties,
+and testing (or even reading) each piece in isolation proves neither one
+implies the other. A unit test of "does bulkDeleteWithConfirmation
+report failures correctly" would have passed — it did pass, that
+function was never the problem. The gap only exists at the composition
+seam, in a widget with no test coverage at all (by this codebase's own
+convention: routes and simple widgets aren't unit-tested here), which is
+exactly the seam a human skimming a diff, or an LLM confident in the
+individual pieces it just wrote, is likely to skip over — everything
+*looks* done, because every piece independently is.
+
+**Article angle:** a UI feedback message isn't "handled" the moment the
+code that computes it is correct — it's handled once something has
+checked that the component holding it is still mounted, under the state
+transitions that follow, at the moment it needs to render. That's a
+claim about timing and lifecycle, not about the string's content, and
+it's exactly the kind of claim that survives a happy-path read of the
+diff and only breaks under a deliberately adversarial one: not "does
+this code do the right thing" but "walk the state forward one more step
+and check whether the right thing is still on screen when it matters."
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

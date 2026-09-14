@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 53,
+    "beat": 54,
     "status": "running"
   },
   "cursor": {
-    "step": "8.5",
+    "step": "8.6",
     "phase": 8
   },
   "steps": {
@@ -362,14 +362,15 @@
     }
   },
     "8.5": {
-      "status": "in_progress",
+      "status": "done",
       "class": "ui",
-      "attempts": 5,
+      "attempts": 6,
       "failureSignatures": [
-        "checker: fail (version-history round) -- restoreCapsuleVersion's doc comment claimed a field absent from the restored version's snapshot is 'left untouched rather than cleared', but no test asserted it; logic was already correct, only the guarantee was untested"
+        "checker: fail (version-history round) -- restoreCapsuleVersion's doc comment claimed a field absent from the restored version's snapshot is 'left untouched rather than cleared', but no test asserted it; logic was already correct, only the guarantee was untested",
+        "checker: fail (bulk-operations UI round) -- BulkActionBar unconditionally called onDeleted() after a bulk delete, which the route used to clear selection + exit selection mode + unmount BulkActionBar in the same commit that would have shown a partial-failure error -- the error was computed but never actually visible"
       ],
-      "checkpoint": "d405b5a",
-      "notes": "Compound plan line ('Capsule nesting + version history + bulk operations'), worked across five beats. Mechanism layers (beats 49-51, all checker-passed): NESTING (ecf82bd) -- parentCapsuleId, features/nest-capsule's setCapsuleParent + wouldCreateCycle. VERSION HISTORY (825ef3b) -- CapsuleVersion, features/capsule-versioning. BULK OPERATIONS (dbc887e) -- shared/lib's runBulkOperation<T>. UI layer: VERSION HISTORY UI (beat 52, 9ed110c) -- hasCapsuleEdits + snapshot-before-save wiring + VersionHistory widget. NESTING UI (this beat, d405b5a) -- new widgets/ParentPicker (purely controlled, mirrors RelationPicker's pick-to-link/tap-to-clear shape but single-slot; deliberately does NOT pre-filter descendants from its pick-list, relying on setCapsuleParent's real cycle rejection + an error prop rather than duplicating wouldCreateCycle's ancestor-walk client-side); capsules/[id].tsx now fetches+renders the current parent and a read-only tap-to-navigate children list (inline, not its own widget -- just a navigable list), with a try/catch around setCapsuleParent (the only handler on this screen that can fail) surfacing a parentError message, and an unguarded handleClearParent (confirmed safe: setCapsuleParent's cycle check short-circuits entirely on a null target, verified by reading the source, not assumed). No new tests this beat -- pure route/widget composition over already-fully-tested feature functions, matching this codebase's established no-dedicated-test precedent for this class of widget (RelationPicker/TagPicker/VersionHistory all have none either). Checker passed both UI beats on first attempt. Gate: tsc/jest (854/854, 67 suites, unchanged from before this beat since no new tests were needed)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.5 box STAYS UNCHECKED -- version history AND nesting now both have complete UI (a user can see/restore history, and set/clear a capsule's parent + see its children); bulk operations is the one sub-feature still with zero UI (no multi-select mode anywhere in the app). Next beat's natural work: bulk operations' UI -- a multi-select mode + action bar in capsules/index.tsx/CapsuleList, composed with runBulkOperation + deleteCapsule/tagCapsule as the first real caller of the bulk mechanism from beat 51. Completing that would let 8.5's box finally be ticked."
+      "checkpoint": "368270f",
+      "notes": "DONE -- compound plan line ('Capsule nesting + version history + bulk operations'), all three named sub-features complete end-to-end (mechanism + UI) across six beats. NESTING (49: ecf82bd mechanism, 53: d405b5a UI) -- parentCapsuleId + features/nest-capsule's cycle-safe setCapsuleParent; widgets/ParentPicker (single-slot pick-to-link/tap-to-clear, mirrors RelationPicker) + a read-only children list, wired into capsules/[id].tsx with a try/catch surfacing cycle-rejection errors. VERSION HISTORY (50: 825ef3b mechanism, 52: 9ed110c UI) -- CapsuleVersion + features/capsule-versioning's snapshot/restore (safety-snapshot-before-restore); hasCapsuleEdits gate + snapshot-before-save wiring in the edit route (order-verified by regression tests) + widgets/VersionHistory, wired into capsules/[id].tsx. BULK OPERATIONS (51: dbc887e mechanism, 54: 368270f UI) -- shared/lib's domain-agnostic runBulkOperation<T> (deliberately NOT a features/ slice, since features can't import features); this beat's UI: widgets/CapsuleList gained toggleSelection.ts (pure, mirrors FilterSheet's toggleSort/SchemaBuilder's moveField precedent -- computes the next selection set internally, hands it up whole via onSelectionChange) + selectionMode/selectedIds props; widgets/CapsuleCard gained a selection checkbox; new widgets/BulkActionBar mirrors WipeDataSettings' shape exactly (db-taking widget, Alert.alert-wrapped confirmation, injected-dependency-tested bulkDeleteWithConfirmation composing runBulkOperation) -- deliberately lives in BulkActionBar not CapsuleList (avoids a cross-widget deep import into another slice's internal file, since CLAUDE.md forbids importing anything but a slice's own index.ts); capsules/index.tsx gained a Select/Cancel toggle mirroring the existing Filter&sort toggle. SCOPED to bulk-DELETE only (no bulk-tag/retype/reparent) -- a deliberate, explicitly-named boundary, not a hidden gap; the exact same runBulkOperation mechanism makes adding those a low-cost future extension whenever a real need arises. Checker found ONE real bug in the final UI round: BulkActionBar unconditionally called onDeleted() after every bulk delete, which cleared selection + exited selection mode + (via the render guard) unmounted BulkActionBar in the SAME commit that would have shown a partial-failure error message -- the error was correctly computed but never actually visible to a user, silently making a partial failure look identical to full success. Fixed: onDeleted now receives the full BulkOperationResult; the route narrows selectedIds to just the failed subset (keeping BulkActionBar mounted -- re-rendered, not remounted, so its local error state survives -- and incidentally re-selecting exactly the capsules still needing a retry) and only exits selection mode on full success. Re-review: pass, independently confirmed via content-hash comparison that only the two touched files changed and nothing else regressed. Gate: tsc/jest (867/867, 69 suites)/eslint all green across the whole 8.5 arc. docs/DEVELOPMENT_PLAN.md 8.5 box TICKED. Cursor advances past 8.5."
     }
   },
   "quarantinedThisRun": [],
@@ -377,8 +378,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-14T01:22:00Z",
-    "head": "d405b5a",
-    "note": "67 suites, 854 tests passing after 8.5 nesting UI sub-scope"
+    "at": "2026-09-14T01:46:00Z",
+    "head": "368270f",
+    "note": "69 suites, 867 tests passing -- 8.5 fully complete (nesting + version history + bulk operations, mechanism + UI)"
   }
 }
