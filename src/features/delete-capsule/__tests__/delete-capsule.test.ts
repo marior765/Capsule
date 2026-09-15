@@ -29,10 +29,12 @@ import {
   getAttachmentsByCapsuleField,
   insertAttachment,
 } from "@/entities/attachment";
+import { getRemindersByCapsule, remindersMigration } from "@/entities/reminder";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
 import { snapshotCapsule } from "@/features/capsule-versioning";
+import { createReminder } from "@/features/manage-reminders";
 import { deleteCapsule } from "../index";
 
 let db: SQLiteDatabase;
@@ -51,6 +53,7 @@ beforeEach(() => {
     attachmentsMigration,
     capsuleParentIdMigration,
     capsuleVersionsMigration,
+    remindersMigration,
   ]);
 });
 
@@ -239,5 +242,22 @@ describe("deleteCapsule", () => {
     snapshotCapsule(db, b.id);
     deleteCapsule(db, a.id);
     expect(getVersionsByCapsule(db, b.id)).toHaveLength(1);
+  });
+
+  it("removes the capsule's reminders too (8.8 cascade)", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    createReminder(db, { capsuleId: capsule.id, remindAt: 1000 });
+    createReminder(db, { capsuleId: capsule.id, remindAt: 2000 });
+    deleteCapsule(db, capsule.id);
+    expect(getRemindersByCapsule(db, capsule.id)).toEqual([]);
+  });
+
+  it("leaves another capsule's reminders intact", () => {
+    const a = createCapsule(db, { capsuleTypeId: "ct-1" });
+    const b = createCapsule(db, { capsuleTypeId: "ct-1" });
+    createReminder(db, { capsuleId: a.id, remindAt: 1000 });
+    createReminder(db, { capsuleId: b.id, remindAt: 2000 });
+    deleteCapsule(db, a.id);
+    expect(getRemindersByCapsule(db, b.id)).toHaveLength(1);
   });
 });

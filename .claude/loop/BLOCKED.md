@@ -611,6 +611,54 @@ Not wired into `LlmProvider`, `ChatInput`, or any route — deliberately
 out of scope for a spike, and largely moot without the picker library
 from decision 1 to trigger it with anyway.
 
+### 8.8 — Local reminders: `expo-notifications` dependency decision
+Implemented and green: `entities/reminder` (`Reminder` — `capsuleId`,
+`remindAt`, optional `message`; migration v22; full CRUD; `getDueReminders`
+for "what's due right now") + `features/manage-reminders`
+(`createReminder`/`rescheduleReminder`/`removeReminder`), registered in
+`providers/migrations.ts`'s real boot-time array, wired into
+`delete-capsule`'s cascade. Proven through the real migration set in
+`migrations.test.ts`, same as every other domain.
+
+**This is the data layer only.** Nothing in it schedules or delivers an
+actual OS-level notification — that needs `expo-notifications`, which
+isn't in `package.json`. Per CLAUDE.md's dependency-audit rule and this
+loop's own `deferred` classification (same shape as 6.8/8.4's picker-
+library gap above), adding it is a decision for you, not something to
+install unattended.
+
+**Decisions needed before the notification half is buildable:**
+1. Install `expo-notifications`? (Confirm no outbound network calls at
+   runtime beyond what CLAUDE.md already permits — local scheduled
+   notifications are on-device only and shouldn't need any, but worth
+   confirming against the package's own behavior before trusting that.)
+2. Permission UX — when is the OS permission prompt shown (first reminder
+   created? app-wide onboarding step?), and what happens to an already-
+   created `Reminder` row if permission is denied or later revoked?
+3. Behavior when the app is backgrounded or fully killed — does
+   `expo-notifications` schedule natively at the OS level (survives an app
+   kill) or does it need the app running? This determines whether
+   `getDueReminders` needs a background task/poller at all, or whether the
+   OS handles delivery entirely once scheduled — a real difference in how
+   much more code this needs.
+4. Notification content — always show `Reminder.message`, or fall back to
+   the capsule's own title when `message` is null (the entity's own doc
+   comment already assumes this fallback is the scheduling layer's call,
+   not decided here)?
+
+**Device check, once both the dependency and permission model are decided:**
+1. A scheduled reminder actually fires at (approximately) the right time
+   on a real device, with the app backgrounded and with it killed.
+2. Tapping the notification opens the right capsule.
+3. Denying/revoking permission degrades gracefully (no crash, no silently
+   "successful" `createReminder` call that will never actually notify
+   anyone — probably needs a UI signal, not just a DB row).
+
+Not wired into any route or widget — no UI to create a reminder exists
+yet either, deliberately deferred alongside the notification-scheduling
+half above (little point building a "set a reminder" screen before
+deciding whether reminders can actually notify anyone).
+
 ### `src/app/` routes have no testID coverage at all
 CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
 always via the component's `testIDs` object, never a hardcoded string

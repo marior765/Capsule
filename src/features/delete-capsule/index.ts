@@ -9,6 +9,7 @@ import {
 import { deleteCapsuleTagsByCapsule } from "@/entities/tag";
 import { deleteLinksByCapsule } from "@/entities/link";
 import { deleteAttachmentsByCapsule } from "@/entities/attachment";
+import { deleteRemindersByCapsule } from "@/entities/reminder";
 
 /**
  * Deletes a capsule, all of its field values, its tag attachments (never
@@ -42,6 +43,12 @@ import { deleteAttachmentsByCapsule } from "@/entities/attachment";
  * yet to have put bytes there in the first place). Once one does, real
  * file cleanup on capsule delete is a genuine follow-up, tracked in
  * `BLOCKED.md` rather than guessed at here.
+ *
+ * `deleteRemindersByCapsule` (8.8) removes a deleted capsule's own
+ * reminders — a reminder pointing at a capsule that no longer exists
+ * would otherwise keep firing (once notification scheduling actually
+ * exists) for something the user can never open. Same-entity structural
+ * data, same active-cleanup reasoning as version history/embedding above.
  */
 export function deleteCapsule(db: SQLiteDatabase, id: string): void {
   deleteValuesByCapsule(db, id);
@@ -50,6 +57,7 @@ export function deleteCapsule(db: SQLiteDatabase, id: string): void {
   deleteAttachmentsByCapsule(db, id);
   deleteEmbedding(db, id);
   deleteVersionsByCapsule(db, id);
+  deleteRemindersByCapsule(db, id);
   orphanChildCapsules(db, id);
   deleteCapsuleRecord(db, id);
 }

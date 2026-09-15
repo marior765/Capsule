@@ -39,6 +39,11 @@ import {
 } from "@/features/capsule-versioning";
 import { hasCapsuleEdits, saveCapsuleEdits } from "@/features/edit-capsule";
 import { runBulkOperation } from "@/shared/lib";
+import { getRemindersByCapsule } from "@/entities/reminder";
+import {
+  createReminder,
+  rescheduleReminder,
+} from "@/features/manage-reminders";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -337,5 +342,26 @@ describe("Providers' registered migrations", () => {
       updatedAt: Date.now(),
     });
     expect(getAllSnippets(db).map((s) => s.title)).toEqual(["Summarize"]);
+  });
+
+  it("lets a reminder actually be created and rescheduled through the real migration set (8.8)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    const capsuleType = createCapsuleType(db, { name: "Book" });
+    const capsule = createCapsule(db, {
+      capsuleTypeId: capsuleType.id,
+      title: "Dune",
+    });
+
+    const reminder = createReminder(db, {
+      capsuleId: capsule.id,
+      remindAt: 1000,
+      message: "Finish reading",
+    });
+    rescheduleReminder(db, reminder.id, 9000);
+
+    expect(getRemindersByCapsule(db, capsule.id)).toEqual([
+      expect.objectContaining({ id: reminder.id, remindAt: 9000 }),
+    ]);
   });
 });
