@@ -35,6 +35,7 @@ export function PrivacyBanner() {
       testID={testIDs.containers.root}
       style={styles.root}
       accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
     >
       <Text testID={testIDs.texts.label} style={styles.label}>
         Network active — downloading a model

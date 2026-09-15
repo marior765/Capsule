@@ -108,6 +108,7 @@ export function CommandPalette({ db }: CommandPaletteProps) {
         placeholder="Search or jump to…"
         autoFocus
         autoCapitalize="none"
+        accessibilityLabel="Search or jump to"
       />
       <FlatList
         testID={testIDs.containers.results}
@@ -126,6 +127,12 @@ export function CommandPalette({ db }: CommandPaletteProps) {
             }
             style={styles.row}
             onPress={() => handleSelect(item)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              item.kind === "capsule"
+                ? `${item.capsule.title}, capsule`
+                : item.command.label
+            }
           >
             <Text style={styles.rowLabel}>
               {item.kind === "capsule"

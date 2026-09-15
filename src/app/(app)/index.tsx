@@ -22,6 +22,8 @@ export default function HomeScreen() {
         testID={testIDs.pressables.openSearch}
         style={styles.searchTrigger}
         onPress={() => router.push("/search")}
+        accessibilityRole="button"
+        accessibilityLabel="Search or jump to"
       >
         <Text style={styles.searchTriggerLabel}>Search or jump to…</Text>
       </Pressable>

@@ -39,6 +39,8 @@ export default function SettingsScreen() {
           key={entry.href}
           style={styles.row}
           onPress={() => router.push(entry.href)}
+          accessibilityRole="button"
+          accessibilityLabel={`${entry.label}. ${entry.hint}`}
         >
           <Text style={styles.label}>{entry.label}</Text>
           <Text style={styles.meta}>{entry.hint}</Text>

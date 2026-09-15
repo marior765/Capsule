@@ -129,6 +129,7 @@ export function AppLockSettings({ db }: AppLockSettingsProps) {
         value={passphrase}
         onChangeText={setPassphrase}
         editable={!busy}
+        accessibilityLabel="Passphrase"
       />
       <TextInput
         testID={testIDs.inputs.confirmation}
@@ -138,9 +139,14 @@ export function AppLockSettings({ db }: AppLockSettingsProps) {
         value={confirmation}
         onChangeText={setConfirmation}
         editable={!busy}
+        accessibilityLabel="Confirm passphrase"
       />
       {error !== null && (
-        <Text testID={testIDs.texts.error} style={styles.error}>
+        <Text
+          testID={testIDs.texts.error}
+          style={styles.error}
+          accessibilityLiveRegion="polite"
+        >
           {error}
         </Text>
       )}
@@ -149,6 +155,8 @@ export function AppLockSettings({ db }: AppLockSettingsProps) {
         style={styles.button}
         onPress={handleEnable}
         disabled={busy}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: busy, busy }}
       >
         <Text style={styles.buttonLabel}>
           {busy ? "Setting up…" : "Enable app lock"}

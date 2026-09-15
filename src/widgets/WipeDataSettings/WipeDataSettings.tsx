@@ -77,7 +77,11 @@ export function WipeDataSettings({ db, onWiped }: WipeDataSettingsProps) {
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
       {error !== null && (
-        <Text testID={testIDs.texts.error} style={styles.error}>
+        <Text
+          testID={testIDs.texts.error}
+          style={styles.error}
+          accessibilityLiveRegion="polite"
+        >
           {error}
         </Text>
       )}
@@ -86,6 +90,8 @@ export function WipeDataSettings({ db, onWiped }: WipeDataSettingsProps) {
         style={styles.button}
         onPress={handlePress}
         disabled={busy}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: busy, busy }}
       >
         <Text style={styles.buttonLabel}>
           {busy ? "Wiping…" : "Wipe all data"}

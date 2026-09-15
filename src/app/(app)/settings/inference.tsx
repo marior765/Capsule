@@ -114,18 +114,23 @@ export default function InferenceScreen() {
             }
             keyboardType="numbers-and-punctuation"
             inputMode="numeric"
+            accessibilityLabel={field.label}
           />
           <Text style={styles.meta}>{field.hint}</Text>
         </View>
       ))}
 
       {reloaded && (
-        <Text style={styles.notice}>
+        <Text style={styles.notice} accessibilityLiveRegion="polite">
           Context length changed — the model is reloading ({status}).
         </Text>
       )}
 
-      <Pressable style={styles.reset} onPress={handleReset}>
+      <Pressable
+        style={styles.reset}
+        onPress={handleReset}
+        accessibilityRole="button"
+      >
         <Text style={styles.resetLabel}>Reset to defaults</Text>
       </Pressable>
     </ScrollView>
