@@ -4081,4 +4081,71 @@ dependency decision. Cursor stays at **8.9**.
 
 ---
 
+## Beat 61 — 8.9 continued: accessibility pass, Chat domain
+
+Second installment of the 8.9 split, extending beat 60's methodology to
+the **Chat domain** per `docs/ARCHITECTURE.md`'s AI-chat-core widget
+grouping: `ChatBubble`, `ChatInput`, `ChatThread`, `ModelPicker`,
+`PersonaSelector`, `SnippetPicker` widgets, plus the `chat/index.tsx`,
+`chat/[id].tsx`, `chat/ephemeral.tsx`, `models/index.tsx`,
+`personas/index.tsx`, `snippets/index.tsx` routes. `InferenceStats` and
+`VoiceRecordButton` were checked and needed nothing (no interactive
+elements / already covered from an earlier beat), and `chat/new.tsx`
+was checked and delegates entirely to the now-covered
+`PersonaSelector` — neither is a gap, both are genuinely done already.
+
+Same fixes as beat 60, applied to this domain's own controls: copy/edit
+buttons on `ChatBubble`, the message input and send button on
+`ChatInput`, previous/next branch navigation on `ChatThread` (disabled
+state bound to the real `branch.index === 1` / `=== branch.total`
+conditions, not hardcoded), radio role/state/label on the per-model and
+per-persona rows in `ModelPicker`/`PersonaSelector`, button role/label
+on `SnippetPicker` rows, and the usual sweep of route-level
+Pressables/TextInputs. Same discipline held: no testIDs added to route
+Pressables that lack them (that gap is separately tracked in
+`BLOCKED.md`), no focus-order or dynamic-type work — both stay open for
+a future 8.9 installment.
+
+The checker's first pass caught a real recurrence of beat 60's own
+lesson: `models/index.tsx`'s download-spec button kept a static
+`"Download <name>..."` label even while *that specific* download was
+in progress and the visible text had already switched to
+`"Downloading…"` — the exact "label and visible text tell a different
+story" defect `docs/ARTICLE.md` named after the view-mode-toggle
+self-correction in beat 60, except this time nobody caught it before
+the checker did. Fixed to track the same `downloadingUrl === spec.url`
+condition the render already used; gate re-run green; the checker
+re-reviewed the complete updated diff (not just the delta) and passed,
+independently re-running tsc/jest/eslint itself rather than trusting
+the coordinator's report, and confirming every other file's diff was
+byte-identical to its first review.
+
+Separately, closing this beat surfaced that `.claude/loop/state.json`
+had a real, pre-existing structural break: step `8.4`'s closing brace
+was missing its comma and followed by a stray extra `},` one level up,
+closing the whole `steps` object early and leaving everything from
+`8.5` onward outside it. The file was never actually valid JSON —
+`Read`-based edits happily kept string-appending into it without
+either the checker or any earlier beat's `python3 -m json.tool`-style
+check ever validating it, so the corruption was invisible until this
+beat tried a strict `json.load()` while updating the `8.9` entry. Fixed
+by isolating the break with a per-block parse sweep (wrap each step's
+own key/value pair in `{}` and try to parse it standalone) rather than
+guessing from the full-file error location, which only ever pointed at
+the *symptom* (line 409, the accidental early end-of-document) and not
+the *cause* (line 363, dozens of steps earlier). Worth remembering for
+any future spine repair: a JSON "Extra data" error's reported line is
+where parsing *stopped*, not where it *broke*.
+
+Gate: tsc clean, jest 915/915 (72 suites, unchanged), eslint clean
+(pre-existing `[boundaries]` warning only). Checker: fail once (the
+download-label mismatch above), fix, re-review on the full updated
+diff, pass. Checkpoint `428d73f`.
+
+`docs/DEVELOPMENT_PLAN.md`'s 8.9 box stays **unchecked** — Settings,
+Home, and the command palette still have zero accessibility props.
+Cursor stays at **8.9** for a future beat to continue.
+
+---
+
 <!-- Append new beats above this line. -->

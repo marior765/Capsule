@@ -152,7 +152,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 8.6 Quick capture + command palette — quick capture (capsules list Capture toggle) + command palette (Home's search trigger → one input filtering navigation shortcuts and live capsule search) both complete
 - [x] 8.7 Multiple capsule views (card / board) — card (2-column grid) and board (kanban columns grouped by a type's first single_select field, requires an active type filter) both complete; board is read-only this round, moving a capsule between columns means editing its field directly
 - [ ] 8.8 Local reminders (on-device notifications) — data layer done (entities/reminder + features/manage-reminders, full CRUD + getDueReminders, delete-capsule cascade); actual OS notification scheduling blocked on the expo-notifications dependency decision (see BLOCKED.md)
-- [ ] 8.9 Accessibility pass — Capsules domain done (12 widgets + 7 capsules/types routes: real accessibilityLabel on symbol-only controls, accessibilityRole/State on toggles matching real state, accessibilityLiveRegion on dynamic errors); Chat, Settings, Home, and CommandPalette still untouched
+- [ ] 8.9 Accessibility pass — Capsules domain done (12 widgets + 7 capsules/types routes: real accessibilityLabel on symbol-only controls, accessibilityRole/State on toggles matching real state, accessibilityLiveRegion on dynamic errors); Chat domain done (6 widgets: ChatBubble/ChatInput/ChatThread/ModelPicker/PersonaSelector/SnippetPicker + 6 routes: chat index/[id]/ephemeral, models, personas, snippets); Settings, Home, and CommandPalette still untouched
 
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format

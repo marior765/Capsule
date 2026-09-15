@@ -2426,4 +2426,55 @@ telling."
 
 ---
 
+### 2026-09-15 — The loop's own memory silently stopped being valid JSON
+
+`.claude/loop/state.json` is the single source of truth this whole
+unattended run depends on: every beat reads it first, writes to it
+before and after work, and treats it as ground truth about what's done,
+what's blocked, and where the cursor sits. It is edited almost entirely
+through string-append and string-replace tools across dozens of beats —
+never through a JSON library that would refuse a malformed write. At
+some point, plausibly beats and beats ago, one of those edits dropped a
+comma and left a stray extra closing brace one level up, silently
+closing the file's top-level `steps` object early. Every step from that
+point onward in the file was — structurally — sitting *outside* the
+object that was supposed to contain it.
+
+Nothing caught this for a long time because nothing needed to. The
+loop's own tooling reads `state.json` with a plain file-read and treats
+it as text to grep and re-append to, the same way this run's edits were
+made. `git diff`, the checker subagent, and every prior beat's own gate
+(tsc/jest/eslint) have no reason to touch a file that isn't part of the
+app's source tree, so a slowly-rotting spine produces no red anywhere a
+normal Definition-of-Done check would look. It surfaced only because
+this beat happened to reach for `python3 -c "json.load(...)"` — a
+strict parser — while sanity-checking an edit, for a reason that had
+nothing to do with suspecting corruption.
+
+Finding the actual break was its own small lesson. Python's error
+message pointed at line 409: "Extra data." But line 409 is where the
+*file* stopped looking like a complete document to the parser — the
+accidental premature `}` was dozens of steps earlier, at line 363. A
+JSON parser's error location tells you where it gave up, which is
+almost never where things actually went wrong; for a large single-root
+object like this one, that gap can be the entire rest of the file. The
+fix that actually worked was mechanical and boring: split the file at
+each top-level step key, try to parse each one standalone wrapped in
+its own `{}`, and let the first one that fails point at the real fault
+line — turning a whole-file needle-in-a-haystack search into forty-five
+small, independently-checkable ones.
+
+**Article angle:** a file that's read like a database but edited like a
+document degrades in a way nothing in a normal test suite is positioned
+to catch — it's not app code, so the gate ignores it; it's not prose, so
+nobody proofreads it; and every tool that touched it treated "the file
+exists and I can find my substring in it" as good enough. The fix isn't
+a bigger gate, it's a cheap habit: any file a long-running process treats
+as its own memory deserves the same one-line validation its format
+actually supports — `json.load()` after every edit costs nothing and
+would have caught this on the very beat that introduced it, instead of
+however many beats later.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
