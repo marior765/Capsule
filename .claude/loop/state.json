@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 59,
+    "beat": 60,
     "status": "running"
   },
   "cursor": {
@@ -397,6 +397,14 @@
       ],
       "checkpoint": "7811ab6",
       "notes": "Data layer FULLY done and tested, mirroring 6.8/8.4's own 'build what doesn't need the missing dependency' precedent. entities/reminder (new slice): Reminder {capsuleId, remindAt, message, timestamps}, migration v22 (registered in providers/migrations.ts's real boot array), full CRUD, getDueReminders(db, now) -- 'at or before' boundary genuinely tested with a reminder due EXACTLY at now, getRemindersByCapsule genuinely tested with scrambled insertion order to prove the ORDER BY is real. features/manage-reminders (new slice): createReminder/rescheduleReminder/removeReminder, mirrors create-capsule's shape. delete-capsule's cascade now also removes a deleted capsule's own reminders (same-entity derived data, active cleanup, matches the CapsuleVersion/CapsuleEmbedding precedent already in that cascade). New end-to-end regression test in migrations.test.ts proves createReminder+rescheduleReminder work together through the REAL boot-time array. GENUINELY BLOCKED on the actual notification half: expo-notifications is not in package.json, and per CLAUDE.md's dependency-audit rule + this loop's deferred-classification convention, installing it is a decision for the user, not something to do unattended -- mirrors 6.8's picker-library gap exactly. Checker failed the first round on a real instance of this run's own most-recurring mistake: the new code's doc comment claimed BLOCKED.md already had an '8.8' section describing this decision, but it didn't -- caught before the checkpoint, not after, by the SAME rule (Definition-of-Done item 9) this run wrote into its own contract after the 4.2/4.4/4.5 occurrences. Fixed: added a real, substantive '8.8' BLOCKED.md section (decisions needed: install expo-notifications?, permission UX and when the OS prompt shows, behavior when the app is backgrounded/killed -- does expo-notifications schedule natively at the OS level or need the app running, notification content fallback when message is null; device checks once resolved) before the checkpoint. Re-review: pass, independently re-read BLOCKED.md to confirm the section is real and substantive, not a stub. No UI/route wiring -- no way to create a reminder from the app yet, deliberately deferred alongside the notification half (no point building a create-reminder screen before deciding whether reminders can notify anyone at all). Gate: tsc/jest (915/915, 72 suites)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.8 box stays UNCHECKED (native-class convention: mocked/data-only green is not hardware green). Cursor advances past 8.8 to 8.9."
+    },
+    "8.9": {
+      "status": "in_progress",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [],
+      "checkpoint": "91b52c3",
+      "notes": "'Accessibility pass' has no scope qualifier in the plan text and a full-app audit in one beat is unrealistic -- scoped this beat to the CAPSULES DOMAIN (every widget/route in ARCHITECTURE.md's Capsules slice-map grouping, plus the newer capsule-adjacent widgets built later in this run): CapsuleCard, TagPicker, RelationPicker, ParentPicker, VersionHistory, BulkActionBar, QuickCapture, SearchBar, FilterSheet, SchemaBuilder, CapsuleEditor, FieldRenderer (12 widgets) + capsules/index.tsx, capsules/[id].tsx, capsules/new.tsx, capsules/[id]/edit.tsx, types/index.tsx, types/new.tsx, types/[id].tsx (7 routes) -- 19 files. CapsuleList/CapsuleBoard needed no changes (verified by reading both fully: neither has any interactive element of its own, everything delegates to CapsuleCard). Deliberately excluded: Chat, Settings, Home, and widgets/CommandPalette specifically (genuinely cross-domain -- its command list spans capsules/chat/types/snippets/personas/models/settings in one flat list, doesn't fit a 'Capsules domain' pass; checker independently verified this boundary by reading the file). Fixes: (1) symbol-only glyph buttons (X remove/unlink/clear, up/down reorder) got real descriptive accessibilityLabel -- a screen reader would otherwise just read the raw unicode glyph; (2) toggle-like controls got accessibilityRole + accessibilityState matching REAL current state (not just a role with no state) -- CapsuleCard's selection indicator (role='checkbox' in selection mode else 'button', checked matching the real selected prop), capsules/index.tsx's Filter/Select/Capture toggles (expanded/selected), the various chip pickers (selected/checked); (3) every Pressable got accessibilityRole='button' at minimum -- RN's Pressable has no implicit role; (4) TextInputs got accessibilityLabel, several genuinely derived from an already-available field.name prop (FieldRenderer) rather than invented; (5) dynamic error messages (BulkActionBar/ParentPicker/CapsuleEditor) got accessibilityLiveRegion='polite' so a screen reader announces them on appearance; (6) CapsuleCard's raw bullet-glyph indicator hidden from the accessibility tree via BOTH accessibilityElementsHidden (iOS) AND importantForAccessibility='no' (Android) -- checker verified both platforms are covered, not just one, since the parent Pressable's role/state now conveys the same info correctly. SELF-CAUGHT DESIGN CORRECTION mid-beat: initially gave the view-mode toggle button a custom accessibilityLabel naming the NEXT mode it would switch to, but its VISIBLE text always shows the CURRENT mode -- would have created a real mismatch between what's shown and what's announced (sighted+screen-reader users getting inconsistent information). Caught and reverted before the checker ever saw it; final version relies on accessibilityRole='button' + the child Text alone, so announced and visible content are identical. No new tests -- this codebase has no @testing-library/react-native, accessibility props aren't assertable; pure additive prop changes, every existing testID left byte-identical (checker spot-checked several). Gate: tsc/jest (915/915, 72 suites, unchanged)/eslint all green. Checker: pass on first attempt, independently grepped the whole widgets/app trees to confirm no capsule-domain interactive element was missed. docs/DEVELOPMENT_PLAN.md 8.9 box STAYS UNCHECKED -- this is a genuine multi-beat split (in_progress, not done or blocked): Chat, Settings, Home, and CommandPalette all still have zero accessibility props, and nothing blocks continuing there, unlike 8.8's real dependency wall. Cursor stays at 8.9 for a future beat to extend the pass to the remaining domains."
     }
   },
   "quarantinedThisRun": [],
@@ -404,8 +412,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-15T00:00:00Z",
-    "head": "7811ab6",
-    "note": "72 suites, 915 tests passing -- 8.8 data layer done, notification scheduling blocked on expo-notifications decision"
+    "at": "2026-09-15T00:30:00Z",
+    "head": "91b52c3",
+    "note": "72 suites, 915 tests passing after 8.9 accessibility-pass sub-scope (Capsules domain)"
   }
 }

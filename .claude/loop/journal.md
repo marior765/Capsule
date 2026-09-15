@@ -4004,4 +4004,81 @@ delivery once told. Cursor advances to **8.9** (accessibility pass).
 
 ---
 
+## Beat 60 — 8.9 Accessibility pass (scoped: Capsules domain)
+
+"Accessibility pass" is the least scoped plan line this run has hit —
+not a feature with an obvious boundary like "quick capture" or "board
+view," just a directive covering the entire app. A literal reading
+would mean touching every screen in one beat, which isn't realistic
+work to verify carefully in one pass. Picked the same move as command
+palette/board view before it: find a real, defensible boundary rather
+than either attempting everything shallowly or picking an arbitrary
+slice. The boundary that held up here was the app's own existing
+structure — `docs/ARCHITECTURE.md`'s own "Capsules" widget grouping,
+extended to include the newer capsule-adjacent widgets this run built
+in later beats (ParentPicker, VersionHistory, BulkActionBar). Explicitly
+left out Chat, Settings, Home, and — deliberately, by name — the command
+palette, which spans every domain in the app in one flat list and so
+doesn't belong to any single one.
+
+The mechanical work itself (19 files) sorted into a few real, distinct
+categories rather than one undifferentiated "add labels" sweep:
+symbol-only glyph buttons (every ✕/↑/↓ this run has shipped across
+several earlier beats without a second thought — TagPicker's remove,
+RelationPicker's unlink, ParentPicker's clear, SchemaBuilder's reorder)
+needed a real spoken description, since a screen reader reading a raw
+unicode character aloud communicates nothing. Toggle-shaped controls
+needed both a role AND a state — a checkbox role with no `checked`
+state is only half the contract, and several chip pickers already had
+the role from earlier beats but never the matching label. Dynamic error
+text needed `accessibilityLiveRegion` specifically because it appears
+mid-interaction, outside the normal top-to-bottom screen read a screen
+reader does on load — without it, a validation error or a partial bulk-
+delete failure could go completely unannounced to someone not currently
+touching that exact spot on screen.
+
+One real self-correction worth recording, because it's a subtler
+accessibility mistake than a missing label: the view-mode toggle button
+shows its CURRENT mode as its visible text ("List view," tap to advance
+to card). The first draft gave it a custom `accessibilityLabel`
+describing the mode it would switch TO — accurate about the action, but
+now visually and audibly telling two different stories about the same
+button at the same moment. Caught this by re-reading what I'd just
+written against what the button actually displays, before it ever
+reached the checker. The fix was subtraction, not more code — dropping
+the custom label entirely and trusting the same automatic child-text
+reading every other plain-text button in this pass already relies on.
+An accessibility label isn't just "does something get announced" — it's
+"does what gets announced agree with what gets seen," and those are
+different questions with different failure modes.
+
+`CapsuleCard`'s own selection indicator got the most involved treatment:
+its raw "●"/"○" glyph is now explicitly hidden from the accessibility
+tree on both platforms (`accessibilityElementsHidden` for iOS,
+`importantForAccessibility="no"` for Android — RN needs both, one per
+platform, to actually achieve "hidden" everywhere), since the *parent*
+Pressable's own `accessibilityRole="checkbox"` + `accessibilityState`
+now says "checkbox, checked" or "checkbox, unchecked" properly, in
+words, instead of leaving a screen reader to read a bare glyph character
+that means nothing on its own.
+
+No new tests — this codebase has no `@testing-library/react-native`, so
+there's no infrastructure to assert a JSX element's accessibility props
+against, the same gap that's kept every other pure-UI beat in this run
+test-free. Gate: tsc clean, jest 915/915 (72 suites, unchanged), eslint
+clean. Checker: pass on first attempt — grepped the whole `widgets`/`app`
+trees itself to confirm nothing capsule-domain was missed, independently
+verified both hide-from-accessibility-tree props were present (not just
+one), and specifically confirmed the view-mode button's fix actually
+holds (visible and announced text now identical).
+
+Checkpoint `91b52c3`. `docs/DEVELOPMENT_PLAN.md`'s 8.9 box stays
+**unchecked** — genuinely `in_progress`, not `done`: this is a real
+multi-beat split, not a blocked step. Chat, Settings, Home, and the
+command palette all still have zero accessibility props, and nothing
+stops a future beat from continuing there the way 8.8 is stopped on its
+dependency decision. Cursor stays at **8.9**.
+
+---
+
 <!-- Append new beats above this line. -->

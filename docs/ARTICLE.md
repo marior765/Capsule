@@ -2385,4 +2385,45 @@ mechanically, without anyone having to remember it was supposed to.
 
 ---
 
+## 2026-09-15 — An accessibility label can be accurate and still wrong
+
+The capsule list's view-mode button shows one word at a time — "List
+view" while you're in list mode, "Card view" while you're in card mode —
+and tapping it advances to the next one. Writing its `accessibilityLabel`
+felt like an easy call: describe what tapping *does*, so a screen reader
+user hears "Switch to Card view" instead of just "List view," which on
+its own doesn't obviously say "this is a button that changes something."
+That label is factually correct. It's also a mistake, and the reasoning
+for why took a second look to actually see.
+
+The button already has a visible text child — "List view" — and React
+Native reads that automatically as the accessible name when nothing
+overrides it. Overriding it with "Switch to Card view" doesn't add
+information on top of the visible text; it *replaces* what gets
+announced with something that describes a different state than what's
+on screen. A sighted screen-reader user — someone glancing at the
+screen while also listening, or switching between modalities depending
+on context — now gets two different answers to "what does this button
+currently say" depending on which sense they're using. That's not a
+missing label. It's a coherence bug between two channels the interface
+is supposed to be telling the same story through.
+
+The fix was deleting the custom label, not writing a better one. Once
+the intent was clear it hasn't produced *new* information the visible
+text lacked — it had produced *different* information — the right move
+was letting the existing, already-correct visible text do the job
+unaided, the same way the four other toggle buttons on that same screen
+already worked without needing a custom label at all.
+
+**Article angle:** the instinct to add an accessibility label is usually
+right, but "does this label accurately describe the action" is a weaker
+check than "does this label agree with what a sighted user sees at the
+same instant." A label can pass the first test and fail the second —
+and the failure is subtle exactly because the label, read in isolation,
+sounds like an improvement. The right question isn't "is this label
+true," it's "is this label the same truth the screen is already
+telling."
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
