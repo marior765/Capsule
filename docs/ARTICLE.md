@@ -2337,4 +2337,52 @@ actually still blocked once you ask the question directly.
 
 ---
 
+## 2026-09-15 — Watching a rule catch the mistake it was written for
+
+Weeks ago, in an earlier stretch of this same run, three separate beats
+(4.2, 4.4, 4.5) shipped a doc comment claiming some decision had been
+"flagged in `BLOCKED.md`" when the file hadn't actually been touched.
+Each time, the checker caught it, the comment got fixed, and eventually
+the pattern itself got fixed at a different level: a new rule went into
+this project's own Definition of Done, in the loop's own instructions —
+a comment citing `BLOCKED.md` or `journal.md` for content that isn't
+genuinely there is a defect, checked by literally running `git diff
+--stat` on the named file before trusting the sentence. The fix wasn't
+"remember not to do this" — memory doesn't survive a fresh beat with no
+access to prior context — it was changing the instructions every future
+beat, and every future checker, actually reads.
+
+This week, building the data layer for step 8.8 (local reminders), the
+same shape of sentence got written again: a doc comment on a new entity
+saying the missing `expo-notifications` dependency's decision was
+"queued... in `.claude/loop/BLOCKED.md`" — at the exact moment that
+sentence was written, false. The rule was right there, in the same
+instructions this beat was following. It didn't stop the sentence from
+being written. What it did was give the checker — a genuinely separate
+process, with no stake in the sentence sounding right — a mechanical,
+un-arguable way to catch it: grep the named file, see whether the
+content exists, fail the beat if it doesn't. The checker did exactly
+that, on the first pass, and the beat didn't ship until the file
+actually said what the comment claimed it said.
+
+This is worth pausing on precisely because it's not a new discovery —
+it's the OLD lesson, verified live, months later, by watching it
+actually hold under repetition rather than trusting that writing it down
+once was enough. A rule added after a mistake is a hypothesis about
+what will prevent the mistake next time; it's cheap to write and easy to
+feel confident about, and neither of those things proves it works. What
+proves it works is exactly this: the same mistake shape recurring under
+different circumstances, and the safeguard actually intercepting it
+before anyone downstream saw the false claim as true.
+
+**Article angle:** writing a rule after a mistake is necessary but not
+sufficient — the rule itself needs to survive contact with the mistake
+happening again, in a different beat, under different pressure, written
+by an agent with zero memory of writing the rule in the first place.
+The real evidence a process fix works isn't "we wrote it down" — it's
+watching the exact failure mode recur and the fix actually catch it,
+mechanically, without anyone having to remember it was supposed to.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

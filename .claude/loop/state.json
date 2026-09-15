@@ -2,11 +2,11 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 58,
+    "beat": 59,
     "status": "running"
   },
   "cursor": {
-    "step": "8.8",
+    "step": "8.9",
     "phase": 8
   },
   "steps": {
@@ -387,6 +387,16 @@
       "failureSignatures": [],
       "checkpoint": "d6e371b",
       "notes": "DONE -- compound plan line ('Multiple capsule views (card / board)'), both sub-features complete across two beats. CARD VIEW (57: 98702e1) -- CapsuleCard/CapsuleList gained viewMode: 'list'|'card', FlatList numColumns 1/2 with key={viewMode} forcing a remount (verified against RN's own FlatList source). BOARD VIEW (this beat, d6e371b) -- made the required grouping-dimension design decision: board only makes sense scoped to ONE capsule type (a single_select field's options are per-type), requires a type filter already active, groups by that type's FIRST single_select field (no per-user field-choice UI yet -- deterministic default). New entities/capsule getValuesByField (symmetric counterpart to getValuesByCapsule: one field across every capsule, TDD) + features/filter-sort-capsules groupCapsulesBySelectField (pure, one column per option in defined order + trailing 'unset' bucket for no-value-or-stale-value, never drops a capsule, TDD) + new widgets/CapsuleBoard (outer horizontal ScrollView of columns, inner vertical ScrollViews of CapsuleCards -- safe opposite-direction nesting, no dedicated test per RelationPicker/VersionHistory's pure-composition precedent). capsules/index.tsx's viewMode became a 3-way list/card/board cycle via a lookup table; shows an explanatory hint instead of an empty board when no type is selected or the type has no single_select field. New end-to-end regression test in migrations.test.ts proves the whole chain (real CapsuleType+field -> real capsules+values -> getValuesByField -> groupCapsulesBySelectField) through the real migration set, including the genuinely distinct 'no value at all' path (a capsule created with zero values), not just the 'stale value' path already covered by the unit tests. SCOPED to read-only (tap-to-navigate, same as list/card) -- no drag-and-drop, no bulk-select participation; moving a capsule between columns means editing its field value directly via the already-complete edit screen. Checker passed on first attempt with two acknowledged-low-risk non-blocking notes: a capsule whose value is literally the string 'unset' would collide with the sentinel column key (deemed unlikely in practice, not acted on); the two board-unavailable hint messages share one testID since only one is ever mounted at a time. Gate: tsc/jest (883/883, 70 suites)/eslint all green across the whole 8.7 arc. docs/DEVELOPMENT_PLAN.md 8.7 box TICKED. Cursor advances to 8.8."
+    },
+    "8.8": {
+      "status": "blocked",
+      "class": "native",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- entities/reminder/model.ts's doc comment claimed the expo-notifications dependency decision was 'queued as a human decision in .claude/loop/BLOCKED.md', but BLOCKED.md had no 8.8 section yet -- the exact recurring false-citation bug this loop's own Definition-of-Done rule (added after 4.2/4.4/4.5) exists to catch"
+      ],
+      "checkpoint": "7811ab6",
+      "notes": "Data layer FULLY done and tested, mirroring 6.8/8.4's own 'build what doesn't need the missing dependency' precedent. entities/reminder (new slice): Reminder {capsuleId, remindAt, message, timestamps}, migration v22 (registered in providers/migrations.ts's real boot array), full CRUD, getDueReminders(db, now) -- 'at or before' boundary genuinely tested with a reminder due EXACTLY at now, getRemindersByCapsule genuinely tested with scrambled insertion order to prove the ORDER BY is real. features/manage-reminders (new slice): createReminder/rescheduleReminder/removeReminder, mirrors create-capsule's shape. delete-capsule's cascade now also removes a deleted capsule's own reminders (same-entity derived data, active cleanup, matches the CapsuleVersion/CapsuleEmbedding precedent already in that cascade). New end-to-end regression test in migrations.test.ts proves createReminder+rescheduleReminder work together through the REAL boot-time array. GENUINELY BLOCKED on the actual notification half: expo-notifications is not in package.json, and per CLAUDE.md's dependency-audit rule + this loop's deferred-classification convention, installing it is a decision for the user, not something to do unattended -- mirrors 6.8's picker-library gap exactly. Checker failed the first round on a real instance of this run's own most-recurring mistake: the new code's doc comment claimed BLOCKED.md already had an '8.8' section describing this decision, but it didn't -- caught before the checkpoint, not after, by the SAME rule (Definition-of-Done item 9) this run wrote into its own contract after the 4.2/4.4/4.5 occurrences. Fixed: added a real, substantive '8.8' BLOCKED.md section (decisions needed: install expo-notifications?, permission UX and when the OS prompt shows, behavior when the app is backgrounded/killed -- does expo-notifications schedule natively at the OS level or need the app running, notification content fallback when message is null; device checks once resolved) before the checkpoint. Re-review: pass, independently re-read BLOCKED.md to confirm the section is real and substantive, not a stub. No UI/route wiring -- no way to create a reminder from the app yet, deliberately deferred alongside the notification half (no point building a create-reminder screen before deciding whether reminders can notify anyone at all). Gate: tsc/jest (915/915, 72 suites)/eslint all green. docs/DEVELOPMENT_PLAN.md 8.8 box stays UNCHECKED (native-class convention: mocked/data-only green is not hardware green). Cursor advances past 8.8 to 8.9."
     }
   },
   "quarantinedThisRun": [],
@@ -394,8 +404,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-09-15T00:10:00Z",
-    "head": "d6e371b",
-    "note": "70 suites, 883 tests passing -- 8.7 fully complete (card + board views)"
+    "at": "2026-09-15T00:00:00Z",
+    "head": "7811ab6",
+    "note": "72 suites, 915 tests passing -- 8.8 data layer done, notification scheduling blocked on expo-notifications decision"
   }
 }

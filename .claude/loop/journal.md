@@ -3944,4 +3944,64 @@ Checkpoint `d6e371b`. **This closes out 8.7** —
 
 ---
 
+## Beat 59 — 8.8 Local reminders (data layer only, blocked on a dependency)
+
+"Local reminders (on-device notifications)" is the first step in a while
+that hits the same wall 6.8 and 8.4 already mapped: the thing the plan
+line names literally cannot exist without a package that isn't
+installed. `expo-notifications` isn't in `package.json`, and per this
+project's own dependency-audit rule, adding it is a decision for the
+user, not something to reach for mid-beat because the plan happened to
+need it.
+
+The useful move, already established by 6.8's own precedent (ship
+`entities/attachment` metadata-only while the picker-library decision
+sat open), was separating what the step NEEDS the missing dependency for
+from what it doesn't. Scheduling and delivering an actual OS
+notification needs `expo-notifications`, unavoidably. Recording that a
+reminder should exist — when, for which capsule, saying what — needs
+nothing but a table and some CRUD, the same shape as every other entity
+in this codebase. Built exactly that: `entities/reminder` +
+`features/manage-reminders`, full TDD, migration registered, delete-
+cascade wired, a real end-to-end regression test — the complete, normal
+beat discipline, just stopped one layer short of the part that's
+actually blocked.
+
+The checker earned its keep in a way worth naming specifically: it
+caught this run repeating its own most-documented mistake. The new
+entity's doc comment said the `expo-notifications` decision was "queued
+... in `.claude/loop/BLOCKED.md`" — true in intent, false in fact, at
+the moment that sentence was written. `BLOCKED.md` had no 8.8 section
+yet. This is the *exact* failure this project's own Definition of Done
+grew a dedicated rule for, after it happened three times in one earlier
+run (steps 4.2, 4.4, 4.5) — a comment citing a document for content that
+isn't there yet, cheap to write, cheap to believe, and cheap to catch
+with one `grep`, which is exactly how the checker caught it. The rule
+existing in the contract didn't stop the mistake from happening again;
+it stopped it from *shipping* — the checker applied the rule mechanically
+and refused to pass a plausible-sounding claim it could trivially check
+and didn't find true. Fixed by writing the section for real before
+resubmitting, not by softening the doc comment to stop promising
+something.
+
+17 new tests for `entities/reminder`, 12 for `features/manage-reminders`,
+plus the cascade tests and the new regression test. Gate: tsc clean,
+jest 915/915 (72 suites), eslint clean after one `--fix` pass. Checker:
+fail (the BLOCKED.md citation) → fix → pass.
+
+Checkpoint `7811ab6`. `docs/DEVELOPMENT_PLAN.md`'s 8.8 box stays
+**unchecked** — native-class convention, and doubly so here: nothing
+schedules a real notification yet, and there's no UI to even create a
+reminder (deliberately deferred alongside the notification half — a
+"set a reminder" screen has nothing to actually do until the scheduling
+question is resolved). `BLOCKED.md` carries the real decisions needed:
+whether to install `expo-notifications`, the permission-prompt UX, and —
+the one with the biggest implementation-shape consequences — whether
+`expo-notifications` schedules natively at the OS level (survives an app
+kill) or needs the app running, which determines whether `getDueReminders`
+ever needs a background poller of its own or whether the OS just handles
+delivery once told. Cursor advances to **8.9** (accessibility pass).
+
+---
+
 <!-- Append new beats above this line. -->
