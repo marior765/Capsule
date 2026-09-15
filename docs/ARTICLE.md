@@ -2477,4 +2477,52 @@ however many beats later.
 
 ---
 
+### 2026-09-15 — Closing an unattended run means auditing your own "done"s, not just finding new work
+
+62 beats of an autonomous, unattended `/safe-loop` run ended today — not
+because someone told it to stop, but because it ran out of steps that
+were neither finished, blocked on hardware, nor deferred pending a
+human decision. That's the actual stopping condition this run was
+built around from the start, and reaching it honestly required doing
+something no single beat had been asked to do before: looking backward
+at steps already marked closed, not just forward at what's next.
+
+Selecting this beat's work meant the usual walk through the plan in
+phase order, skipping anything `state.json` already called `done`,
+`blocked`, or `deferred`. That's normally a fast, mechanical pass. This
+time it surfaced three steps — two Phase 5 portability features and one
+Phase 7 RAG-wiring step — recorded `"done"` despite their own plan
+lines and code comments openly saying otherwise: a capsule-export
+scope that was never built once its blocking dependency shipped months
+ago, four of five import formats simply never started, and a wiring
+step blocked on the same device decision its own siblings already
+correctly show as blocked. None of these were lies exactly — each one's
+prose notes were honest about what was and wasn't finished. The
+`status` field just hadn't been asked to carry that nuance, and nothing
+ever checked it against the plan text it was supposed to summarize.
+
+The three didn't get the same treatment. One (the RAG-wiring step) was
+a pure bookkeeping error — its blocked-ness was already fully described
+elsewhere, correcting the field was zero-risk and changed no behavior,
+so it got fixed on the spot. The other two involve real, undesigned
+feature work with open scoping questions (does "capsule export" include
+relations? which import format ships first?) — flipping their status to
+reopen them would have meant a bookkeeping pass silently deciding to
+start new, unscoped work in the final minutes of an unrelated run. Those
+got written down instead, for a human or a future, properly-scoped beat
+to pick up deliberately.
+
+**Article angle:** an autonomous loop's stopping condition is usually
+described as "no more work left" — but "no more work" is a claim about
+the *record*, not the codebase, and a record that only ever gets written
+forward (mark this done, tick this box, move on) can drift from what it
+describes without any single edit being wrong. Closing out a long
+unattended run honestly means treating your own accumulated "done"s
+with the same skepticism you'd apply to a stranger's — and knowing the
+difference between a status that's just wrong (fix it) and a status
+that's a judgment call about starting new work (write it down and stop
+there, even one beat away from the finish line).
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

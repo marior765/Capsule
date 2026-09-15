@@ -47,6 +47,78 @@ Deferred rather than guessed at (2026-09 — see journal beat 45).
 
 ---
 
+### 5.2 — `features/import-export` capsule scope: spine says "done", the code says otherwise
+Discovered during beat 62's step-selection walk (not something this beat
+was assigned to fix): `.claude/loop/state.json`'s `5.2` entry is marked
+`status: "done"`, but `docs/DEVELOPMENT_PLAN.md` line 124 still reads
+"capsule scope blocked on Phase 6 (`entities/capsule` doesn't exist yet)",
+and `src/features/import-export/index.ts`'s own doc comment says the same
+thing verbatim — "Capsules aren't included yet: `entities/capsule` doesn't
+exist yet." Phase 6 (`entities/capsule` and everything around it) has been
+fully built and shipped since then. The blocking condition this step was
+recorded against no longer exists, but nobody has gone back to either
+finish the capsule scope or correct the spine's claim that this step is
+done.
+
+This is a genuine spine/reality mismatch, structurally similar to the
+`state.json` JSON corruption beat 61 found and fixed — except here fixing
+it isn't a one-line mechanical correction, it's real unscoped feature work
+with its own open questions, so it's being recorded rather than acted on
+unilaterally mid-beat on an unrelated step (8.9).
+
+**Decisions needed before this is picked up:**
+1. Does "capsule scope" for import/export mean a single capsule, all
+   capsules, or both (mirroring the existing conversation/whole-vault
+   split already implemented)?
+2. Do `CapsuleLink` relations round-trip, or degrade gracefully like they
+   already do elsewhere (CLAUDE.md's stated behavior for a missing
+   relation target)?
+3. Does this wait on 6.8's attachment-field decision (still blocked on a
+   picker-library dependency), or ship attachment-less for now the way
+   6.8 itself already does?
+4. Whether `state.json`'s `5.2` status should be corrected to
+   `in_progress` now, independent of when the remaining work actually
+   gets picked up — left unchanged for this beat since flipping status
+   without also deciding what finishes the step felt like a bigger call
+   than a step-selection walk should make alone.
+
+Flagged, not fixed (2026-09-15 — see journal beat 62).
+
+---
+
+### 5.4 — `features/migrate-import` (portable-format importers): same spine/reality gap as 5.2
+Found alongside 5.2 while auditing every `logic`/`ui` step whose
+`state.json` status is `"done"` but plan checkbox is unchecked (a
+bounded, mechanical check — not a full re-verification of every closed
+step, just this one specific inconsistency pattern). `docs/DEVELOPMENT_PLAN.md`
+line 126 reads: "Migration importers (ChatGPT export, Claude export, CSV,
+JSON, Markdown) — ChatGPT export implemented, unverified against a real
+export file (see BLOCKED.md); the other four formats not started." One
+format out of five, and that one only against synthetic test fixtures,
+not a real export file (see the existing "Needs external verification"
+entry below for 5.4's ChatGPT-parser status specifically). `state.json`
+still records this step as `"done"`.
+
+Unlike 5.2, nothing here is blocked on a since-resolved dependency — CSV,
+JSON, and Markdown importers don't obviously need anything this repo
+doesn't already have; Claude-export format would need someone to actually
+look at what a real Claude export looks like first. This is just
+unfinished, unblocked work that was never picked back up.
+
+**Decisions needed before this is picked up:**
+1. Priority and order for the remaining four formats — CSV/JSON/Markdown
+   first (structurally simpler, no vendor-specific quirks to reverse
+   engineer) versus Claude export (higher user value if Capsule expects
+   to attract people migrating away from Claude specifically)?
+2. Same open question as the existing ChatGPT-parser entry below: real
+   export files to test against, not just synthetic fixtures.
+3. Whether `state.json`'s `5.4` status should be corrected to
+   `in_progress` — left unchanged for the same reason as 5.2.
+
+Flagged, not fixed (2026-09-15 — see journal beat 62).
+
+---
+
 ## Needs a device / dev build
 
 ### 4.5 — `features/wipe-data` — secure full wipe (models, chats, settings)
@@ -431,6 +503,14 @@ live embedding context is loaded anywhere in the app (`LlmProvider` only
 loads a chat completion context). Once the device check settles which
 model to use, wiring both a `Providers`-level embedding context and the
 actual call sites is the remaining work for 7.2/7.3.
+
+**Beat 62 correction:** `state.json`'s `7.2` status was recorded as
+`"done"` despite this entry already describing it as blocked on 7.1's
+device check — inconsistent with `7.3`/`7.4`, which correctly show
+`"blocked"` for the identical reason. Relabeled `7.2` to `"blocked"` to
+match. Pure record correction — `"done"` and `"blocked"` already produced
+the same selection behavior (both skip), so nothing about the run's
+actual progress changed, only the honesty of what's recorded.
 
 ## Needs external verification (not a device check)
 

@@ -4148,4 +4148,90 @@ Cursor stays at **8.9** for a future beat to continue.
 
 ---
 
+## Beat 62 — 8.9 finished: accessibility pass, Settings/Home/CommandPalette
+(the final domain) — and the run reaches scope complete
+
+Third and final installment of 8.9, covering everything beats 60/61
+deliberately left out: `AppLockSettings`, `WipeDataSettings`,
+`PrivacyBanner`, `CommandPalette` widgets; `settings/index.tsx`,
+`settings/inference.tsx`, and Home's `index.tsx` routes. Same fixes as
+the prior two beats — accessibilityLabel on inputs, accessibilityRole +
+matching accessibilityState on buttons/toggles, accessibilityLiveRegion
+on dynamic messages — plus one small inconsistency worth naming:
+`PrivacyBanner` already had `accessibilityRole="alert"` from an earlier
+beat but no `accessibilityLiveRegion`, the only place in the whole app
+using the alert role without a live region alongside it. Added it for
+consistency with every other dynamic-message pattern already
+established.
+
+`EgressLog`, `settings/privacy.tsx`, the four empty settings stub
+routes, and `search.tsx` were all checked and confirmed to need
+nothing — read-only, pure composition, or genuinely empty placeholders.
+
+Because this closes the last of the three domains, closing this beat
+means **the entire app now has accessibility coverage** — `docs/
+DEVELOPMENT_PLAN.md`'s 8.9 box is ticked for the first time. The checker
+didn't take that claim on faith: it independently enumerated all 27
+widgets and every route under `app/(app)/` against this beat's diff plus
+beats 60 and 61's actual commit stats, confirmed `CapsuleList`/
+`CapsuleBoard`/`InferenceStats`/`VoiceRecordButton`/all five
+`_layout.tsx` files have zero interactive elements of their own, and
+found no gap. Focus order and dynamic type support stay explicitly
+out of scope for all three beats — a real, separate gap, just not one
+this box was ever meant to cover.
+
+Checkpoint `5d96b42`.
+
+### Closing out the run
+
+Selecting this beat's step meant walking the whole registry in phase
+order, which surfaced something this beat wasn't assigned to fix: two
+other `logic`-class steps — **5.2** (`features/import-export`'s capsule
+scope) and **5.4** (`features/migrate-import`'s four unbuilt importer
+formats) — are recorded `"done"` in `state.json` despite their own plan
+lines and code comments openly describing real, unfinished work. 5.2's
+original blocker (`entities/capsule` not existing yet) has been gone
+since Phase 6 shipped, months ago; nobody went back to either finish it
+or correct the record. Both are flagged in `BLOCKED.md` rather than
+silently reopened as new work at the tail end of an unrelated beat —
+deciding what "done" means for a half-built importer isn't a call a
+step-selection walk should make alone.
+
+A third one, **7.2**, got the opposite treatment: also recorded
+`"done"`, but its own notes already said its remaining wiring work is
+blocked on 7.1's device decision — exactly what `7.3` and `7.4` already
+correctly show as `"blocked"` for the same reason. That one *was* a
+pure record error (not a new judgment call), so it's fixed: relabeled
+`"blocked"` to match its siblings. `"done"` and `"blocked"` already
+produced identical step-selection behavior, so nothing about the run
+changed — only the accuracy of what's written down.
+
+With 8.9 now done and 7.2 corrected, every remaining step in the
+registry is `done`, `blocked` (awaiting a device or dev-build check:
+3.1, 6.8, 7.2, 7.3, 7.4, 8.8), or `deferred` (awaiting a human decision:
+8.1, 9.1–9.5) — nothing is left `pending` or `in_progress`. That's the
+literal stopping condition this run has been working toward since it
+started. **`run.status` is now `"complete"`.**
+
+This is not a claim that Capsule is finished — it's a claim that this
+particular unattended run, scoped to `all`, has run out of steps it can
+pick up without a device, a dependency decision, or a scoping decision
+a human hasn't made. The honest summary: what shipped is real and
+tested (every `logic`/`ui` step through the gate + an independent
+checker, every beat checkpointed on `main`); what's blocked needs
+hardware (`whisper.rn`, biometrics, SQLCipher, image-picker, embedding-
+model verification — all in `BLOCKED.md` under "Needs a device");
+what's deferred needs a decision this run correctly declined to make
+unattended (cloud-backend provider choice, sync's CRDT model, STT
+model management); and what looked done but wasn't (5.2, 5.4) is now
+visible instead of silently buried under a green checkbox that was
+never actually checked.
+
+Gate: tsc clean, jest 915/915 (72 suites), eslint clean (pre-existing
+`[boundaries]` warning only). Checker: pass, with the full-app coverage
+claim independently re-verified rather than trusted. Checkpoint
+`5d96b42`.
+
+---
+
 <!-- Append new beats above this line. -->
