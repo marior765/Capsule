@@ -82,23 +82,33 @@ export default function PersonasScreen() {
         value={name}
         onChangeText={setName}
         placeholder="Name (e.g. Code reviewer)"
+        accessibilityLabel="Persona name"
       />
       <TextInput
         style={[styles.input, styles.multiline]}
         value={systemPrompt}
         onChangeText={setSystemPrompt}
         placeholder="System prompt"
+        accessibilityLabel="System prompt"
         multiline
       />
 
       <View style={styles.formActions}>
-        <Pressable style={styles.primary} onPress={handleSave}>
+        <Pressable
+          style={styles.primary}
+          onPress={handleSave}
+          accessibilityRole="button"
+        >
           <Text style={styles.primaryLabel}>
             {editingId ? "Save changes" : "Create persona"}
           </Text>
         </Pressable>
         {editingId && (
-          <Pressable style={styles.secondary} onPress={resetForm}>
+          <Pressable
+            style={styles.secondary}
+            onPress={resetForm}
+            accessibilityRole="button"
+          >
             <Text style={styles.meta}>Cancel</Text>
           </Pressable>
         )}
@@ -110,13 +120,22 @@ export default function PersonasScreen() {
       )}
       {personas.map((persona) => (
         <View key={persona.id} style={styles.row}>
-          <Pressable style={styles.rowMain} onPress={() => handleEdit(persona)}>
+          <Pressable
+            style={styles.rowMain}
+            onPress={() => handleEdit(persona)}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${persona.name}`}
+          >
             <Text style={styles.name}>{persona.name}</Text>
             <Text style={styles.meta} numberOfLines={2}>
               {persona.systemPrompt}
             </Text>
           </Pressable>
-          <Pressable onPress={() => handleDelete(persona)}>
+          <Pressable
+            onPress={() => handleDelete(persona)}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${persona.name}`}
+          >
             <Text style={styles.delete}>Delete</Text>
           </Pressable>
         </View>

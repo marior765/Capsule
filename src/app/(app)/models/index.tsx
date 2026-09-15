@@ -81,6 +81,9 @@ export default function ModelsScreen() {
             <Pressable
               style={styles.rowMain}
               onPress={() => handleSelect(model)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={`${model.name}, ${model.parameters}, ${model.quantization}`}
             >
               <Text style={styles.name}>{model.name}</Text>
               <Text style={styles.meta}>
@@ -88,7 +91,11 @@ export default function ModelsScreen() {
                 {model.quantization}
               </Text>
             </Pressable>
-            <Pressable onPress={() => handleDelete(model)}>
+            <Pressable
+              onPress={() => handleDelete(model)}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete model ${model.name}`}
+            >
               <Text style={styles.delete}>Delete</Text>
             </Pressable>
           </View>
@@ -96,7 +103,11 @@ export default function ModelsScreen() {
       })}
 
       <Text style={styles.heading}>Download</Text>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
       {available.length === 0 && (
         <Text style={styles.muted}>All recommended models downloaded.</Text>
       )}
@@ -106,6 +117,9 @@ export default function ModelsScreen() {
           style={styles.row}
           disabled={downloadingUrl !== null}
           onPress={() => handleDownload(spec)}
+          accessibilityRole="button"
+          accessibilityLabel={`${downloadingUrl === spec.url ? "Downloading" : "Download"} ${spec.name}, ${spec.parameters}, ${spec.quantization}`}
+          accessibilityState={{ disabled: downloadingUrl !== null }}
         >
           <View style={styles.rowMain}>
             <Text style={styles.name}>

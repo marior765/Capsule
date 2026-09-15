@@ -24,6 +24,9 @@ export function PersonaSelector({
           testID={testIDs.pressables.none}
           style={[styles.row, selectedId === null && styles.rowSelected]}
           onPress={() => onSelect(null)}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: selectedId === null }}
+          accessibilityLabel="No persona"
         >
           <Text style={styles.name}>No persona</Text>
           <Text style={styles.meta}>
@@ -38,6 +41,9 @@ export function PersonaSelector({
           testID={`${testIDs.pressables.row}_${persona.id}`}
           style={[styles.row, selectedId === persona.id && styles.rowSelected]}
           onPress={() => onSelect(persona)}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: selectedId === persona.id }}
+          accessibilityLabel={persona.name}
         >
           <Text testID={testIDs.texts.name} style={styles.name}>
             {persona.name}

@@ -39,6 +39,8 @@ export function SnippetPicker({ snippets, onSelect }: SnippetPickerProps) {
           testID={`${testIDs.pressables.snippet}_${snippet.id}`}
           style={styles.row}
           onPress={() => onSelect(snippet)}
+          accessibilityRole="button"
+          accessibilityLabel={snippet.title}
         >
           <Text style={styles.title}>{snippet.title}</Text>
           <Text style={styles.preview} numberOfLines={1}>

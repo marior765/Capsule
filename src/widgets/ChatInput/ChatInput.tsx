@@ -37,6 +37,7 @@ export function ChatInput({
         value={text}
         onChangeText={setText}
         placeholder="Message"
+        accessibilityLabel="Message"
         editable={!disabled}
         multiline
       />
@@ -45,6 +46,9 @@ export function ChatInput({
         style={[styles.send, disabled && styles.sendDisabled]}
         onPress={handleSend}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={sendLabel}
+        accessibilityState={{ disabled }}
       >
         <Text style={styles.sendLabel}>{sendLabel}</Text>
       </Pressable>

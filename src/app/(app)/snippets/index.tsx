@@ -86,6 +86,7 @@ export default function SnippetsScreen() {
         value={title}
         onChangeText={setTitle}
         placeholder="Title (e.g. Summarize)"
+        accessibilityLabel="Snippet title"
       />
       <TextInput
         testID={testIDs.inputs.content}
@@ -93,6 +94,7 @@ export default function SnippetsScreen() {
         value={content}
         onChangeText={setContent}
         placeholder="Snippet text"
+        accessibilityLabel="Snippet text"
         multiline
       />
 
@@ -101,6 +103,7 @@ export default function SnippetsScreen() {
           testID={testIDs.buttons.save}
           style={styles.primary}
           onPress={handleSave}
+          accessibilityRole="button"
         >
           <Text style={styles.primaryLabel}>
             {editingId ? "Save changes" : "Create snippet"}
@@ -111,6 +114,7 @@ export default function SnippetsScreen() {
             testID={testIDs.buttons.cancel}
             style={styles.secondary}
             onPress={resetForm}
+            accessibilityRole="button"
           >
             <Text style={styles.meta}>Cancel</Text>
           </Pressable>
@@ -129,6 +133,8 @@ export default function SnippetsScreen() {
             testID={`${testIDs.pressables.edit}_${snippet.id}`}
             style={styles.rowMain}
             onPress={() => handleEdit(snippet)}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${snippet.title}`}
           >
             <Text style={styles.name}>{snippet.title}</Text>
             <Text style={styles.meta} numberOfLines={2}>
@@ -138,6 +144,8 @@ export default function SnippetsScreen() {
           <Pressable
             testID={`${testIDs.pressables.delete}_${snippet.id}`}
             onPress={() => handleDelete(snippet)}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${snippet.title}`}
           >
             <Text style={styles.delete}>Delete</Text>
           </Pressable>

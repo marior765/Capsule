@@ -252,8 +252,10 @@ export default function ChatScreen() {
             testID={testIDs.buttons.export}
             style={styles.exportButton}
             onPress={handleExport}
+            accessibilityRole="button"
+            accessibilityLabel={exported ? "Copied" : "Export"}
           >
-            <Text style={styles.exportLabel}>
+            <Text style={styles.exportLabel} accessibilityLiveRegion="polite">
               {exported ? "Copied!" : "Export"}
             </Text>
           </Pressable>
@@ -267,20 +269,36 @@ export default function ChatScreen() {
         onSwitchBranch={handleSwitchBranch}
       />
       {editing && (
-        <Pressable onPress={() => setEditing(null)}>
-          <Text style={styles.editing}>
+        <Pressable
+          onPress={() => setEditing(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel editing"
+        >
+          <Text style={styles.editing} accessibilityLiveRegion="polite">
             Editing — sending forks a new branch. Tap to cancel.
           </Text>
         </Pressable>
       )}
       {error && (
-        <Pressable onPress={() => setError(null)}>
-          <Text style={styles.error}>{error} Tap to dismiss.</Text>
+        <Pressable
+          onPress={() => setError(null)}
+          accessibilityRole="button"
+          accessibilityLabel={`${error}. Dismiss`}
+        >
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {error} Tap to dismiss.
+          </Text>
         </Pressable>
       )}
       {voiceError && (
-        <Pressable onPress={() => setVoiceError(null)}>
-          <Text style={styles.error}>{voiceError} Tap to dismiss.</Text>
+        <Pressable
+          onPress={() => setVoiceError(null)}
+          accessibilityRole="button"
+          accessibilityLabel={`${voiceError}. Dismiss`}
+        >
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {voiceError} Tap to dismiss.
+          </Text>
         </Pressable>
       )}
       {canChat ? (
@@ -309,6 +327,8 @@ export default function ChatScreen() {
                   ? setShowSnippetPicker(false)
                   : handleOpenSnippetPicker()
               }
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showSnippetPicker }}
             >
               <Text style={styles.snippetsLabel}>
                 {showSnippetPicker ? "Close" : "Snippets"}
@@ -327,7 +347,11 @@ export default function ChatScreen() {
       ) : status === "loading" ? (
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
-        <Pressable onPress={() => router.push("/models")}>
+        <Pressable
+          onPress={() => router.push("/models")}
+          accessibilityRole="button"
+          accessibilityLabel={`${STATUS_MESSAGE[status]}. Manage models`}
+        >
           <Text style={styles.status}>
             {STATUS_MESSAGE[status]} Tap to manage models.
           </Text>

@@ -137,8 +137,14 @@ export default function EphemeralChatScreen() {
       </Text>
       <ChatThread messages={messages} streamingText={streaming} />
       {voiceError && (
-        <Pressable onPress={() => setVoiceError(null)}>
-          <Text style={styles.error}>{voiceError} Tap to dismiss.</Text>
+        <Pressable
+          onPress={() => setVoiceError(null)}
+          accessibilityRole="button"
+          accessibilityLabel={`${voiceError}. Dismiss`}
+        >
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {voiceError} Tap to dismiss.
+          </Text>
         </Pressable>
       )}
       {canChat ? (
@@ -161,6 +167,8 @@ export default function EphemeralChatScreen() {
                   ? setShowSnippetPicker(false)
                   : handleOpenSnippetPicker()
               }
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showSnippetPicker }}
             >
               <Text style={styles.snippetsLabel}>
                 {showSnippetPicker ? "Close" : "Snippets"}
@@ -178,7 +186,11 @@ export default function EphemeralChatScreen() {
       ) : status === "loading" ? (
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
-        <Pressable onPress={() => router.push("/models")}>
+        <Pressable
+          onPress={() => router.push("/models")}
+          accessibilityRole="button"
+          accessibilityLabel={`${STATUS_MESSAGE[status]}. Manage models`}
+        >
           <Text style={styles.status}>
             {STATUS_MESSAGE[status]} Tap to manage models.
           </Text>

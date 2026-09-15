@@ -50,6 +50,9 @@ export function ChatThread({
               testID={`${testIDs.buttons.prevBranch}_${item.id}`}
               onPress={() => onSwitchBranch?.(item, -1)}
               disabled={branch.index === 1}
+              accessibilityRole="button"
+              accessibilityLabel="Previous branch"
+              accessibilityState={{ disabled: branch.index === 1 }}
             >
               <Text
                 style={[styles.arrow, branch.index === 1 && styles.arrowMuted]}
@@ -64,6 +67,9 @@ export function ChatThread({
               testID={`${testIDs.buttons.nextBranch}_${item.id}`}
               onPress={() => onSwitchBranch?.(item, 1)}
               disabled={branch.index === branch.total}
+              accessibilityRole="button"
+              accessibilityLabel="Next branch"
+              accessibilityState={{ disabled: branch.index === branch.total }}
             >
               <Text
                 style={[

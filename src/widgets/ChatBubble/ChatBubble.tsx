@@ -52,8 +52,16 @@ function CodeBlock({ code, testID }: CodeBlockProps) {
   return (
     <View style={styles.codeBlock}>
       <Text style={styles.codeText}>{code}</Text>
-      <Pressable testID={testID} style={styles.copyButton} onPress={handleCopy}>
-        <Text style={styles.copyLabel}>{copied ? "Copied" : "Copy"}</Text>
+      <Pressable
+        testID={testID}
+        style={styles.copyButton}
+        onPress={handleCopy}
+        accessibilityRole="button"
+        accessibilityLabel={copied ? "Copied" : "Copy code"}
+      >
+        <Text style={styles.copyLabel} accessibilityLiveRegion="polite">
+          {copied ? "Copied" : "Copy"}
+        </Text>
       </Pressable>
     </View>
   );
@@ -133,6 +141,8 @@ export function ChatBubble({ message, onEdit }: ChatBubbleProps) {
         <Pressable
           testID={`${testIDs.buttons.edit}_${message.id}`}
           onPress={() => onEdit(message)}
+          accessibilityRole="button"
+          accessibilityLabel="Edit message"
         >
           <Text style={styles.edit}>Edit</Text>
         </Pressable>

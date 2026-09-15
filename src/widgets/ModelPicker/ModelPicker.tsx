@@ -31,6 +31,9 @@ export function ModelPicker({
         testID={`${testIDs.pressables.row}_${item.id}`}
         style={[styles.row, isActive && styles.rowActive]}
         onPress={() => onSelect(item)}
+        accessibilityRole="radio"
+        accessibilityState={{ selected: isActive }}
+        accessibilityLabel={`${item.name}, ${item.parameters}, ${item.quantization}, ${formatGB(item.size)}${item.fits ? ", recommended" : ""}`}
       >
         <View style={styles.rowText}>
           <Text testID={testIDs.texts.name} style={styles.name}>

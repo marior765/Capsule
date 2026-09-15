@@ -22,18 +22,21 @@ export default function ChatListScreen() {
         <Pressable
           style={styles.actionButton}
           onPress={() => router.push("/chat/new")}
+          accessibilityRole="button"
         >
           <Text style={styles.newLabel}>New chat</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => router.push("/chat/ephemeral")}
+          accessibilityRole="button"
         >
           <Text style={styles.newLabel}>Ephemeral</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => router.push("/models")}
+          accessibilityRole="button"
         >
           <Text style={styles.newLabel}>Models</Text>
         </Pressable>
@@ -45,6 +48,8 @@ export default function ChatListScreen() {
           <Pressable
             style={styles.row}
             onPress={() => router.push(`/chat/${item.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={item.title}
           >
             <Text style={styles.title}>{item.title}</Text>
           </Pressable>
