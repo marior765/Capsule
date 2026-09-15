@@ -49,7 +49,12 @@ export function ParentPicker({
       {parent ? (
         <View style={styles.currentRow}>
           <Text style={styles.currentLabel}>{parent.title}</Text>
-          <Pressable testID={testIDs.pressables.clear} onPress={onClearParent}>
+          <Pressable
+            testID={testIDs.pressables.clear}
+            onPress={onClearParent}
+            accessibilityRole="button"
+            accessibilityLabel={`Clear parent ${parent.title}`}
+          >
             <Text style={styles.removeLabel}>✕</Text>
           </Pressable>
         </View>
@@ -58,7 +63,11 @@ export function ParentPicker({
       )}
 
       {error && (
-        <Text testID={testIDs.texts.error} style={styles.errorLabel}>
+        <Text
+          testID={testIDs.texts.error}
+          style={styles.errorLabel}
+          accessibilityLiveRegion="polite"
+        >
           {error}
         </Text>
       )}
@@ -71,6 +80,8 @@ export function ParentPicker({
               testID={`${testIDs.pressables.setParent}_${capsule.id}`}
               style={styles.pickRow}
               onPress={() => onSetParent(capsule.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Set parent to ${capsule.title}`}
             >
               <Text style={styles.pickLabel}>{capsule.title}</Text>
             </Pressable>

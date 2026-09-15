@@ -124,6 +124,7 @@ export default function TypeDetailScreen() {
         testID={testIDs.buttons.saveMeta}
         style={styles.primary}
         onPress={handleSaveMeta}
+        accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>Save name & description</Text>
       </Pressable>
@@ -131,6 +132,7 @@ export default function TypeDetailScreen() {
         testID={testIDs.buttons.delete}
         style={styles.secondary}
         onPress={handleDelete}
+        accessibilityRole="button"
       >
         <Text style={styles.deleteLabel}>Delete type</Text>
       </Pressable>

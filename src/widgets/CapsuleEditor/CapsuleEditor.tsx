@@ -48,6 +48,7 @@ export function CapsuleEditor({
         value={title}
         onChangeText={onTitleChange}
         placeholder="Title"
+        accessibilityLabel="Capsule title"
       />
       {fields.map((field) => {
         const error = errors?.[field.id];
@@ -66,6 +67,7 @@ export function CapsuleEditor({
               <Text
                 testID={`${testIDs.texts.fieldError}_${field.id}`}
                 style={styles.fieldError}
+                accessibilityLiveRegion="polite"
               >
                 {error}
               </Text>

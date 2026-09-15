@@ -40,6 +40,7 @@ export default function TypesListScreen() {
         testID={testIDs.buttons.newType}
         style={styles.primary}
         onPress={() => router.push("/types/new")}
+        accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>New type</Text>
       </Pressable>
@@ -59,6 +60,8 @@ export default function TypesListScreen() {
             testID={`${testIDs.pressables.row}_${capsuleType.id}`}
             style={styles.rowMain}
             onPress={() => router.push(`/types/${capsuleType.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={capsuleType.name}
           >
             <Text style={styles.name}>{capsuleType.name}</Text>
             {capsuleType.description && (
@@ -70,6 +73,8 @@ export default function TypesListScreen() {
           <Pressable
             testID={`${testIDs.buttons.delete}_${capsuleType.id}`}
             onPress={() => handleDelete(capsuleType)}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete type ${capsuleType.name}`}
           >
             <Text style={styles.delete}>Delete</Text>
           </Pressable>

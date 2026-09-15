@@ -65,6 +65,7 @@ export default function NewCapsuleScreen() {
         <Pressable
           testID={testIDs.pressables.createType}
           onPress={() => router.push("/types/new")}
+          accessibilityRole="button"
         >
           <Text style={styles.link}>Create a type</Text>
         </Pressable>
@@ -86,6 +87,8 @@ export default function NewCapsuleScreen() {
             testID={`${testIDs.pressables.typeOption}_${capsuleType.id}`}
             style={styles.typeRow}
             onPress={() => handleSelectType(capsuleType)}
+            accessibilityRole="button"
+            accessibilityLabel={capsuleType.name}
           >
             <Text style={styles.name}>{capsuleType.name}</Text>
             {capsuleType.description && (
@@ -111,6 +114,7 @@ export default function NewCapsuleScreen() {
         testID={testIDs.buttons.create}
         style={styles.primary}
         onPress={handleCreate}
+        accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>Create capsule</Text>
       </Pressable>

@@ -57,11 +57,20 @@ export function CapsuleCard({
         selectionMode && selected && styles.selected,
       ]}
       onPress={onPress}
+      accessibilityRole={selectionMode ? "checkbox" : "button"}
+      accessibilityState={selectionMode ? { checked: selected } : undefined}
+      accessibilityLabel={`${capsule.title}, ${capsuleTypeName ?? "Unknown type"}`}
     >
       {selectionMode && (
+        // Decorative — the Pressable's own accessibilityRole/State above
+        // already conveys "checkbox, checked/unchecked" to a screen
+        // reader; without hiding this, VoiceOver/TalkBack would also read
+        // the raw "●"/"○" glyph, which says nothing on its own.
         <Text
           testID={`${testIDs.texts.checkbox}_${capsule.id}`}
           style={styles.checkbox}
+          importantForAccessibility="no"
+          accessibilityElementsHidden
         >
           {selected ? "●" : "○"}
         </Text>

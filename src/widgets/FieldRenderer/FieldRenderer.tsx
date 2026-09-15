@@ -43,6 +43,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
           style={styles.input}
           value={value ?? ""}
           onChangeText={(text) => onChange(text || null)}
+          accessibilityLabel={field.name}
         />
       );
 
@@ -54,6 +55,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
           value={value ?? ""}
           onChangeText={(text) => onChange(text || null)}
           multiline
+          accessibilityLabel={field.name}
         />
       );
 
@@ -66,6 +68,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
           onChangeText={(text) => onChange(text || null)}
           keyboardType="numbers-and-punctuation"
           inputMode="decimal"
+          accessibilityLabel={field.name}
         />
       );
 
@@ -75,6 +78,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
           testID={testIDs.inputs.boolean}
           value={parseBooleanValue(value)}
           onValueChange={(next) => onChange(serializeBooleanValue(next))}
+          accessibilityLabel={field.name}
         />
       );
 
@@ -88,6 +92,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
           value={value ?? ""}
           onChangeText={(text) => onChange(text || null)}
           placeholder="YYYY-MM-DD"
+          accessibilityLabel={`${field.name} (YYYY-MM-DD)`}
         />
       );
 
@@ -109,6 +114,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                 onPress={() => onChange(selected ? null : option)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
+                accessibilityLabel={option}
               >
                 <Text
                   style={[
@@ -150,6 +156,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                 onPress={toggle}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: selected }}
+                accessibilityLabel={option}
               >
                 <Text
                   style={[

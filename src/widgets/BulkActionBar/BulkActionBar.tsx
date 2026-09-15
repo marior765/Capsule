@@ -86,7 +86,11 @@ export function BulkActionBar({
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
       {error !== null && (
-        <Text testID={testIDs.texts.error} style={styles.error}>
+        <Text
+          testID={testIDs.texts.error}
+          style={styles.error}
+          accessibilityLiveRegion="polite"
+        >
           {error}
         </Text>
       )}
@@ -98,6 +102,9 @@ export function BulkActionBar({
         style={styles.deleteButton}
         onPress={handlePress}
         disabled={busy || selectedIds.length === 0}
+        accessibilityRole="button"
+        accessibilityLabel={`Delete ${selectedIds.length} selected capsule${selectedIds.length === 1 ? "" : "s"}`}
+        accessibilityState={{ disabled: busy || selectedIds.length === 0 }}
       >
         <Text style={styles.deleteLabel}>{busy ? "Deleting…" : "Delete"}</Text>
       </Pressable>

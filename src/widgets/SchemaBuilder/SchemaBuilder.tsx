@@ -104,6 +104,7 @@ export function SchemaBuilder({
         value={name}
         onChangeText={onNameChange}
         placeholder="Type name (e.g. Book)"
+        accessibilityLabel="Type name"
       />
       <TextInput
         testID={testIDs.inputs.description}
@@ -111,6 +112,7 @@ export function SchemaBuilder({
         value={description}
         onChangeText={onDescriptionChange}
         placeholder="Description (optional)"
+        accessibilityLabel="Type description"
         multiline
       />
 
@@ -140,6 +142,7 @@ export function SchemaBuilder({
             )}
             value={field.required}
             onValueChange={() => onToggleRequired(field.id)}
+            accessibilityLabel={`${field.name} required`}
           />
           {index > 0 && (
             <Pressable
@@ -149,6 +152,8 @@ export function SchemaBuilder({
                 `moveUp_${field.id}`,
               )}
               onPress={() => handleMove(index, "up")}
+              accessibilityRole="button"
+              accessibilityLabel={`Move ${field.name} up`}
             >
               <Text style={styles.moveLabel}>↑</Text>
             </Pressable>
@@ -161,6 +166,8 @@ export function SchemaBuilder({
                 `moveDown_${field.id}`,
               )}
               onPress={() => handleMove(index, "down")}
+              accessibilityRole="button"
+              accessibilityLabel={`Move ${field.name} down`}
             >
               <Text style={styles.moveLabel}>↓</Text>
             </Pressable>
@@ -172,6 +179,8 @@ export function SchemaBuilder({
               `removeField_${field.id}`,
             )}
             onPress={() => onRemoveField(field.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove field ${field.name}`}
           >
             <Text style={styles.removeLabel}>Remove</Text>
           </Pressable>
@@ -185,6 +194,7 @@ export function SchemaBuilder({
         value={draftName}
         onChangeText={setDraftName}
         placeholder="Field name (e.g. Author)"
+        accessibilityLabel="New field name"
       />
       <View testID={testIDs.containers.typeOptions} style={styles.optionsRow}>
         {FIELD_TYPES.map((fieldType) => {
@@ -201,6 +211,7 @@ export function SchemaBuilder({
               onPress={() => setDraftType(fieldType)}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
+              accessibilityLabel={FIELD_TYPE_LABELS[fieldType]}
             >
               <Text
                 style={[styles.chipLabel, selected && styles.chipLabelSelected]}
@@ -215,6 +226,7 @@ export function SchemaBuilder({
         testID={testIDs.buttons.addField}
         style={styles.primary}
         onPress={handleAddField}
+        accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>Add field</Text>
       </Pressable>

@@ -35,6 +35,8 @@ export function VersionHistory({ versions, onRestore }: VersionHistoryProps) {
           <Pressable
             testID={`${testIDs.pressables.restore}_${version.id}`}
             onPress={() => onRestore(version.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Restore version "${version.title}" from ${new Date(version.createdAt).toLocaleString()}`}
           >
             <Text style={styles.restoreLabel}>Restore</Text>
           </Pressable>

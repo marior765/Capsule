@@ -108,6 +108,7 @@ export default function EditCapsuleScreen() {
         testID={testIDs.buttons.save}
         style={styles.primary}
         onPress={handleSave}
+        accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>Save changes</Text>
       </Pressable>

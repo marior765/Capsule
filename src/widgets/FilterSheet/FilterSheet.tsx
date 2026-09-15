@@ -55,6 +55,9 @@ export function FilterSheet({
           testID={testIDs.pressables.allTypes}
           style={[styles.chip, selectedTypeId === null && styles.chipSelected]}
           onPress={() => onSelectType(null)}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: selectedTypeId === null }}
+          accessibilityLabel="All types"
         >
           <Text style={styles.chipLabel}>All</Text>
         </Pressable>
@@ -67,6 +70,9 @@ export function FilterSheet({
               selectedTypeId === capsuleType.id && styles.chipSelected,
             ]}
             onPress={() => onSelectType(capsuleType.id)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: selectedTypeId === capsuleType.id }}
+            accessibilityLabel={capsuleType.name}
           >
             <Text style={styles.chipLabel}>{capsuleType.name}</Text>
           </Pressable>
@@ -83,6 +89,13 @@ export function FilterSheet({
               testID={`${testIDs.pressables.sortOption}_${option.key}`}
               style={[styles.chip, isActive && styles.chipSelected]}
               onPress={() => handlePressSort(option.key)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={
+                isActive
+                  ? `${option.label}, sorted ${sortDirection === "asc" ? "ascending" : "descending"}`
+                  : option.label
+              }
             >
               <Text style={styles.chipLabel}>
                 {option.label}

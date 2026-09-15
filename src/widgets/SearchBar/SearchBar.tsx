@@ -27,6 +27,7 @@ export function SearchBar({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        accessibilityLabel={placeholder}
         autoCorrect={false}
         autoCapitalize="none"
       />
@@ -35,6 +36,8 @@ export function SearchBar({
           testID={queryTestIDs.clear}
           style={styles.clearButton}
           onPress={() => onChangeText("")}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
         >
           <Text style={styles.clearLabel}>✕</Text>
         </Pressable>

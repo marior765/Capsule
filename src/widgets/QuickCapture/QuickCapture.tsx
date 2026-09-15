@@ -60,6 +60,7 @@ export function QuickCapture({ capsuleTypes, onCapture }: QuickCaptureProps) {
                 onPress={() => setSelectedTypeId(type.id)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
+                accessibilityLabel={type.name}
               >
                 <Text
                   style={[
@@ -81,6 +82,7 @@ export function QuickCapture({ capsuleTypes, onCapture }: QuickCaptureProps) {
           value={title}
           onChangeText={setTitle}
           placeholder="Quick capture…"
+          accessibilityLabel="Quick capture title"
           returnKeyType="done"
           onSubmitEditing={handleCapture}
         />
@@ -88,6 +90,8 @@ export function QuickCapture({ capsuleTypes, onCapture }: QuickCaptureProps) {
           testID={testIDs.buttons.capture}
           style={styles.captureButton}
           onPress={handleCapture}
+          accessibilityRole="button"
+          accessibilityLabel="Capture"
         >
           <Text style={styles.captureLabel}>Add</Text>
         </Pressable>

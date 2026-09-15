@@ -72,6 +72,8 @@ export default function NewTypeScreen() {
         style={[styles.primary, !name.trim() && styles.primaryDisabled]}
         onPress={handleCreate}
         disabled={!name.trim()}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !name.trim() }}
       >
         <Text style={styles.primaryLabel}>Create type</Text>
       </Pressable>

@@ -51,6 +51,8 @@ export function RelationPicker({
           <Pressable
             testID={`${testIDs.pressables.unlink}_${entry.link.id}`}
             onPress={() => onUnlink(entry.link.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Unlink ${entry.capsule?.title ?? "missing capsule"}`}
           >
             <Text style={styles.removeLabel}>✕</Text>
           </Pressable>
@@ -65,6 +67,8 @@ export function RelationPicker({
               testID={`${testIDs.pressables.link}_${capsule.id}`}
               style={styles.pickRow}
               onPress={() => onLink(capsule.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Link ${capsule.title}`}
             >
               <Text style={styles.pickLabel}>{capsule.title}</Text>
             </Pressable>

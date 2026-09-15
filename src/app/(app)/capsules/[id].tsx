@@ -239,6 +239,8 @@ export default function CapsuleDetailScreen() {
               testID={`${testIDs.pressables.child}_${child.id}`}
               style={styles.childRow}
               onPress={() => router.push(`/capsules/${child.id}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${child.title}`}
             >
               <Text style={styles.childLabel}>{child.title}</Text>
             </Pressable>
@@ -250,6 +252,7 @@ export default function CapsuleDetailScreen() {
         testID={testIDs.buttons.edit}
         style={styles.primary}
         onPress={() => router.push(`/capsules/${capsule.id}/edit`)}
+        accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>Edit</Text>
       </Pressable>
@@ -257,6 +260,7 @@ export default function CapsuleDetailScreen() {
         testID={testIDs.buttons.delete}
         style={styles.secondary}
         onPress={handleDelete}
+        accessibilityRole="button"
       >
         <Text style={styles.deleteLabel}>Delete capsule</Text>
       </Pressable>

@@ -38,6 +38,8 @@ export function TagPicker({ tags, onAddTag, onRemoveTag }: TagPickerProps) {
               <Pressable
                 testID={`${testIDs.pressables.removeTag}_${tag.id}`}
                 onPress={() => onRemoveTag(tag.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove tag ${tag.name}`}
               >
                 <Text style={styles.removeLabel}>✕</Text>
               </Pressable>
@@ -52,6 +54,7 @@ export function TagPicker({ tags, onAddTag, onRemoveTag }: TagPickerProps) {
           value={draftName}
           onChangeText={setDraftName}
           placeholder="Add a tag"
+          accessibilityLabel="New tag name"
           autoCapitalize="none"
           returnKeyType="done"
           onSubmitEditing={handleAdd}
@@ -60,6 +63,7 @@ export function TagPicker({ tags, onAddTag, onRemoveTag }: TagPickerProps) {
           testID={testIDs.buttons.add}
           style={styles.addButton}
           onPress={handleAdd}
+          accessibilityRole="button"
         >
           <Text style={styles.addLabel}>Add</Text>
         </Pressable>

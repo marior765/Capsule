@@ -130,6 +130,7 @@ export default function CapsuleListScreen() {
           <Pressable
             testID={testIDs.pressables.createType}
             onPress={() => router.push("/types/new")}
+            accessibilityRole="button"
           >
             <Text style={styles.noticeLink}>Create a type</Text>
           </Pressable>
@@ -141,6 +142,8 @@ export default function CapsuleListScreen() {
           testID={testIDs.pressables.toggleFilter}
           style={styles.filterToggle}
           onPress={() => setFilterVisible((visible) => !visible)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: filterVisible }}
         >
           <Text style={styles.filterToggleLabel}>
             {filterVisible ? "Hide filters" : "Filter & sort"}
@@ -150,6 +153,8 @@ export default function CapsuleListScreen() {
           testID={testIDs.pressables.toggleSelectionMode}
           style={styles.filterToggle}
           onPress={handleToggleSelectionMode}
+          accessibilityRole="button"
+          accessibilityState={{ selected: selectionMode }}
         >
           <Text style={styles.filterToggleLabel}>
             {selectionMode ? "Cancel" : "Select"}
@@ -160,6 +165,8 @@ export default function CapsuleListScreen() {
             testID={testIDs.pressables.toggleCapture}
             style={styles.filterToggle}
             onPress={() => setCaptureVisible((visible) => !visible)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: captureVisible }}
           >
             <Text style={styles.filterToggleLabel}>
               {captureVisible ? "Hide capture" : "Capture"}
@@ -170,6 +177,7 @@ export default function CapsuleListScreen() {
           testID={testIDs.pressables.toggleViewMode}
           style={styles.filterToggle}
           onPress={() => setViewMode((mode) => NEXT_VIEW_MODE[mode])}
+          accessibilityRole="button"
         >
           <Text style={styles.filterToggleLabel}>
             {VIEW_MODE_LABEL[viewMode]}
