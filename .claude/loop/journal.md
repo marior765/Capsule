@@ -4234,4 +4234,24 @@ claim independently re-verified rather than trusted. Checkpoint
 
 ---
 
+## Beat 63 — re-invocation check, no selectable work
+
+`/loop /safe-loop all` was re-invoked a day after beat 62 closed the run
+as `"complete"`. Loaded the spine, re-ran the full gate against a clean
+HEAD (tsc/jest 915/915 across 72 suites/eslint all green, unchanged from
+beat 62), and re-walked step selection from scratch rather than trusting
+`run.status` at face value. Same result as beat 62's own audit: every
+step is `done`, `blocked` (3.1, 6.8, 7.2, 7.3, 7.4, 8.8), or `deferred`
+(8.1, 9.1–9.5); `1.2` is the only `pending` entry but its plan box is
+already checked, so it's excluded by the "unchecked" half of the
+selection filter. Nothing changed since yesterday — no new commit, no
+checkpoint, nothing to record beyond this confirmation.
+
+Run stays `"complete"`. Restarting `/safe-loop all` again won't produce
+different output until either 5.2/5.4's status gets a deliberate
+decision (see `BLOCKED.md`), a blocked item gets its device check or
+dependency decision, or the plan itself grows new steps.
+
+---
+
 <!-- Append new beats above this line. -->
