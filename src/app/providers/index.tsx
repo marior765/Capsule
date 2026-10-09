@@ -5,6 +5,7 @@ import { openDb, runMigrations } from "@/shared/db";
 import { migrations } from "./migrations";
 import { LlmProvider } from "./LlmProvider";
 import { SttProvider } from "./SttProvider";
+import { EmbeddingProvider } from "./EmbeddingProvider";
 
 export function Providers({ children }: PropsWithChildren) {
   // Run migrations synchronously on first render, before any child (including
@@ -16,7 +17,9 @@ export function Providers({ children }: PropsWithChildren) {
 
   return (
     <LlmProvider>
-      <SttProvider>{children}</SttProvider>
+      <SttProvider>
+        <EmbeddingProvider>{children}</EmbeddingProvider>
+      </SttProvider>
     </LlmProvider>
   );
 }
@@ -41,4 +44,5 @@ export function remigrateDb(): void {
 
 export { useLlm } from "./LlmProvider";
 export { useStt } from "./SttProvider";
+export { useEmbeddings } from "./EmbeddingProvider";
 export { useDb } from "./useDb";

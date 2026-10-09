@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb } from "@/app/providers";
+import { useDb, useEmbeddings } from "@/app/providers";
 import { createCapsule } from "@/features/create-capsule";
 import { getAllCapsuleTypes, type CapsuleType } from "@/entities/capsule-type";
 import {
@@ -15,6 +15,7 @@ import { CapsuleEditor } from "@/widgets/CapsuleEditor";
 
 export default function NewCapsuleScreen() {
   const db = useDb();
+  const embeddings = useEmbeddings();
   const [capsuleTypes, setCapsuleTypes] = useState<CapsuleType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [fields, setFields] = useState<CapsuleField[]>([]);
@@ -52,6 +53,7 @@ export default function NewCapsuleScreen() {
       title: title.trim() || undefined,
       values,
     });
+    embeddings.indexCapsule(capsule.id);
     router.replace(`/capsules/${capsule.id}`);
   };
 

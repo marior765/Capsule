@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { remigrateDb, useDb } from "@/app/providers";
+import { remigrateDb, useDb, useEmbeddings } from "@/app/providers";
 import { getAllAuditEntries, type AuditEntry } from "@/entities/audit";
 import { PrivacyBanner } from "@/widgets/PrivacyBanner";
 import { EgressLog } from "@/widgets/EgressLog";
@@ -11,6 +11,7 @@ import { WipeDataSettings } from "@/widgets/WipeDataSettings";
 
 export default function PrivacyScreen() {
   const db = useDb();
+  const embeddings = useEmbeddings();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
 
   useFocusEffect(
@@ -26,6 +27,8 @@ export default function PrivacyScreen() {
   // showing pre-wipe data or hitting "no such table."
   const handleWiped = () => {
     remigrateDb();
+    // The embedding model file is gone; drop its loaded context too.
+    embeddings.reload();
     router.replace("/");
   };
 

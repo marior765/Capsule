@@ -2,13 +2,16 @@ import type { LlamaContext } from "@/shared/llm";
 import { embedText } from "@/shared/llm";
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
+  getAllCapsules,
   getAllEmbeddings,
+  getCapsuleById,
   getEmbeddingByCapsule,
+  getValuesByCapsule,
   upsertEmbedding,
   type Capsule,
 } from "@/entities/capsule";
-import type { CapsuleType } from "@/entities/capsule-type";
-import type { CapsuleField } from "@/entities/field";
+import { getCapsuleTypeById, type CapsuleType } from "@/entities/capsule-type";
+import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
 import { buildCapsuleText } from "./buildCapsuleText";
 import { cosineSimilarity } from "./cosineSimilarity";
 
@@ -25,9 +28,9 @@ export { cosineSimilarity } from "./cosineSimilarity";
  *
  * `ctx: LlamaContext` — a context from `initEmbeddingContext` loaded with
  * the dedicated embedding model (decided 2026-10-09; downloaded by
- * `features/manage-embedding-model`). Loading that context at the app
- * level and calling this on capsule create/edit is the remaining 7.2
- * wiring, not done yet.
+ * `features/manage-embedding-model`). `app/providers`' EmbeddingProvider
+ * loads that context and calls `indexCapsuleById` after a capsule is
+ * created, edited, or restored, plus `indexAllCapsules` on app start.
  */
 export async function indexCapsule(
   db: SQLiteDatabase,
@@ -36,10 +39,10 @@ export async function indexCapsule(
   capsuleType: CapsuleType | null,
   fields: CapsuleField[],
   values: Record<string, string | null>,
-): Promise<void> {
+): Promise<boolean> {
   const content = buildCapsuleText(capsule, capsuleType, fields, values);
   const existing = getEmbeddingByCapsule(db, capsule.id);
-  if (existing?.content === content) return;
+  if (existing?.content === content) return false;
 
   const { embedding } = await embedText(ctx, content);
   upsertEmbedding(db, {
@@ -48,6 +51,60 @@ export async function indexCapsule(
     content,
     updatedAt: Date.now(),
   });
+  return true;
+}
+
+/**
+ * Loads a capsule's current type, fields, and values from the database and
+ * indexes it. Returns true if it was (re-)embedded, false if the capsule
+ * doesn't exist or its text hasn't changed since the last index.
+ */
+export async function indexCapsuleById(
+  db: SQLiteDatabase,
+  ctx: LlamaContext,
+  capsuleId: string,
+): Promise<boolean> {
+  const capsule = getCapsuleById(db, capsuleId);
+  if (capsule === null) return false;
+  const values: Record<string, string | null> = {};
+  for (const v of getValuesByCapsule(db, capsuleId)) {
+    values[v.fieldId] = v.value;
+  }
+  return indexCapsule(
+    db,
+    ctx,
+    capsule,
+    getCapsuleTypeById(db, capsule.capsuleTypeId),
+    getFieldsByCapsuleType(db, capsule.capsuleTypeId),
+    values,
+  );
+}
+
+export type IndexAllResult = {
+  embedded: number;
+  skipped: number;
+  failed: number;
+};
+
+/**
+ * Backfill: indexes every capsule, one at a time. Unchanged capsules are
+ * skipped cheaply (no model call), so this is safe to run on every app
+ * start. One capsule failing doesn't stop the rest.
+ */
+export async function indexAllCapsules(
+  db: SQLiteDatabase,
+  ctx: LlamaContext,
+): Promise<IndexAllResult> {
+  const result: IndexAllResult = { embedded: 0, skipped: 0, failed: 0 };
+  for (const capsule of getAllCapsules(db)) {
+    try {
+      if (await indexCapsuleById(db, ctx, capsule.id)) result.embedded++;
+      else result.skipped++;
+    } catch {
+      result.failed++;
+    }
+  }
+  return result;
 }
 
 export type RelevantCapsule = {

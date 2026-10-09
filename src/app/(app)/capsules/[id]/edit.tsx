@@ -2,7 +2,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb } from "@/app/providers";
+import { useDb, useEmbeddings } from "@/app/providers";
 import { getCapsuleById, getValuesByCapsule } from "@/entities/capsule";
 import {
   validateFields,
@@ -16,6 +16,7 @@ import { CapsuleEditor } from "@/widgets/CapsuleEditor";
 
 export default function EditCapsuleScreen() {
   const db = useDb();
+  const embeddings = useEmbeddings();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [found, setFound] = useState(false);
   const [fields, setFields] = useState<CapsuleField[]>([]);
@@ -81,6 +82,7 @@ export default function EditCapsuleScreen() {
       snapshotCapsule(db, id);
     }
     saveCapsuleEdits(db, id, editInput);
+    embeddings.indexCapsule(id);
     router.replace(`/capsules/${id}`);
   };
 

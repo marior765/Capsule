@@ -2,7 +2,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb } from "@/app/providers";
+import { useDb, useEmbeddings } from "@/app/providers";
 import {
   getAllCapsules,
   getCapsuleById,
@@ -40,6 +40,7 @@ import { AttachmentList, type AttachmentEntry } from "@/widgets/AttachmentList";
 
 export default function CapsuleDetailScreen() {
   const db = useDb();
+  const embeddings = useEmbeddings();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [capsule, setCapsule] = useState<Capsule | null>(null);
   const [capsuleType, setCapsuleType] = useState<CapsuleType | null>(null);
@@ -219,6 +220,7 @@ export default function CapsuleDetailScreen() {
   // existing "apply immediately, then re-fetch" convention for tags/links.
   const handleRestore = (versionId: string) => {
     restoreCapsuleVersion(db, versionId);
+    embeddings.indexCapsule(id);
     const refreshed = getCapsuleById(db, id);
     setCapsule(refreshed);
     if (refreshed) {

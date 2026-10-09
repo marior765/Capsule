@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb } from "@/app/providers";
+import { useDb, useEmbeddings } from "@/app/providers";
 import {
   getAllCapsules,
   getValuesByField,
@@ -30,6 +30,7 @@ import { QuickCapture } from "@/widgets/QuickCapture";
 
 export default function CapsuleListScreen() {
   const db = useDb();
+  const embeddings = useEmbeddings();
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [capsuleTypes, setCapsuleTypes] = useState<CapsuleType[]>([]);
   const [query, setQuery] = useState("");
@@ -115,7 +116,8 @@ export default function CapsuleListScreen() {
   // actually wanted). Re-fetching puts the new capsule at the top of the
   // (default updatedAt-desc-sorted) list immediately.
   const handleCapture = (input: { capsuleTypeId: string; title: string }) => {
-    createCapsule(db, input);
+    const created = createCapsule(db, input);
+    embeddings.indexCapsule(created.id);
     setCapsules(getAllCapsules(db));
   };
 
