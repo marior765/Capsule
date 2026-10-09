@@ -4469,4 +4469,25 @@ Gate: tsc clean, jest 1095/1095 (84 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 73 — 7.3 finished in code: "My capsules" toggle in chat
+
+A "Capsules: on/off" switch in chat (remembered per conversation). With it
+on, each new or edited message first searches the user's capsules — capped
+at 4 s so it never hangs behind start-up indexing — and the user always
+sees one honest line: which capsules were used, that none were relevant,
+that the search model needs downloading, or that search was unavailable
+this time. The decision logic (`prepareGrounding`) is pure and fully
+tested; the screen just wires it.
+
+Checker passed on the first round. I applied one post-pass hardening
+(a synchronously throwing search can't lose the user's message), which the
+checker confirmed. Logged as follow-ups: a pre-existing double-send race
+that 7.3 widens, and abandoned searches occupying the queue after timeouts.
+
+7.3 is done in code, native — box unchecked pending the device check.
+Gate: tsc clean, jest 1103/1103 (85 suites), eslint clean. Checkpoint
+`9153a73`. Cursor → 7.4.
+
+---
+
 <!-- Append new beats above this line. -->

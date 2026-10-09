@@ -576,7 +576,14 @@ chat model. (g) **tune the retrieval threshold** (7.3):
 0.35. BGE-small often scores unrelated text around 0.4–0.6, so 0.35 may let
 nearly everything through (every message then carries the top 3 capsules).
 Log the `score`s `retrieveCapsuleContext` sees for a few clearly relevant and
-clearly irrelevant questions, and set `minScore` between them.
+clearly irrelevant questions, and set `minScore` between them. (h) **7.3
+"My capsules" in chat**: in a conversation, tap "Capsules: off" to turn it on
+(it should stay on when you come back to that conversation). Ask something a
+capsule answers — the line above the input should read "Using N capsules: …"
+and the reply should use them; ask something unrelated — "No relevant
+capsules found"; with the embedding model deleted — the Models hint. Check
+how long "Searching your capsules…" shows right after app start (capped at
+4 s, then the message goes out ungrounded with a notice).
 
 **Beat 62 correction:** `state.json`'s `7.2` status was recorded as
 `"done"` despite this entry already describing it as blocked on 7.1's
@@ -899,6 +906,20 @@ file, so including attachments means a design choice: embed bytes as base64
 inside the JSON (simple, but large files make huge exports), or switch the
 export to a folder/zip with the JSON plus the files alongside it. Your call
 before it's built; not attempted unattended.
+
+### Chat: a message can be sent twice while the first is still in progress (found during 7.3)
+`ChatInput` is never disabled while a reply is generating — and, with "My
+capsules" on, during the up-to-4-second capsule search before it, when the
+user's message isn't shown yet and the input is already cleared. A second
+send then starts a second completion on the same llama context. The race
+predates 7.3 (it existed while streaming), but 7.3 widens the window. Fix:
+disable the input for the whole send (search + streaming). Small, but it
+touches every chat flow, so it gets its own beat rather than riding along.
+
+Related, for the 7.3 device check (h): a capsule search that times out still
+runs later in the serial embedding queue (there's no cancel), so during a
+long start-up backfill each send can leave one cheap abandoned job queued.
+If you see searches timing out one after another, that's why.
 
 ## Precedent set (informational — no action needed)
 
