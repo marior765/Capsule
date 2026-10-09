@@ -4380,4 +4380,26 @@ suites), eslint clean. Checkpoint `582530f`. Cursor → 7.2.
 
 ---
 
+## Beat 69 — 7.2: embedding model download layer
+
+Following your decision (a dedicated small embedding model), built
+`features/manage-embedding-model` on the STT manager's single-default-model
+shape, choosing BGE small English v1.5 (~35 MB). Unlike the STT and chat
+model managers, it stores a relative path, marks egress for the privacy
+banner, and goes through `shared/fs`'s new `downloadFileInto`.
+
+Checker round 1 found a retry trap I'd copied from the existing managers:
+expo-file-system names a downloaded file from the response, so every
+attempt targets the same name, and without `idempotent: true` a partial
+file left by a dropped Android download makes every retry fail with
+DestinationAlreadyExists — forever, until a wipe. My mock gave each
+download a unique name, so it couldn't see this; the new test uses a
+realistic mock. Fixed, plus double-tap dedupe and audit-before-store.
+The two older managers have the same trap — logged in BLOCKED.md.
+
+Gate: tsc clean, jest 1050/1050 (80 suites), eslint clean. Checkpoint
+`c5be48e`. 7.2 stays in_progress; cursor stays at 7.2.
+
+---
+
 <!-- Append new beats above this line. -->

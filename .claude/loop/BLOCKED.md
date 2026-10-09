@@ -548,6 +548,23 @@ loads a chat completion context). Once the device check settles which
 model to use, wiring both a `Providers`-level embedding context and the
 actual call sites is the remaining work for 7.2/7.3.
 
+**Update (beat 69, 7.2):** model decided — a dedicated small embedding model,
+BGE small English v1.5 (Q8_0, ~35 MB). `features/manage-embedding-model`
+downloads it on request into `embedding-models/` (relative path stored,
+egress signalled, audited) and the wipe deletes it. **Add to the device
+check:** (a) the URL
+`https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf`
+actually downloads (it was chosen from memory, not fetched — this loop never
+makes network calls); (b) steps 1–3 above using THIS model. (c) the
+GGUF carries BERT pooling metadata (llama.rn passes no `pooling_type`, so
+llama.cpp uses the file's own setting — CLS for BGE); if similarities look
+random, pooling is the first suspect. (d) llama.rn caches the embedding
+width in a function-level `static` (`rn-completion.cpp`), computed once per
+process — never call `embedding()` on a different model in the same app run,
+or BGE vectors come back the wrong length. Still to build:
+an app-level embedding context, indexing on capsule create/edit, and the
+download control in the UI.
+
 **Beat 62 correction:** `state.json`'s `7.2` status was recorded as
 `"done"` despite this entry already describing it as blocked on 7.1's
 device check — inconsistent with `7.3`/`7.4`, which correctly show
@@ -698,7 +715,19 @@ storage and stored paths survive iOS moving the app's container.
 Attachments, capsule deletion, and the full wipe use it. Still calling
 `expo-file-system` directly: `features/manage-models` and
 `features/manage-stt-model` (download/delete of model files). Moving those
-two onto `shared/fs` is the remaining follow-up.
+two onto `shared/fs` is the remaining follow-up. Moving them matters beyond tidiness: both store an
+ABSOLUTE `file://` path (`manage-models` in the `models` table's `path`
+column, `manage-stt-model` in MMKV), which goes stale if iOS moves the app's
+data container after an update or restore — the same bug fixed for
+attachments in beat 67. The fix is the same: store a path relative to the
+document directory and resolve it at use time (needs a small migration for
+existing model rows). Also, `manage-stt-model`'s download doesn't call
+`beginEgress`, so the privacy banner doesn't show the STT model download. And both call
+`File.downloadFileAsync` without `{ idempotent: true }`: a partial file left
+by a failed download (Android streams into the target) makes every retry
+fail with DestinationAlreadyExists until a wipe. `shared/fs`'s
+`downloadFileInto` already passes it (beat 69); moving both onto it fixes
+this too.
 
 ### 6.8 — attachment field type: picker library decision + file-cleanup gap
 `entities/attachment` (this beat) is deliberately metadata-only — `Attachment`

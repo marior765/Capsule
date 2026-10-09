@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 68,
+    "beat": 69,
     "status": "running",
     "completedAt": "2026-09-15T00:55:00Z",
     "completionNote": "Every step is now done, blocked (awaiting a device/dev-build check), or deferred (awaiting a human decision) -- see .claude/loop/BLOCKED.md for the full list. No step remains pending or in_progress. Two logic-class steps (5.2, 5.4) are recorded as 'done' with their own plan-line annotations describing real, named remaining work (capsule-scope import/export; four of five migration importer formats) -- flagged in BLOCKED.md rather than silently reopened as new unscoped work at the tail end of an unrelated run. A future scope=5.2 or scope=5.4 /safe-loop invocation, or a human decision recorded in BLOCKED.md, is what picks those up next, not another 'all' run finding nothing else to do.",
@@ -317,10 +317,12 @@
     "7.2": {
       "status": "in_progress",
       "class": "logic",
-      "attempts": 1,
-      "failureSignatures": [],
-      "checkpoint": "c52b21d",
-      "notes": "Mechanism fully done and tested (entities/capsule embedding storage, buildCapsuleText, cosineSimilarity, indexCapsule, retrieveRelevantCapsules). Not wired into any route -- no live embedding context exists yet, blocked on 7.1s model decision. docs/DEVELOPMENT_PLAN.md box stays unchecked (annotated); BLOCKED.md updated to note 7.2 wiring now also waits on 7.1s device check. STATUS CORRECTED beat 62: was recorded as 'done', which caused step-selection to silently skip it the same way an actually-finished step would, indistinguishable from 7.3/7.4 -- both of which correctly show 'blocked' for the exact same underlying reason (waiting on 7.1's embedding-model decision). Relabeled 'blocked' to match its siblings; no code changed, this is a status-field correction only, verified safe because 'blocked' and 'done' already produced identical selection behavior (both skip) -- only the record was wrong, not the run. | DECISION 2026-10-09 (user): dedicated small embedding GGUF (user-initiated download like chat models); wire Providers-level embedding context + indexCapsule/retrieve call sites against mocks, device check still required."
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- downloadFileAsync without idempotent + response-named file: a partial Android download wedges every retry with DestinationAlreadyExists"
+      ],
+      "checkpoint": "c5be48e",
+      "notes": "Mechanism fully done and tested (entities/capsule embedding storage, buildCapsuleText, cosineSimilarity, indexCapsule, retrieveRelevantCapsules). Not wired into any route -- no live embedding context exists yet, blocked on 7.1s model decision. docs/DEVELOPMENT_PLAN.md box stays unchecked (annotated); BLOCKED.md updated to note 7.2 wiring now also waits on 7.1s device check. STATUS CORRECTED beat 62: was recorded as 'done', which caused step-selection to silently skip it the same way an actually-finished step would, indistinguishable from 7.3/7.4 -- both of which correctly show 'blocked' for the exact same underlying reason (waiting on 7.1's embedding-model decision). Relabeled 'blocked' to match its siblings; no code changed, this is a status-field correction only, verified safe because 'blocked' and 'done' already produced identical selection behavior (both skip) -- only the record was wrong, not the run. | DECISION 2026-10-09 (user): dedicated small embedding GGUF (user-initiated download like chat models); wire Providers-level embedding context + indexCapsule/retrieve call sites against mocks, device check still required. | BEAT 69 (c5be48e): embedding-model download layer done (manage-embedding-model + shared/fs downloadFileInto). Next 7.2 beats: app-level embedding context (Provider), index on capsule create/edit, download control UI. When building the UI: a full wipe during an in-flight download can re-store the MMKV key after clearAllSettings -- have the wipe await/cancel it or use a generation counter."
     },
     "7.3": {
       "status": "pending",
@@ -431,8 +433,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-09T20:40:00Z",
-    "head": "582530f",
-    "note": "79 suites, 1031 tests after 6.8 picker UI"
+    "at": "2026-10-09T21:10:00Z",
+    "head": "c5be48e",
+    "note": "80 suites, 1050 tests after 7.2 embedding download layer"
   }
 }
