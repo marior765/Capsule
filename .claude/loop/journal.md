@@ -4402,4 +4402,26 @@ Gate: tsc clean, jest 1050/1050 (80 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 70 — 7.2: indexing wired into the app
+
+Kept the React part thin: the logic is `createEmbeddingIndexer`, a plain
+controller (lazy context load only when the model is downloaded, strictly
+serial jobs since a llama context isn't concurrency-safe, never rejects),
+tested without rendering. `EmbeddingProvider` wires it in; create, quick
+capture, edit, and version restore now re-index; app start backfills.
+
+Checker round 1 caught a React lifecycle trap: I created the indexer once
+in a ref and disposed it in the effect's cleanup. Fast Refresh (and
+StrictMode, if ever enabled) re-runs effects but keeps refs — so after
+the re-run the provider kept using a disposed indexer and silently dropped
+every job. Exactly what you'd hit during the device check and wrongly
+read as "indexing doesn't work". Fixed with a mount-scoped lifecycle
+holder, tested; also guarded against a throwing error handler poisoning
+the queue. Passed round 2.
+
+Gate: tsc clean, jest 1067/1067 (82 suites), eslint clean. Checkpoint
+`9e10743`. 7.2 stays in_progress (download UI left). Cursor stays at 7.2.
+
+---
+
 <!-- Append new beats above this line. -->

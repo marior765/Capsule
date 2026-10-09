@@ -562,8 +562,13 @@ random, pooling is the first suspect. (d) llama.rn caches the embedding
 width in a function-level `static` (`rn-completion.cpp`), computed once per
 process — never call `embedding()` on a different model in the same app run,
 or BGE vectors come back the wrong length. Still to build:
-an app-level embedding context, indexing on capsule create/edit, and the
-download control in the UI.
+the download control in the UI. (Beat 70 added the app-level
+`EmbeddingProvider`: loads the model only if already downloaded, re-indexes
+a capsule after create/edit/restore, backfills on app start.) **Add to the
+device check:** (e) with the model downloaded, create and edit a few
+capsules, relaunch, and confirm `capsule_embeddings` rows exist and update;
+(f) app start time and memory with the embedding model loaded alongside a
+chat model.
 
 **Beat 62 correction:** `state.json`'s `7.2` status was recorded as
 `"done"` despite this entry already describing it as blocked on 7.1's

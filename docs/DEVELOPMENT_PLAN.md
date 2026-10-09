@@ -139,7 +139,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 
 ### Phase 7 — AI × data (hard)
 - [ ] 7.1 Spike: local embedding model via llama.rn (or separate small model) — wrapper implemented and tested against mocked natives (`initEmbeddingContext`/`embedText`); real device verification of embedding quality, and the llama.rn-vs-dedicated-model decision, queued in BLOCKED.md
-- [ ] 7.2 `features/capsule-rag` — index capsules into local vector store, retrieval at query time — mechanism fully implemented and tested (storage, `buildCapsuleText`, `cosineSimilarity`, `indexCapsule`, `retrieveRelevantCapsules`); dedicated embedding model chosen (BGE small en v1.5) with its download layer built (`features/manage-embedding-model`); not yet loaded at app level or wired into capsule create/edit, no download control in the UI
+- [ ] 7.2 `features/capsule-rag` — index capsules into local vector store, retrieval at query time — mechanism done; dedicated embedding model (BGE small en v1.5) with download layer; app-level `EmbeddingProvider` re-indexes capsules on create/edit/restore and backfills on start (only when the model is already downloaded); still missing: the download control in the UI
 - [ ] 7.3 "Chat with your capsules" mode — toggle in chat that grounds responses in the user's data
 - [ ] 7.4 RAG context shown transparently (which capsules were referenced)
 
