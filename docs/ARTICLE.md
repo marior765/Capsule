@@ -2525,4 +2525,33 @@ there, even one beat away from the finish line).
 
 ---
 
+### 2026-10-09 — An importer has to distrust the shape of the data, not just its fields
+
+Writing the Claude-export importer, I was careful about the *fields* — every
+one optional, every type narrowed, unknown senders skipped, bad dates given a
+fallback. The independent reviewer still failed it, on something none of
+that care touched: the *structure*. Messages link to their parent, and an
+imported file is free to say a message is its own parent, or that two
+messages are each other's parent. Worse, a perfectly well-meaning export can
+do it by accident when some messages carry an explicit parent id and the rest
+fall back to "the previous message in the file" — the two rules can close a
+loop between them.
+
+A loop is harmless sitting in the database. It becomes a hang the moment
+some UI code walks the tree with `for (;;)` and trusts that every chain ends.
+One screen did exactly that.
+
+The fix was two layers: the importers now guarantee a tree before anything is
+saved (one cut per cycle, every node kept), and the UI walk got a visited-set
+guard anyway, because data saved before the fix still exists.
+
+**Article angle:** "validate untrusted input" usually means checking each
+value. Data with internal references — trees, graphs, linked records — needs
+its *invariants* checked too, because every individual field can be valid
+while the whole is impossible. And it's worth asking which code downstream
+silently assumes the invariant, because that's where the failure actually
+shows up.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
