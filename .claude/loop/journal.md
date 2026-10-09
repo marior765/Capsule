@@ -4322,4 +4322,34 @@ expo-document-picker / expo-image-picker).
 
 ---
 
+## Beat 67 — 6.8 part 1: attachment file layer
+
+Split 6.8's attachment work: this beat is the file layer, next beat the
+picker UI. Built `shared/fs` (the extraction ARCHITECTURE.md had been
+calling for), `features/manage-attachments`, file cleanup in capsule delete,
+and the wipe now erasing `attachments/` — plus `stt-models/`, which the
+wipe had been silently missing.
+
+Checker round 1 failed on something I'd have shipped without noticing:
+storing absolute `file://` paths. iOS can move an app's data container
+after an update or a restore from backup, so those paths go stale — and
+then "delete" sees no file, removes the row, and leaks the real bytes
+forever, the exact leak this beat was meant to close. Now everything is a
+path relative to the document directory, resolved at use time, and
+`shared/fs` validates every segment so even its delete can't reach outside
+app storage. Also fixed: a copy orphaned if the row insert failed, and
+stale docs. Passed round 2.
+
+One full jest run reported a single failure I couldn't capture; 5 of my
+re-runs and 16 of the checker's (6 randomized) were clean. Best guess:
+`eslint --fix` was still rewriting files. Not chased further.
+
+New decision queued in BLOCKED.md: attachments aren't in the portable
+export (base64-in-JSON vs folder/zip export — your call).
+
+Gate: tsc clean, jest 1009/1009 (77 suites), eslint clean. Checkpoint
+`dd13f5a`. 6.8 stays in_progress. Cursor stays at 6.8.
+
+---
+
 <!-- Append new beats above this line. -->

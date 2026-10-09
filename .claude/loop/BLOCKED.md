@@ -657,6 +657,16 @@ outside this step's own scope even though the extraction itself is low-risk
 (both existing test suites would catch any regression directly). Left for a
 dedicated follow-up beat rather than folded in silently.
 
+**Update (beat 67, 6.8):** `src/shared/fs` now exists — `copyFileInto`,
+`resolveAppPath`, `deleteAppFileIfExists`, `deleteAppDirectoryIfExists`,
+`appDirectoryUri`. Files are addressed by paths relative to the document
+directory (validated segment by segment), so nothing can reach outside app
+storage and stored paths survive iOS moving the app's container.
+Attachments, capsule deletion, and the full wipe use it. Still calling
+`expo-file-system` directly: `features/manage-models` and
+`features/manage-stt-model` (download/delete of model files). Moving those
+two onto `shared/fs` is the remaining follow-up.
+
 ### 6.8 — attachment field type: picker library decision + file-cleanup gap
 `entities/attachment` (this beat) is deliberately metadata-only — `Attachment`
 records a `localUri` string, but nothing anywhere in this repo writes an
@@ -680,6 +690,15 @@ attachment field can do anything a user would notice:
 
 Not fixed now: both require the dependency decision above first; there's
 nothing to implement yet, only something to remember.
+
+**Update (beat 67):** both resolved. The picker decision was made
+(expo-image-picker + expo-document-picker, installed). File handling is
+built: `features/manage-attachments` copies a picked file into
+`<documents>/attachments/<capsuleId>/` before writing its row, and removes
+the file before the row; `features/delete-capsule` now deletes each
+attachment's file plus the capsule's attachment folder before any rows;
+the full wipe deletes the whole `attachments/` folder. Remaining for 6.8:
+the picker UI wired into the capsule screen (next beat).
 
 ### 8.4 — image/vision input: same picker decision as 6.8, plus a model pair decision
 Implemented and green: `shared/llm` gained `initMultimodalSupport`/
@@ -795,6 +814,16 @@ chat still works; it just stops applying a system prompt). Low risk, but it
 falls under CLAUDE.md's "every persisted entity must round-trip". Candidate
 for a small follow-up step: add personas + snippets to the conversation
 vault, or give them their own kinds. Your call whether that's worth a plan line.
+
+### Attachments aren't part of the portable format (found during 6.8)
+5.2's capsule export (`features/import-export/capsules.ts`) leaves attachments
+out. That was fine while attachments were metadata-only; now that they're
+real files, it's a gap against CLAUDE.md's "every persisted entity must
+round-trip through the portable format". The format is a single JSON text
+file, so including attachments means a design choice: embed bytes as base64
+inside the JSON (simple, but large files make huge exports), or switch the
+export to a folder/zip with the JSON plus the files alongside it. Your call
+before it's built; not attempted unattended.
 
 ## Precedent set (informational — no action needed)
 
