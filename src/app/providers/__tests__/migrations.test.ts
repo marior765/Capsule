@@ -133,7 +133,7 @@ describe("Providers' registered migrations", () => {
       capsuleId: capsule.id,
       fieldId: "f-cover",
       filename: "cover.jpg",
-      localUri: "file:///docs/cover.jpg",
+      storagePath: "attachments/x/cover.jpg",
       mimeType: "image/jpeg",
       size: 2048,
       createdAt: Date.now(),

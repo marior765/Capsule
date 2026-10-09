@@ -35,6 +35,11 @@ import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
 import { snapshotCapsule } from "@/features/capsule-versioning";
 import { createReminder } from "@/features/manage-reminders";
+import {
+  __deletedDirectoryUris,
+  __deletedUris,
+  __resetFsMock,
+} from "@/__mocks__/expo-file-system";
 import { deleteCapsule } from "../index";
 
 let db: SQLiteDatabase;
@@ -135,13 +140,38 @@ describe("deleteCapsule", () => {
       capsuleId: capsule.id,
       fieldId: "f-photo",
       filename: "photo.jpg",
-      localUri: "file:///docs/photo.jpg",
+      storagePath: "attachments/x/photo.jpg",
       mimeType: "image/jpeg",
       size: 1024,
       createdAt: Date.now(),
     });
     deleteCapsule(db, capsule.id);
     expect(getAttachmentsByCapsuleField(db, capsule.id, "f-photo")).toEqual([]);
+  });
+
+  it("deletes each attachment's file and the capsule's attachment folder (6.8 file cleanup)", () => {
+    __resetFsMock();
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    for (const id of ["att-a", "att-b"]) {
+      insertAttachment(db, {
+        id,
+        capsuleId: capsule.id,
+        fieldId: "f-photo",
+        filename: `${id}.jpg`,
+        storagePath: `attachments/${capsule.id}/${id}.jpg`,
+        mimeType: "image/jpeg",
+        size: 1,
+        createdAt: Date.now(),
+      });
+    }
+    deleteCapsule(db, capsule.id);
+    expect(__deletedUris.sort()).toEqual([
+      `file:///document/attachments/${capsule.id}/att-a.jpg`,
+      `file:///document/attachments/${capsule.id}/att-b.jpg`,
+    ]);
+    expect(__deletedDirectoryUris).toContain(
+      `file:///document/attachments/${capsule.id}`,
+    );
   });
 
   it("leaves another capsule's attachment records intact", () => {
@@ -152,7 +182,7 @@ describe("deleteCapsule", () => {
       capsuleId: a.id,
       fieldId: "f-photo",
       filename: "a.jpg",
-      localUri: "file:///docs/a.jpg",
+      storagePath: "attachments/x/a.jpg",
       mimeType: null,
       size: null,
       createdAt: Date.now(),
@@ -162,7 +192,7 @@ describe("deleteCapsule", () => {
       capsuleId: b.id,
       fieldId: "f-photo",
       filename: "b.jpg",
-      localUri: "file:///docs/b.jpg",
+      storagePath: "attachments/x/b.jpg",
       mimeType: null,
       size: null,
       createdAt: Date.now(),

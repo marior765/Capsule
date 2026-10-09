@@ -31,6 +31,18 @@ export function getAttachmentById(
   return row ? rowToAttachment(row) : null;
 }
 
+/** Every attachment on a capsule across all its fields, oldest first. Empty array, never an error. */
+export function getAttachmentsByCapsule(
+  db: SQLiteDatabase,
+  capsuleId: string,
+): Attachment[] {
+  const rows = db.getAllSync(
+    `SELECT * FROM attachments WHERE capsule_id = ? ORDER BY created_at ASC;`,
+    capsuleId,
+  ) as AttachmentRow[];
+  return rows.map(rowToAttachment);
+}
+
 /** Every attachment on one specific field of one capsule, oldest first. Empty array, never an error. */
 export function getAttachmentsByCapsuleField(
   db: SQLiteDatabase,
@@ -59,7 +71,7 @@ export function insertAttachment(
     attachment.capsuleId,
     attachment.fieldId,
     attachment.filename,
-    attachment.localUri,
+    attachment.storagePath,
     attachment.mimeType,
     attachment.size,
     attachment.createdAt,
@@ -76,12 +88,9 @@ export function deleteAttachment(db: SQLiteDatabase, id: string): void {
  * feature layer, not automatic here, mirroring
  * `deleteCapsuleTagsByCapsule`/`deleteLinksByCapsule`).
  *
- * Deliberately does NOT delete the underlying file bytes at `localUri` —
- * this entity never touches `expo-file-system` (see the model's own
- * docstring). Until a real picker + `shared/fs` wrapper exist to write
- * those bytes in the first place, there's nothing on disk for this to
- * clean up; once there is, that cleanup belongs in the feature layer that
- * owns the filesystem side, not here. Tracked in `BLOCKED.md`.
+ * Rows only — this entity never touches the filesystem. Deleting the
+ * files themselves is the feature layer's job (`features/delete-capsule`
+ * deletes them, through `shared/fs`, before calling this).
  */
 export function deleteAttachmentsByCapsule(
   db: SQLiteDatabase,

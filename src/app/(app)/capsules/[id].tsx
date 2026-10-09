@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import {
@@ -99,7 +99,18 @@ export default function CapsuleDetailScreen() {
   );
 
   const handleDelete = () => {
-    deleteCapsule(db, id);
+    // deleteCapsule removes attachment files before any rows, so a failure
+    // (e.g. a file the OS won't let go of) leaves the capsule intact —
+    // tell the user instead of crashing, and let them retry.
+    try {
+      deleteCapsule(db, id);
+    } catch (e) {
+      Alert.alert(
+        "Couldn't delete capsule",
+        e instanceof Error ? e.message : "Something went wrong.",
+      );
+      return;
+    }
     router.replace("/capsules");
   };
 

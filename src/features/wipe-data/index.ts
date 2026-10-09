@@ -1,20 +1,21 @@
-import { Directory, Paths } from "expo-file-system";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { deleteDb } from "@/shared/db";
 import { insertAuditEntry } from "@/entities/audit";
 import { clearAllSettings } from "@/shared/storage";
 import { generateId } from "@/shared/lib";
+import { deleteAppDirectoryIfExists } from "@/shared/fs";
+import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
 
 /**
  * "features/wipe-data — secure full wipe (models, chats, capsules,
  * settings)" (docs/DEVELOPMENT_PLAN.md 4.5).
  *
- * Chats and models are both rows in the same SQLite database, so a single
- * `deleteDb()` covers both at once — no per-table deletes needed. Model
- * *files* on disk are separate from their db rows and need their own
- * deletion. Capsules (entities/capsule) don't exist yet — Phase 6 hasn't
- * been built — so there's nothing to wipe there today; this module doesn't
- * pretend otherwise, it simply has nothing to do for that category yet.
+ * Chats, capsules, and model records are all rows in the same SQLite
+ * database, so a single `deleteDb()` covers them at once — no per-table
+ * deletes needed. Files on disk are separate from their rows and need
+ * their own deletion: chat models (`models/`), speech-to-text models
+ * (`stt-models/`), and capsule attachments (`attachments/`), all through
+ * `shared/fs`.
  *
  * Order: delete files first (a failure here — permissions, an odd native
  * error — leaves the db and audit trail completely untouched, so the
@@ -39,15 +40,16 @@ import { generateId } from "@/shared/lib";
  * .claude/loop/BLOCKED.md.
  */
 export async function wipeAllData(db: SQLiteDatabase): Promise<void> {
-  const modelsDir = new Directory(Paths.document, "models");
-  if (modelsDir.exists) {
-    modelsDir.delete();
-  }
+  // Every app-managed folder of files: chat models, speech-to-text
+  // models, and capsule attachments.
+  deleteAppDirectoryIfExists("models");
+  deleteAppDirectoryIfExists("stt-models");
+  deleteAppDirectoryIfExists(ATTACHMENTS_DIRECTORY);
 
   insertAuditEntry(db, {
     id: generateId(),
     action: "wipe",
-    detail: "Full data wipe (models, chats, settings)",
+    detail: "Full data wipe (models, chats, capsules, attachments, settings)",
     createdAt: Date.now(),
   });
 

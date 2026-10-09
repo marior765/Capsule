@@ -7,6 +7,7 @@ import { getAllAuditEntries, auditMigration } from "@/entities/audit";
 import { setString, getString, clearAllSettings } from "@/shared/storage";
 import {
   __deletedDirectoryUris,
+  __missingUris,
   __resetFsMock,
 } from "@/__mocks__/expo-file-system";
 import { wipeAllData } from "../index";
@@ -24,6 +25,16 @@ describe("wipeAllData — happy path", () => {
   it("deletes the models directory", async () => {
     await wipeAllData(openDb());
     expect(__deletedDirectoryUris).toContain("file:///document/models");
+  });
+
+  it("deletes the attachments directory (every capsule's attached files)", async () => {
+    await wipeAllData(openDb());
+    expect(__deletedDirectoryUris).toContain("file:///document/attachments");
+  });
+
+  it("deletes the speech-to-text models directory too", async () => {
+    await wipeAllData(openDb());
+    expect(__deletedDirectoryUris).toContain("file:///document/stt-models");
   });
 
   it("clears all MMKV settings", async () => {
@@ -77,10 +88,11 @@ describe("wipeAllData — audit logging", () => {
 });
 
 describe("wipeAllData — edge cases", () => {
-  it("does not throw when no models directory exists yet", async () => {
-    // __resetFsMock's Directory.exists defaults to true in this mock, so
-    // this pins the *shape* of the guard (checked, not assumed) rather than
-    // the mock's specific default — see the implementation's own comment.
+  it("does not throw, and deletes nothing, when none of the file folders exist yet", async () => {
+    __missingUris.add("file:///document/models");
+    __missingUris.add("file:///document/stt-models");
+    __missingUris.add("file:///document/attachments");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
+    expect(__deletedDirectoryUris).toEqual([]);
   });
 });

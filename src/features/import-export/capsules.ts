@@ -79,8 +79,11 @@ import { generateId } from "@/shared/lib";
  *   calls `indexCapsule` at all until 7.2's wiring lands), so an imported
  *   capsule simply has no embedding until then — the same state as any
  *   capsule created in the app today.
- * - attachments: metadata-only until 6.8 lands real files; exporting file
- *   references without the files would round-trip nothing useful.
+ * - attachments: the portable format is JSON text and doesn't carry file
+ *   bytes yet. Exporting attachment records without their files would
+ *   round-trip nothing usable, so they're left out until the format can
+ *   carry files — tracked in `.claude/loop/BLOCKED.md` ("Attachments
+ *   aren't part of the portable format").
  */
 
 const CAPSULE_KIND = "capsule";

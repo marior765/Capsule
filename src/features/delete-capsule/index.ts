@@ -8,7 +8,12 @@ import {
 } from "@/entities/capsule";
 import { deleteCapsuleTagsByCapsule } from "@/entities/tag";
 import { deleteLinksByCapsule } from "@/entities/link";
-import { deleteAttachmentsByCapsule } from "@/entities/attachment";
+import {
+  ATTACHMENTS_DIRECTORY,
+  deleteAttachmentsByCapsule,
+  getAttachmentsByCapsule,
+} from "@/entities/attachment";
+import { deleteAppDirectoryIfExists, deleteAppFileIfExists } from "@/shared/fs";
 import { deleteRemindersByCapsule } from "@/entities/reminder";
 
 /**
@@ -37,12 +42,11 @@ import { deleteRemindersByCapsule } from "@/entities/reminder";
  * comment on `CapsuleVersion`), not a cross-entity reference, so it's
  * actively cleaned up rather than left dangling.
  *
- * `deleteAttachmentsByCapsule` only removes the DB rows, not the
- * underlying file bytes at each attachment's `localUri` — `entities/
- * attachment` never touches `expo-file-system` (no picker/writer exists
- * yet to have put bytes there in the first place). Once one does, real
- * file cleanup on capsule delete is a genuine follow-up, tracked in
- * `BLOCKED.md` rather than guessed at here.
+ * Attachments: each attachment's stored file is deleted, then the
+ * capsule's whole `attachments/<capsuleId>` folder (catching any file
+ * whose row was already gone), then the rows. Files go first so that if a
+ * file delete throws, the capsule and its records are still intact and the
+ * delete can be retried — never a capsule gone with its bytes left on disk.
  *
  * `deleteRemindersByCapsule` (8.8) removes a deleted capsule's own
  * reminders — a reminder pointing at a capsule that no longer exists
@@ -51,6 +55,11 @@ import { deleteRemindersByCapsule } from "@/entities/reminder";
  * data, same active-cleanup reasoning as version history/embedding above.
  */
 export function deleteCapsule(db: SQLiteDatabase, id: string): void {
+  for (const attachment of getAttachmentsByCapsule(db, id)) {
+    deleteAppFileIfExists(attachment.storagePath);
+  }
+  deleteAppDirectoryIfExists(ATTACHMENTS_DIRECTORY, id);
+
   deleteValuesByCapsule(db, id);
   deleteCapsuleTagsByCapsule(db, id);
   deleteLinksByCapsule(db, id);

@@ -7,6 +7,7 @@ import {
   deleteAttachment,
   deleteAttachmentsByCapsule,
   getAttachmentById,
+  getAttachmentsByCapsule,
   getAttachmentsByCapsuleField,
   insertAttachment,
   type Attachment,
@@ -17,7 +18,7 @@ const makeAttachment = (overrides: Partial<Attachment> = {}): Attachment => ({
   capsuleId: "c-1",
   fieldId: "f-photo",
   filename: "photo.jpg",
-  localUri: "file:///docs/photo.jpg",
+  storagePath: "attachments/x/photo.jpg",
   mimeType: "image/jpeg",
   size: 1024,
   createdAt: 1000,
@@ -38,7 +39,7 @@ describe("entities/attachment — CRUD", () => {
     insertAttachment(db, attachment);
     const found = getAttachmentById(db, attachment.id);
     expect(found?.filename).toBe("photo.jpg");
-    expect(found?.localUri).toBe("file:///docs/photo.jpg");
+    expect(found?.storagePath).toBe("attachments/x/photo.jpg");
     expect(found?.mimeType).toBe("image/jpeg");
     expect(found?.size).toBe(1024);
   });
@@ -108,6 +109,28 @@ describe("entities/attachment — getAttachmentsByCapsuleField", () => {
 
   it("a field with no attachments yet returns an empty array, not an error", () => {
     expect(getAttachmentsByCapsuleField(db, "c-1", "f-photo")).toEqual([]);
+  });
+});
+
+describe("entities/attachment — getAttachmentsByCapsule", () => {
+  it("returns every attachment on the capsule across all fields, oldest first, and nothing from other capsules", () => {
+    insertAttachment(
+      db,
+      makeAttachment({ id: "b", fieldId: "f-doc", createdAt: 2000 }),
+    );
+    insertAttachment(
+      db,
+      makeAttachment({ id: "a", fieldId: "f-photo", createdAt: 1000 }),
+    );
+    insertAttachment(db, makeAttachment({ id: "x", capsuleId: "c-2" }));
+    expect(getAttachmentsByCapsule(db, "c-1").map((a) => a.id)).toEqual([
+      "a",
+      "b",
+    ]);
+  });
+
+  it("returns an empty array for a capsule with no attachments", () => {
+    expect(getAttachmentsByCapsule(db, "none")).toEqual([]);
   });
 });
 
