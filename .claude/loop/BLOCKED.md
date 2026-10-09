@@ -769,6 +769,15 @@ inconsistent (some elements covered, most not) while the rest of `src/app/`
 stays exactly as uncovered as before — cosmetic, not a real fix. Needs its
 own pass across the whole `app/` layer.
 
+### Personas and snippets aren't part of any portable scope (found during 5.2)
+5.2 now round-trips conversations and capsules, but `entities/persona` and
+`entities/snippet` have no export/import at all. An exported conversation
+keeps its `personaId`, which dangles on a device without that persona (the
+chat still works; it just stops applying a system prompt). Low risk, but it
+falls under CLAUDE.md's "every persisted entity must round-trip". Candidate
+for a small follow-up step: add personas + snippets to the conversation
+vault, or give them their own kinds. Your call whether that's worth a plan line.
+
 ## Precedent set (informational — no action needed)
 
 ### Types-only devDependencies don't route through the dependency gate

@@ -4254,4 +4254,27 @@ dependency decision, or the plan itself grows new steps.
 
 ---
 
+## Beat 64 — 5.2 capsule import/export (reopened by user decision)
+
+User installed expo-notifications / expo-image-picker / expo-document-picker;
+committed as their own deps commit (`c472790`) after a green gate.
+
+5.2's capsule half: `exportCapsule`/`importCapsule` and
+`exportAllCapsules`/`importAllCapsules` in a new `capsules.ts` inside
+`features/import-export`. Each export is self-contained — it carries the
+capsule types and fields it needs, so it restores on a device that has
+never seen that schema. Import gets fresh ids everywhere; links and
+parents pointing outside the export are dropped; tags join by name.
+
+Checker failed twice before passing. Round 1 caught a real data-loss gap:
+reminders (8.8) belong to a capsule but weren't exported, and the "excluded"
+list didn't mention them. Round 2 caught the slice's doc comment claiming
+full round-trip coverage while personas/snippets aren't exported anywhere
+(now flagged in BLOCKED.md as a follow-up). Pass on round 3.
+
+Gate: tsc clean, jest 936/936 (73 suites), eslint clean. Checkpoint
+`b4407cb`. 5.2 box ticked. Cursor -> 5.4.
+
+---
+
 <!-- Append new beats above this line. -->
