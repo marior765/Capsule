@@ -64,10 +64,9 @@ type SchemaBuilderProps = {
  * inline field-renaming and per-type `config` authoring (e.g. defining a
  * `single_select`'s option list) are out of this step's scope. Choosing
  * `relation`/`attachment` here is allowed (matches `entities/field`'s own
- * `FieldType` union) even though neither renders a real control yet —
- * `FieldRenderer` already degrades gracefully for both with its own
- * "not supported yet" placeholder (6.2), so nothing here is unsafe to
- * create ahead of 6.8 actually building their controls.
+ * `FieldType` union): both are edited on the capsule detail screen
+ * (`RelationPicker` / `AttachmentList`), and `FieldRenderer` shows a
+ * pointer there instead of an input in the create/edit form.
  */
 export function SchemaBuilder({
   name,

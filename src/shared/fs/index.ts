@@ -95,3 +95,50 @@ export function deleteAppDirectoryIfExists(...segments: string[]): void {
     directory.delete();
   }
 }
+
+// --- Cache directory (pickers' temporary copies) ---
+//
+// The document/image pickers copy each picked file into a folder under the
+// app's cache directory before handing back its URI. Those copies are not
+// app data — once an attachment has been copied into document storage the
+// temporary one is redundant, and the full wipe removes the picker folders.
+// These helpers only ever touch paths strictly inside `Paths.cache`.
+//
+// Known limit: on iOS the document picker (opened "as copy") also leaves a
+// system-made copy under the app's `tmp/<bundle-id>-Inbox/` before Expo's
+// own cache copy. `expo-file-system` exposes no `tmp` directory (only
+// cache/document/bundle), so neither this module nor the full wipe can
+// reach it; iOS purges `tmp` on its own. Tracked in `.claude/loop/BLOCKED.md`
+// (6.8 device check).
+
+function assertInsideCache(uri: string): void {
+  const cacheRoot = Paths.cache.uri.replace(/\/+$/, "");
+  const rest = uri.startsWith(`${cacheRoot}/`)
+    ? uri.slice(cacheRoot.length + 1)
+    : null;
+  if (
+    rest === null ||
+    rest === "" ||
+    rest.split("/").some((s) => s === "" || s === "." || s === "..")
+  ) {
+    throw new Error(`Refusing to delete outside the cache directory: "${uri}"`);
+  }
+}
+
+/** Deletes a file inside the app's cache directory, if it exists. Throws for any URI outside the cache. */
+export function deleteCacheFileIfExists(uri: string): void {
+  assertInsideCache(uri);
+  const file = new File(uri);
+  if (file.exists) {
+    file.delete();
+  }
+}
+
+/** Deletes a named folder inside the app's cache directory, if it exists. */
+export function deleteCacheDirectoryIfExists(name: string): void {
+  assertSafeSegment(name, "cache folder name");
+  const directory = new Directory(Paths.cache, name);
+  if (directory.exists) {
+    directory.delete();
+  }
+}

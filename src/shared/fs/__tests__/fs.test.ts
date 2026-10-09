@@ -12,6 +12,8 @@ import {
   copyFileInto,
   deleteAppDirectoryIfExists,
   deleteAppFileIfExists,
+  deleteCacheDirectoryIfExists,
+  deleteCacheFileIfExists,
   resolveAppPath,
 } from "../index";
 
@@ -111,5 +113,35 @@ describe("deleteAppDirectoryIfExists", () => {
 
   it("refuses to delete the whole documents directory", () => {
     expect(() => deleteAppDirectoryIfExists()).toThrow(/segment/i);
+  });
+});
+
+describe("cache cleanup (picker temporary copies)", () => {
+  it("deletes a file inside the app's cache directory", () => {
+    deleteCacheFileIfExists("file:///cache/DocumentPicker/a.pdf");
+    expect(__deletedUris).toEqual(["file:///cache/DocumentPicker/a.pdf"]);
+  });
+
+  it("refuses URIs outside the cache directory or containing '..'", () => {
+    for (const bad of [
+      "file:///document/attachments/c1/a.jpg",
+      "file:///cache/../document/x",
+      "file:///cachefake/a",
+      "file:///cache",
+    ]) {
+      expect(() => deleteCacheFileIfExists(bad)).toThrow(/cache/i);
+    }
+    expect(__deletedUris).toEqual([]);
+  });
+
+  it("is a no-op for a missing cache file", () => {
+    __missingUris.add("file:///cache/ImagePicker/gone.jpg");
+    deleteCacheFileIfExists("file:///cache/ImagePicker/gone.jpg");
+    expect(__deletedUris).toEqual([]);
+  });
+
+  it("deletes a named folder inside the cache directory", () => {
+    deleteCacheDirectoryIfExists("DocumentPicker");
+    expect(__deletedDirectoryUris).toEqual(["file:///cache/DocumentPicker"]);
   });
 });

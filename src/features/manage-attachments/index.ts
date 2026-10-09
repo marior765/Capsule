@@ -9,6 +9,7 @@ import {
 import {
   copyFileInto,
   deleteAppFileIfExists,
+  deleteCacheFileIfExists,
   resolveAppPath,
 } from "@/shared/fs";
 import { generateId } from "@/shared/lib";
@@ -39,6 +40,11 @@ export type PickedFile = {
   filename: string;
   mimeType: string | null;
   size: number | null;
+  /**
+   * True when `sourceUri` is a picker's temporary copy in the app cache
+   * (see `shared/picker`). It's deleted after the add, success or not.
+   */
+  sourceIsTemporaryCopy?: boolean;
 };
 
 function storageName(id: string, filename: string): string {
@@ -55,34 +61,49 @@ export function attachmentFileUri(attachment: Attachment): string {
  * Copies a picked file into app storage and records it as an attachment.
  * If recording fails after the copy succeeded, the copy is deleted again
  * before the error propagates — no orphaned bytes either way.
+ *
+ * When `sourceIsTemporaryCopy` is set, the picker's temporary cache copy
+ * is deleted afterwards whether the add succeeded or failed: nothing ever
+ * reuses it (a retry means a fresh pick), so keeping it would only orphan
+ * it. Best effort — a failure there never fails the add.
  */
 export async function addAttachment(
   db: SQLiteDatabase,
   picked: PickedFile,
 ): Promise<Attachment> {
-  const id = generateId();
-  const storagePath = await copyFileInto(
-    picked.sourceUri,
-    [ATTACHMENTS_DIRECTORY, picked.capsuleId],
-    storageName(id, picked.filename),
-  );
-  const attachment: Attachment = {
-    id,
-    capsuleId: picked.capsuleId,
-    fieldId: picked.fieldId,
-    filename: picked.filename,
-    storagePath,
-    mimeType: picked.mimeType,
-    size: picked.size,
-    createdAt: Date.now(),
-  };
   try {
-    insertAttachment(db, attachment);
-  } catch (error) {
-    deleteAppFileIfExists(storagePath);
-    throw error;
+    const id = generateId();
+    const storagePath = await copyFileInto(
+      picked.sourceUri,
+      [ATTACHMENTS_DIRECTORY, picked.capsuleId],
+      storageName(id, picked.filename),
+    );
+    const attachment: Attachment = {
+      id,
+      capsuleId: picked.capsuleId,
+      fieldId: picked.fieldId,
+      filename: picked.filename,
+      storagePath,
+      mimeType: picked.mimeType,
+      size: picked.size,
+      createdAt: Date.now(),
+    };
+    try {
+      insertAttachment(db, attachment);
+    } catch (error) {
+      deleteAppFileIfExists(storagePath);
+      throw error;
+    }
+    return attachment;
+  } finally {
+    if (picked.sourceIsTemporaryCopy) {
+      try {
+        deleteCacheFileIfExists(picked.sourceUri);
+      } catch {
+        // Best effort only; see the doc comment above.
+      }
+    }
   }
-  return attachment;
 }
 
 /**

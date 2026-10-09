@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
@@ -16,10 +16,17 @@ import { getCapsuleTypeById, type CapsuleType } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
 import { getTagsByCapsule, type Tag } from "@/entities/tag";
 import { getLinksFromByField } from "@/entities/link";
+import { getAttachmentsByCapsuleField } from "@/entities/attachment";
 import { deleteCapsule } from "@/features/delete-capsule";
 import { tagCapsule, untagCapsule } from "@/features/tag-capsule";
 import { linkCapsules, unlinkCapsules } from "@/features/link-capsules";
 import { setCapsuleParent } from "@/features/nest-capsule";
+import {
+  addAttachment,
+  attachmentFileUri,
+  removeAttachment,
+} from "@/features/manage-attachments";
+import { pickDocument, pickImage, type PickedSource } from "@/shared/picker";
 import {
   getCapsuleHistory,
   restoreCapsuleVersion,
@@ -29,6 +36,7 @@ import { TagPicker } from "@/widgets/TagPicker";
 import { RelationPicker, type RelationEntry } from "@/widgets/RelationPicker";
 import { VersionHistory } from "@/widgets/VersionHistory";
 import { ParentPicker } from "@/widgets/ParentPicker";
+import { AttachmentList, type AttachmentEntry } from "@/widgets/AttachmentList";
 
 export default function CapsuleDetailScreen() {
   const db = useDb();
@@ -46,6 +54,34 @@ export default function CapsuleDetailScreen() {
   const [parent, setParent] = useState<Capsule | null>(null);
   const [children, setChildren] = useState<Capsule[]>([]);
   const [parentError, setParentError] = useState<string | null>(null);
+  const [attachmentsByFieldId, setAttachmentsByFieldId] = useState<
+    Record<string, AttachmentEntry[]>
+  >({});
+  const [attachmentBusyFieldId, setAttachmentBusyFieldId] = useState<
+    string | null
+  >(null);
+  const [attachmentError, setAttachmentError] = useState<{
+    fieldId: string;
+    message: string;
+  } | null>(null);
+
+  const loadAttachmentEntries = useCallback(
+    (capsuleId: string, fieldId: string): AttachmentEntry[] =>
+      getAttachmentsByCapsuleField(db, capsuleId, fieldId).map(
+        (attachment) => ({ attachment, uri: attachmentFileUri(attachment) }),
+      ),
+    [db],
+  );
+
+  const refreshAttachmentField = useCallback(
+    (fieldId: string) => {
+      setAttachmentsByFieldId((current) => ({
+        ...current,
+        [fieldId]: loadAttachmentEntries(id, fieldId),
+      }));
+    },
+    [id, loadAttachmentEntries],
+  );
 
   const refreshRelationField = useCallback(
     (fieldId: string) => {
@@ -94,9 +130,71 @@ export default function CapsuleDetailScreen() {
           }));
         }
         setRelationsByFieldId(nextRelations);
+
+        const nextAttachments: Record<string, AttachmentEntry[]> = {};
+        for (const field of capsuleFields) {
+          if (field.fieldType === "attachment") {
+            nextAttachments[field.id] = loadAttachmentEntries(
+              found.id,
+              field.id,
+            );
+          }
+        }
+        setAttachmentsByFieldId(nextAttachments);
       }
-    }, [db, id]),
+    }, [db, id, loadAttachmentEntries]),
   );
+
+  // Pick → copy into app storage → record. addAttachment removes the
+  // picker's temporary cache copy afterwards, whether the add succeeded or not.
+  // One pick at a time across the whole screen. A ref, not state, so a fast
+  // double tap can't open two pickers before the busy re-render lands.
+  const attachmentInFlight = useRef(false);
+
+  const handleAddAttachment = async (
+    fieldId: string,
+    pick: () => Promise<PickedSource | null>,
+  ) => {
+    if (attachmentInFlight.current) return;
+    attachmentInFlight.current = true;
+    setAttachmentError(null);
+    setAttachmentBusyFieldId(fieldId);
+    try {
+      const picked = await pick();
+      if (picked === null) return;
+      await addAttachment(db, {
+        capsuleId: id,
+        fieldId,
+        sourceUri: picked.uri,
+        filename: picked.name,
+        mimeType: picked.mimeType,
+        size: picked.size,
+        sourceIsTemporaryCopy: true,
+      });
+      refreshAttachmentField(fieldId);
+    } catch (e) {
+      setAttachmentError({
+        fieldId,
+        message: e instanceof Error ? e.message : "Couldn't add the file.",
+      });
+    } finally {
+      attachmentInFlight.current = false;
+      setAttachmentBusyFieldId(null);
+    }
+  };
+
+  const handleRemoveAttachment = (fieldId: string, attachmentId: string) => {
+    setAttachmentError(null);
+    try {
+      removeAttachment(db, attachmentId);
+    } catch (e) {
+      setAttachmentError({
+        fieldId,
+        message: e instanceof Error ? e.message : "Couldn't remove the file.",
+      });
+    }
+    refreshAttachmentField(fieldId);
+  };
 
   const handleDelete = () => {
     // deleteCapsule removes attachment files before any rows, so a failure
@@ -201,7 +299,10 @@ export default function CapsuleDetailScreen() {
       <Text style={styles.meta}>{capsuleType?.name ?? "Unknown type"}</Text>
 
       {fields
-        .filter((field) => field.fieldType !== "relation")
+        .filter(
+          (field) =>
+            field.fieldType !== "relation" && field.fieldType !== "attachment",
+        )
         .map((field) => (
           <View key={field.id} style={styles.fieldRow}>
             <Text style={styles.fieldLabel}>{field.name}</Text>
@@ -221,6 +322,28 @@ export default function CapsuleDetailScreen() {
               availableCapsules={allCapsules.filter((c) => c.id !== capsule.id)}
               onLink={(targetId) => handleLinkRelation(field.id, targetId)}
               onUnlink={(linkId) => handleUnlinkRelation(field.id, linkId)}
+            />
+          </View>
+        ))}
+
+      {fields
+        .filter((field) => field.fieldType === "attachment")
+        .map((field) => (
+          <View key={field.id} style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>{field.name}</Text>
+            <AttachmentList
+              entries={attachmentsByFieldId[field.id] ?? []}
+              busy={attachmentBusyFieldId === field.id}
+              error={
+                attachmentError?.fieldId === field.id
+                  ? attachmentError.message
+                  : null
+              }
+              onAddFile={() => handleAddAttachment(field.id, pickDocument)}
+              onAddPhoto={() => handleAddAttachment(field.id, pickImage)}
+              onRemove={(attachmentId) =>
+                handleRemoveAttachment(field.id, attachmentId)
+              }
             />
           </View>
         ))}

@@ -37,6 +37,16 @@ describe("wipeAllData — happy path", () => {
     expect(__deletedDirectoryUris).toContain("file:///document/stt-models");
   });
 
+  it("deletes the pickers' temporary cache folders", async () => {
+    await wipeAllData(openDb());
+    expect(__deletedDirectoryUris).toEqual(
+      expect.arrayContaining([
+        "file:///cache/DocumentPicker",
+        "file:///cache/ImagePicker",
+      ]),
+    );
+  });
+
   it("clears all MMKV settings", async () => {
     setString("some.setting", "value");
     await wipeAllData(openDb());
@@ -92,6 +102,8 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///document/models");
     __missingUris.add("file:///document/stt-models");
     __missingUris.add("file:///document/attachments");
+    __missingUris.add("file:///cache/DocumentPicker");
+    __missingUris.add("file:///cache/ImagePicker");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
     expect(__deletedDirectoryUris).toEqual([]);
   });

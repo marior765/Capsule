@@ -95,6 +95,52 @@ describe("addAttachment", () => {
   });
 });
 
+describe("addAttachment — picker temporary copy", () => {
+  it("deletes the picker's temporary cache copy after a successful add", async () => {
+    await addAttachment(db, { ...picked, sourceIsTemporaryCopy: true });
+    expect(__deletedUris).toEqual([picked.sourceUri]);
+  });
+
+  it("leaves the source alone when it isn't a temporary copy", async () => {
+    await addAttachment(db, picked);
+    expect(__deletedUris).toEqual([]);
+  });
+
+  it("deletes the temporary copy even when the add fails — nothing reuses it, so keeping it would only orphan it", async () => {
+    _resetDbForTesting();
+    const brokenDb = openDb();
+    await expect(
+      addAttachment(brokenDb, { ...picked, sourceIsTemporaryCopy: true }),
+    ).rejects.toThrow();
+    expect(__deletedUris).toContain(picked.sourceUri);
+  });
+
+  it("deletes the temporary copy when the copy itself fails", async () => {
+    const spy = jest
+      .spyOn(File.prototype, "copy")
+      .mockRejectedValueOnce(new Error("disk full"));
+    await expect(
+      addAttachment(db, { ...picked, sourceIsTemporaryCopy: true }),
+    ).rejects.toThrow("disk full");
+    expect(__deletedUris).toEqual([picked.sourceUri]);
+    spy.mockRestore();
+  });
+
+  it("still succeeds if deleting the temporary copy fails (the OS clears its cache eventually)", async () => {
+    const spy = jest
+      .spyOn(File.prototype, "delete")
+      .mockImplementationOnce(() => {
+        throw new Error("busy");
+      });
+    const attachment = await addAttachment(db, {
+      ...picked,
+      sourceIsTemporaryCopy: true,
+    });
+    expect(getAttachmentById(db, attachment.id)).not.toBeNull();
+    spy.mockRestore();
+  });
+});
+
 describe("removeAttachment", () => {
   it("deletes the stored file and then the record", async () => {
     const attachment = await addAttachment(db, picked);

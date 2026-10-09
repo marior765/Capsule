@@ -60,7 +60,14 @@
       ],
       "expo-audio",
       "expo-secure-store",
-      "react-native-quick-crypto"
+      "react-native-quick-crypto",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Capsule opens your photo library only when you choose \"Add photo\" on a capsule. The photo is copied into the app and stays on this device.",
+          "cameraPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -3,7 +3,11 @@ import { deleteDb } from "@/shared/db";
 import { insertAuditEntry } from "@/entities/audit";
 import { clearAllSettings } from "@/shared/storage";
 import { generateId } from "@/shared/lib";
-import { deleteAppDirectoryIfExists } from "@/shared/fs";
+import {
+  deleteAppDirectoryIfExists,
+  deleteCacheDirectoryIfExists,
+} from "@/shared/fs";
+import { PICKER_CACHE_DIRECTORIES } from "@/shared/picker";
 import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
 
 /**
@@ -14,8 +18,10 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
  * database, so a single `deleteDb()` covers them at once — no per-table
  * deletes needed. Files on disk are separate from their rows and need
  * their own deletion: chat models (`models/`), speech-to-text models
- * (`stt-models/`), and capsule attachments (`attachments/`), all through
- * `shared/fs`.
+ * (`stt-models/`), capsule attachments (`attachments/`), and the pickers'
+ * temporary copies in the cache directory, all through `shared/fs`. One
+ * known exception it can't reach: the iOS document picker's own
+ * `tmp/<bundle-id>-Inbox/` copy (see `shared/fs`'s cache-section note).
  *
  * Order: delete files first (a failure here — permissions, an odd native
  * error — leaves the db and audit trail completely untouched, so the
@@ -45,6 +51,8 @@ export async function wipeAllData(db: SQLiteDatabase): Promise<void> {
   deleteAppDirectoryIfExists("models");
   deleteAppDirectoryIfExists("stt-models");
   deleteAppDirectoryIfExists(ATTACHMENTS_DIRECTORY);
+  // Pickers' temporary copies of files the user picked (shared/picker).
+  PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
 
   insertAuditEntry(db, {
     id: generateId(),

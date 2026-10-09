@@ -28,7 +28,9 @@ type FieldRendererProps = {
  * `widgets/RelationPicker`, wired directly into `capsules/[id].tsx`
  * (the detail screen, not through `CapsuleEditor`/this widget), the same
  * way tags live outside the field-value form entirely. `attachment`
- * remains genuinely unsupported (deferred, likely native-classed).
+ * fields work the same way: `widgets/AttachmentList` on the detail screen
+ * (an attachment needs a saved capsule to belong to, so it can't be part
+ * of the create form anyway).
  *
  * Purely controlled — like `VoiceRecordButton`, this component owns no
  * state of its own; the caller (`CapsuleEditor`) is responsible for
@@ -183,7 +185,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
     case "attachment":
       return (
         <Text testID={testIDs.texts.unsupported} style={styles.unsupported}>
-          Attachment fields are not supported yet.
+          Add files from the capsule detail screen.
         </Text>
       );
   }
