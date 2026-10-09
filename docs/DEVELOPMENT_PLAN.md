@@ -153,6 +153,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 8.7 Multiple capsule views (card / board) — card (2-column grid) and board (kanban columns grouped by a type's first single_select field, requires an active type filter) both complete; board is read-only this round, moving a capsule between columns means editing its field directly
 - [ ] 8.8 Local reminders (on-device notifications) — data layer done (entities/reminder + features/manage-reminders, full CRUD + getDueReminders, delete-capsule cascade); actual OS notification scheduling blocked on the expo-notifications dependency decision (see BLOCKED.md)
 - [x] 8.9 Accessibility pass — real accessibilityLabel on symbol-only controls, accessibilityRole/State on toggles/buttons matching real state, accessibilityLiveRegion on dynamic errors/confirmations, across the whole app in three beats: Capsules domain (12 widgets + 7 capsules/types routes), Chat domain (6 widgets + 6 routes), Settings/Home/CommandPalette domain (4 widgets + 3 routes; remaining routes/widgets confirmed to have no interactive elements of their own). Focus order and dynamic type support are explicitly out of scope for all three beats — not covered by this box
+- [ ] 8.10 testID retrofit for every `src/app/` route via `createComponentTestIDs` (CLAUDE.md hard rule; decided 2026-10-09)
 
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format

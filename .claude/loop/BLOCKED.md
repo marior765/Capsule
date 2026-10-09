@@ -119,6 +119,17 @@ Flagged, not fixed (2026-09-15 — see journal beat 62).
 
 ---
 
+## Resolved (2026-10-09) — user decisions on open blockers
+
+- **8.8 reminders:** install `expo-notifications`; local-only scheduling, OS permission requested on first reminder creation. Device check still required.
+- **6.8 / 8.4 picker:** install `expo-image-picker` + `expo-document-picker`.
+- **8.4 vision model:** one recommended small vision base + mmproj pair in the recommended-models list, downloaded together. Device check still required.
+- **7.1 / 7.2 embeddings:** dedicated small embedding GGUF, user-initiated download like chat models. 7.2 wiring, 7.3, 7.4 unblocked; device quality check (7.1 steps 1–3) still required.
+- **5.2:** reopened — capsule import/export (single + whole vault), dangling links dropped gracefully, attachments excluded until 6.8 lands.
+- **5.4:** reopened — CSV/JSON/Markdown importers + Claude export importer built from public docs, marked unverified until checked against a real export.
+- **Route testIDs:** retrofit every `src/app/` route via `createComponentTestIDs` — new plan step 8.10.
+- **8.1 cloud backends:** stays deferred; app stays fully local.
+
 ## Needs a device / dev build
 
 ### 4.5 — `features/wipe-data` — secure full wipe (models, chats, settings)
