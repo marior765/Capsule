@@ -180,3 +180,62 @@ describe("sendMessage — inference settings (2.1)", () => {
     expect(params.topP).toBe(DEFAULT_INFERENCE.topP);
   });
 });
+
+describe("sendMessage — capsule grounding (7.3)", () => {
+  beforeEach(() => {
+    insertPersona(db, {
+      id: "persona-1",
+      name: "Pirate",
+      systemPrompt: "Answer like a pirate.",
+      createdAt: 0,
+      updatedAt: 0,
+    });
+  });
+
+  it("sends the grounding prompt as the system turn when there's no persona", async () => {
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "When is my dentist?",
+      groundingPrompt: "CAPSULES: Dentist — Tuesday 3pm",
+    });
+    expect(sentMessages()[0]).toEqual({
+      role: "system",
+      content: "CAPSULES: Dentist — Tuesday 3pm",
+    });
+  });
+
+  it("appends the grounding prompt after the persona's prompt", async () => {
+    updateConversation(db, "conv-1", { personaId: "persona-1" });
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hello",
+      groundingPrompt: "CAPSULES: x",
+    });
+    expect(sentMessages()[0]).toEqual({
+      role: "system",
+      content: "Answer like a pirate.\n\nCAPSULES: x",
+    });
+  });
+
+  it("never persists the grounding text — only the user's own words are stored", async () => {
+    const { userMessage } = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hello",
+      groundingPrompt: "CAPSULES: secret capsule text",
+    });
+    expect(userMessage.content).toBe("Hello");
+    const stored = getMessagesByConversation(db, "conv-1");
+    expect(stored.some((m) => m.content.includes("secret capsule text"))).toBe(
+      false,
+    );
+  });
+
+  it("ignores an empty grounding prompt", async () => {
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hello",
+      groundingPrompt: "   ",
+    });
+    expect(sentMessages().some((m) => m.role === "system")).toBe(false);
+  });
+});

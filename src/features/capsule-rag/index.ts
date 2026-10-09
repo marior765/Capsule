@@ -144,3 +144,116 @@ export async function retrieveRelevantCapsules(
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
 }
+
+// --- Grounding chat in the user's capsules (7.3) ---
+
+export type GroundingEntry = { title: string; text: string };
+
+const GROUNDING_INSTRUCTION =
+  "The user keeps a personal, on-device knowledge base of notes called capsules. " +
+  "The capsules below may be relevant to their next message. Use them only if they " +
+  "help answer it, refer to them by their number like [1] when you do, and don't " +
+  "invent details they don't contain.";
+
+function composeGrounding(
+  entries: GroundingEntry[],
+  maxChars: number,
+): { prompt: string | null; included: number } {
+  let prompt = GROUNDING_INSTRUCTION;
+  let included = 0;
+  for (const [index, entry] of entries.entries()) {
+    const header = `\n\n[${index + 1}] ${entry.title}\n`;
+    const room = maxChars - prompt.length - header.length;
+    if (room <= 0) break;
+    if (entry.text.length <= room) {
+      prompt += header + entry.text;
+      included++;
+    } else {
+      // Truncate only the best match; otherwise stop at the budget.
+      if (included === 0) {
+        prompt += header + entry.text.slice(0, Math.max(0, room - 1)) + "…";
+        included++;
+      }
+      break;
+    }
+  }
+  return included > 0 ? { prompt, included } : { prompt: null, included: 0 };
+}
+
+/**
+ * Formats retrieved capsules into a system-prompt block, best match first,
+ * within `maxChars`. Lower-ranked capsules are dropped first; a single
+ * capsule too long to fit is truncated rather than dropped. Pure.
+ */
+export function buildGroundingPrompt(
+  entries: GroundingEntry[],
+  maxChars: number,
+): string | null {
+  return composeGrounding(entries, maxChars).prompt;
+}
+
+export type GroundingSource = {
+  capsuleId: string;
+  title: string;
+  score: number;
+};
+
+export type CapsuleContext = {
+  /** System-prompt text to send with the message, or null if nothing was relevant enough. */
+  prompt: string | null;
+  /** The capsules actually included, best first — for showing the user what was used (7.4). */
+  sources: GroundingSource[];
+};
+
+export type RetrieveContextOptions = {
+  topK?: number;
+  /**
+   * Cosine-similarity floor. A starting value, not a measured one — the
+   * right threshold for this embedding model has to be tuned on real
+   * capsules on a device (see `.claude/loop/BLOCKED.md`, 7.1/7.2 device
+   * check, item g).
+   */
+  minScore?: number;
+  maxChars?: number;
+};
+
+export const DEFAULT_RETRIEVE_OPTIONS: Required<RetrieveContextOptions> = {
+  topK: 3,
+  minScore: 0.35,
+  maxChars: 2000,
+};
+
+/**
+ * Retrieves the capsules most relevant to `query` and turns them into a
+ * grounding prompt. Uses each capsule's indexed text (exactly what was
+ * embedded) rather than rebuilding it. Embeddings whose capsule no longer
+ * exists are skipped.
+ */
+export async function retrieveCapsuleContext(
+  db: SQLiteDatabase,
+  ctx: LlamaContext,
+  query: string,
+  options: RetrieveContextOptions = {},
+): Promise<CapsuleContext> {
+  const { topK, minScore, maxChars } = {
+    ...DEFAULT_RETRIEVE_OPTIONS,
+    ...options,
+  };
+  const ranked = await retrieveRelevantCapsules(db, ctx, query, topK);
+
+  const sources: GroundingSource[] = [];
+  const entries: GroundingEntry[] = [];
+  for (const { capsuleId, score } of ranked) {
+    if (score < minScore) continue;
+    const capsule = getCapsuleById(db, capsuleId);
+    const indexed = getEmbeddingByCapsule(db, capsuleId);
+    if (capsule === null || indexed === null) continue;
+    sources.push({ capsuleId, title: capsule.title, score });
+    entries.push({ title: capsule.title, text: indexed.content });
+  }
+
+  const { prompt, included } = composeGrounding(entries, maxChars);
+  if (prompt === null) return { prompt: null, sources: [] };
+  // Only report capsules that actually made it into the prompt.
+  return { prompt, sources: sources.slice(0, included) };
+}

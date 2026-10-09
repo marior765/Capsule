@@ -9,7 +9,7 @@ import {
 } from "@/entities/message";
 import { getPersonaById } from "@/entities/persona";
 import { DEFAULT_INFERENCE, type InferenceSettings } from "@/shared/config";
-import { generateId } from "@/shared/lib";
+import { generateId, joinSystemPrompts } from "@/shared/lib";
 import {
   runCompletion,
   type ChatMessage,
@@ -41,6 +41,8 @@ export async function branchFromMessage(
   newText: string,
   onToken?: (token: string) => void,
   settings: InferenceSettings = DEFAULT_INFERENCE,
+  /** Optional per-turn capsule grounding (7.3) — same contract as `sendMessage`'s; never stored. */
+  groundingPrompt?: string,
 ): Promise<{ userMessage: Message; assistantMessage: Message }> {
   const original = findMessage(db, messageId);
   if (!original) {
@@ -67,9 +69,13 @@ export async function branchFromMessage(
     : null;
 
   const history = getMessagePath(db, userMessage.id);
+  const systemPrompt = joinSystemPrompts(
+    persona?.systemPrompt,
+    groundingPrompt,
+  );
   const messages: ChatMessage[] = [
-    ...(persona
-      ? [{ role: "system" as const, content: persona.systemPrompt }]
+    ...(systemPrompt
+      ? [{ role: "system" as const, content: systemPrompt }]
       : []),
     ...history.map((m) => ({ role: m.role, content: m.content })),
   ];

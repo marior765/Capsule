@@ -5,7 +5,12 @@ import {
   useRef,
   type PropsWithChildren,
 } from "react";
-import { indexAllCapsules, indexCapsuleById } from "@/features/capsule-rag";
+import {
+  indexAllCapsules,
+  indexCapsuleById,
+  retrieveCapsuleContext,
+  type CapsuleContext,
+} from "@/features/capsule-rag";
 import {
   DEFAULT_EMBEDDING_MODEL,
   getEmbeddingModelUri,
@@ -23,6 +28,12 @@ type EmbeddingState = {
   indexCapsule: (capsuleId: string) => void;
   /** Drop the loaded model and backfill again — after the model is downloaded or after a wipe. */
   reload: () => void;
+  /**
+   * The user's capsules most relevant to `query`, as a grounding prompt plus
+   * sources. Null when no embedding model is downloaded (or retrieval
+   * failed) — callers then just send the message ungrounded.
+   */
+  retrieveContext: (query: string) => Promise<CapsuleContext | null>;
 };
 
 const EmbeddingContext = createContext<EmbeddingState | null>(null);
@@ -70,6 +81,13 @@ export function EmbeddingProvider({ children }: PropsWithChildren) {
   const value: EmbeddingState = {
     indexCapsule: (capsuleId) => {
       void lifecycle.current?.get()?.enqueue(capsuleId);
+    },
+    retrieveContext: async (query) => {
+      const indexer = lifecycle.current?.get();
+      if (!indexer) return null;
+      return indexer.retrieve((ctx) =>
+        retrieveCapsuleContext(openDb(), ctx, query),
+      );
     },
     reload: () => {
       const indexer = lifecycle.current?.get();

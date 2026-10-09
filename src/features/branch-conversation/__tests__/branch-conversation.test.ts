@@ -259,3 +259,42 @@ describe("switchBranch", () => {
     expect(() => switchBranch(db, "missing", "a2")).not.toThrow();
   });
 });
+
+describe("branchFromMessage — capsule grounding (7.3)", () => {
+  const sent = (): ChatMessage[] =>
+    (mockRunCompletion.mock.calls[0][1] as { messages: ChatMessage[] })
+      .messages;
+
+  it("sends the grounding prompt as the system turn for an edited message too", async () => {
+    await branchFromMessage(
+      db,
+      ctx,
+      "u2",
+      "Edited question",
+      undefined,
+      undefined,
+      "CAPSULES: [1] Dentist",
+    );
+    expect(sent()[0]).toEqual({
+      role: "system",
+      content: "CAPSULES: [1] Dentist",
+    });
+  });
+
+  it("never stores the grounding text", async () => {
+    await branchFromMessage(
+      db,
+      ctx,
+      "u2",
+      "Edited",
+      undefined,
+      undefined,
+      "CAPSULES: private",
+    );
+    expect(
+      getMessagesByConversation(db, "conv-1").some((m) =>
+        m.content.includes("CAPSULES"),
+      ),
+    ).toBe(false);
+  });
+});

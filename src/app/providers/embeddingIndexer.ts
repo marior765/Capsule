@@ -29,6 +29,12 @@ export type IndexerDeps = {
 export type EmbeddingIndexer = {
   /** Index (or re-index) one capsule. Resolves when done; never rejects. */
   enqueue: (capsuleId: string) => Promise<void>;
+  /**
+   * Runs a read (e.g. retrieval for a chat message) on the shared context,
+   * in the same serial queue. Resolves to null — never rejects — when no
+   * model is downloaded, the indexer is disposed, or the read fails.
+   */
+  retrieve: <T>(read: (ctx: LlamaContext) => Promise<T>) => Promise<T | null>;
   /** Index every capsule that needs it. Never rejects. */
   backfill: () => Promise<void>;
   /** Release the loaded context; the next job loads it again (after a new download or a wipe). */
@@ -87,6 +93,13 @@ export function createEmbeddingIndexer(deps: IndexerDeps): EmbeddingIndexer {
   }
 
   return {
+    retrieve: async <T>(read: (loaded: LlamaContext) => Promise<T>) => {
+      let result: T | null = null;
+      await run(async (loaded) => {
+        result = await read(loaded);
+      });
+      return result;
+    },
     enqueue: (capsuleId) => run((loaded) => deps.indexOne(loaded, capsuleId)),
     backfill: () => run((loaded) => deps.indexAll(loaded)),
     reset: () => {

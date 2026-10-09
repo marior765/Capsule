@@ -9,7 +9,7 @@ import {
 } from "@/entities/message";
 import { getPersonaById } from "@/entities/persona";
 import { DEFAULT_INFERENCE, type InferenceSettings } from "@/shared/config";
-import { generateId } from "@/shared/lib";
+import { generateId, joinSystemPrompts } from "@/shared/lib";
 import {
   runCompletion,
   type ChatMessage,
@@ -20,6 +20,13 @@ import type { SQLiteDatabase } from "expo-sqlite";
 export type SendMessageInput = {
   conversationId: string;
   text: string;
+  /**
+   * Per-turn context to append to the system prompt — e.g. the user's own
+   * capsules retrieved for this message (7.3). Sent to the local model
+   * only and never stored. `branchFromMessage` (editing a message) takes
+   * the same optional grounding, so an edited question can be grounded too.
+   */
+  groundingPrompt?: string;
 };
 
 export type EphemeralMessageInput = {
@@ -99,7 +106,10 @@ export async function sendMessage(
 
   // Prompt follows the *active branch*, not every message in the conversation.
   const history = getMessagePath(db, userMessage.id);
-  const messages = buildMessages(history, persona?.systemPrompt);
+  const messages = buildMessages(
+    history,
+    joinSystemPrompts(persona?.systemPrompt, input.groundingPrompt),
+  );
 
   let tokenCount = 0;
   const result = await runCompletion(

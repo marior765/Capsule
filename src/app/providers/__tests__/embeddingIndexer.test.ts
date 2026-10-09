@@ -183,3 +183,32 @@ describe("createIndexerLifecycle — mount / unmount / re-mount", () => {
     expect(d.releaseContext).toHaveBeenCalledWith(fakeCtx);
   });
 });
+
+describe("createEmbeddingIndexer — retrieve", () => {
+  it("runs retrieval on the shared context, in the same serial queue, and returns its result", async () => {
+    const d = deps();
+    const indexer = createEmbeddingIndexer(d);
+    const result = await indexer.retrieve(async (ctx) => {
+      expect(ctx).toBe(fakeCtx);
+      return "found";
+    });
+    expect(result).toBe("found");
+    expect(d.loadContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves to null (never rejects) without a model, or when retrieval fails", async () => {
+    const noModel = createEmbeddingIndexer(
+      deps({ getModelUri: jest.fn(() => undefined) }),
+    );
+    await expect(noModel.retrieve(async () => "x")).resolves.toBeNull();
+
+    const d = deps();
+    const failing = createEmbeddingIndexer(d);
+    await expect(
+      failing.retrieve(async () => {
+        throw new Error("boom");
+      }),
+    ).resolves.toBeNull();
+    expect(d.onError).toHaveBeenCalled();
+  });
+});
