@@ -13,19 +13,14 @@ import { generateId } from "@/shared/lib";
  * differentiator extended to *other tools'* export formats, not just this
  * app's own portable format (that's `features/import-export`, 5.2).
  *
- * **This beat implements ChatGPT export only.** Claude export, CSV,
- * generic JSON, and Markdown are deliberately deferred — genuinely
- * unstarted, not silently dropped. ChatGPT's export was picked first
- * because it has a real, specific, well-known schema (a `conversations.json`
- * file: an array of conversation objects, each holding a `mapping` of
- * node id -> `{ message, parent, children }`, forming the same kind of
- * message tree this app's own branching model already uses) — the other
- * four formats each need their own separate design pass (Claude's export
- * has a different schema entirely; CSV/generic-JSON have no fixed schema
- * at all and need a column/field-mapping design decision first; Markdown
- * export has no standard structure to parse against).
+ * Status: ChatGPT export (conversations, this file) and CSV / JSON /
+ * Markdown (capsules, `./capsuleImporters.ts`) are implemented. Claude
+ * export is not started yet. ChatGPT's export has a specific schema: a
+ * `conversations.json` array whose entries hold a `mapping` of node id ->
+ * `{ message, parent, children }`, the same kind of message tree this
+ * app's branching model uses.
  *
- * **Important caveat, not glossed over**: this parser's field names and
+ * **Important caveat, not glossed over**: the ChatGPT parser's field names and
  * structure are implemented from training-time knowledge of ChatGPT's
  * export format, not verified against a real, current export file — OpenAI
  * could have changed field names/shapes since. Written defensively
@@ -243,3 +238,16 @@ export function importChatGptExport(
     return conversation;
   });
 }
+
+export {
+  parseCsv,
+  parseCsvTable,
+  parseJsonTable,
+  parseMarkdownNote,
+  importCsv,
+  importJsonRecords,
+  importMarkdownNotes,
+  type ImportedTable,
+  type CapsuleImportResult,
+  type MarkdownNote,
+} from "./capsuleImporters";
