@@ -571,7 +571,12 @@ device check:** (e) on the Models screen, tap "Download" under Capsule search
 model download entry), then create and edit a few
 capsules, relaunch, and confirm `capsule_embeddings` rows exist and update;
 (f) app start time and memory with the embedding model loaded alongside a
-chat model.
+chat model. (g) **tune the retrieval threshold** (7.3):
+`DEFAULT_RETRIEVE_OPTIONS.minScore` in `features/capsule-rag` is an untuned
+0.35. BGE-small often scores unrelated text around 0.4–0.6, so 0.35 may let
+nearly everything through (every message then carries the top 3 capsules).
+Log the `score`s `retrieveCapsuleContext` sees for a few clearly relevant and
+clearly irrelevant questions, and set `minScore` between them.
 
 **Beat 62 correction:** `state.json`'s `7.2` status was recorded as
 `"done"` despite this entry already describing it as blocked on 7.1's

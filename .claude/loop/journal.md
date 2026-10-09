@@ -4449,4 +4449,24 @@ Checkpoint `dd0c6dd`. Cursor → 7.3.
 
 ---
 
+## Beat 72 — 7.3 part 1: grounding logic
+
+Logic for "chat with your capsules": `retrieveCapsuleContext` picks the
+top matches above a threshold and `buildGroundingPrompt` turns their stored
+indexed text into numbered blocks within a character budget; chat sends it
+as extra system text to the local model and never stores it. Retrieval runs
+on the same serial embedding queue as indexing.
+
+Checker round 1 failed on two honesty problems: editing a message goes
+through a separate completion path (`branchFromMessage`) that I hadn't
+given grounding to — while a comment claimed it was covered — and a
+comment cited a BLOCKED.md tuning item that didn't exist. Both fixed (a
+shared `joinSystemPrompts` keeps both paths identical; the threshold-
+tuning step is now a real device-check item). Passed round 2.
+
+Gate: tsc clean, jest 1095/1095 (84 suites), eslint clean. Checkpoint
+`1324fdc`. 7.3 in_progress; cursor stays at 7.3 for the toggle UI.
+
+---
+
 <!-- Append new beats above this line. -->
