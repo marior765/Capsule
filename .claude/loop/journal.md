@@ -4299,4 +4299,27 @@ Gate: tsc clean, jest 969/969 (74 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 66 — 5.4 part 2: Claude export importer — 5.4 done
+
+Built `parseClaudeExport`/`importClaudeExport` from the publicly described
+claude.ai export shape (user's choice; unverified, BLOCKED.md entry tells
+you how to check it against your own export). Refactored the ChatGPT
+importer's insert loop into a shared `insertParsedConversations`.
+
+Checker round 1 found a real hazard I hadn't considered: parent links in an
+imported file are untrusted, and could form a cycle — a message naming
+itself, two naming each other, or (the realistic one) a loop created by
+mixing explicit `parent_message_uuid`s with array-order chaining. A saved
+cycle would freeze the chat screen's branch switch, whose downward walk
+was an unguarded `for(;;)`. Fix: `breakParentCycles` guarantees a tree for
+both the ChatGPT and Claude parsers, and the UI walk gained a visited
+guard for any data saved before this fix. Round 2 passed after the checker
+verified the algorithm on 3-cycles, tails into cycles, and multiple cycles.
+
+Gate: tsc clean, jest 986/986 (75 suites), eslint clean. Checkpoint
+`9b77a95`. 5.4 box ticked. Cursor → 6.8 (attachments, now unblocked by
+expo-document-picker / expo-image-picker).
+
+---
+
 <!-- Append new beats above this line. -->

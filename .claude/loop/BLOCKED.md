@@ -559,10 +559,28 @@ inside a zip) and run `importChatGptExport` against a real file. Confirm:
    that's this parser's field-name assumptions being wrong, not a fixable
    "device" issue; it needs the real schema, not another guess.
 
-Only 1 of `docs/DEVELOPMENT_PLAN.md` 5.4's five named formats (ChatGPT
-export) is implemented — Claude export, CSV, generic JSON, and Markdown
-are genuinely unstarted, not silently dropped. `docs/DEVELOPMENT_PLAN.md`'s
-5.4 line is annotated with this status rather than ticked.
+All five of 5.4's formats are now implemented (CSV, JSON, Markdown in beat
+65; Claude export in beat 66). The two chat-export importers (ChatGPT,
+Claude) remain unverified against real export files — see this entry and
+the next.
+
+### 5.4 — Claude export importer: built from public docs, unverified
+`parseClaudeExport`/`importClaudeExport` (`features/migrate-import`) follow the
+publicly described claude.ai data export shape (no formal schema is
+published) — `conversations.json`: an
+array of `{ uuid, name, created_at, updated_at, chat_messages: [{ uuid,
+sender: "human" | "assistant", text, content: [{ type, text }], created_at,
+parent_message_uuid? }] }` with ISO timestamps. You chose "build from public
+docs" (2026-10-09) rather than providing a sample file. Tested only against
+hand-written fixtures of that shape.
+
+**To verify:** export your data from claude.ai (Settings → Privacy → Export
+data), unzip, and import `conversations.json`. Check: titles and timestamps,
+human/assistant roles, multi-block messages (text joined, tool-use blocks
+skipped), and whether `parent_message_uuid` is present — if it is, edited/
+regenerated branches should appear as branches; if not, every conversation
+imports as a single linear thread (expected). Report any field that came
+through empty or wrong and the parser gets adjusted to the real shape.
 
 ## Resolved (2026-08-16) — 3.2 whisper.rn Expo plugin config
 

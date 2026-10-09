@@ -123,7 +123,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 5.1 `shared/format` — versioned portable format spec + serializers
 - [x] 5.2 `features/import-export` (single conversation, single capsule, whole vault) — conversations + whole conversation vault, and capsules (single + whole collection, self-contained with type schema, values, tags, versions, reminders, internal links). Embeddings and attachments excluded; personas/snippets are not part of any portable scope yet (see BLOCKED.md)
 - [x] 5.3 `features/backup-restore` — conversations scope done; capsules N/A (Phase 6 unbuilt), settings not yet covered
-- [ ] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown) — ChatGPT (conversations; unverified against a real export, see BLOCKED.md), CSV / JSON / Markdown (into capsules: rows → new type + capsules, notes → "Note" capsules) done; Claude export not started yet
+- [x] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown) — ChatGPT + Claude export into conversations (both unverified against real export files, see BLOCKED.md; parent cycles broken on import), CSV / JSON / Markdown into capsules (rows → new type + capsules, notes → "Note" capsules)
 
 ### Phase 6 — Capsule data core
 - [x] 6.1 `entities/capsule`, `entities/field`, `entities/capsule-type` — models + CRUD
