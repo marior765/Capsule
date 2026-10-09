@@ -206,11 +206,17 @@ export default function ChatScreen() {
     if (!next || !id) return;
 
     // Follow the chosen sibling down to its deepest reply, then show it.
+    // The visited set stops the walk if stored data ever contains a parent
+    // cycle (importers now refuse to write one, but older data might).
     let leafId = next.id;
+    const visited = new Set<string>([leafId]);
     for (;;) {
       const children = getChildren(db, leafId);
       if (children.length === 0) break;
-      leafId = children[children.length - 1].id;
+      const child = children[children.length - 1].id;
+      if (visited.has(child)) break;
+      visited.add(child);
+      leafId = child;
     }
 
     switchBranch(db, id, leafId);
