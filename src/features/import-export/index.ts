@@ -16,12 +16,17 @@ import { insertAuditEntry } from "@/entities/audit";
 
 /**
  * "features/import-export (single conversation, single capsule, whole
- * vault)" (docs/DEVELOPMENT_PLAN.md 5.2) — the CLAUDE.md-required
- * "everything round-trips through the portable format" made real for the
- * first entity. Capsules aren't included yet: `entities/capsule` doesn't
- * exist (Phase 6 unbuilt) — "whole vault" here means every conversation,
- * not literally everything the app could ever hold; capsules join once
- * that entity ships.
+ * vault)" (docs/DEVELOPMENT_PLAN.md 5.2). Scope, stated exactly: this
+ * file round-trips conversations + their messages; `./capsules.ts`
+ * round-trips capsules and everything they own (exceptions listed
+ * there). Personas, snippets, model records, and audit entries are NOT
+ * part of any 5.2 portable scope — an exported conversation keeps its
+ * `personaId`, which dangles on a device that lacks that persona. This file holds
+ * the conversation scope; the capsule scope (single capsule + every
+ * capsule) lives in `./capsules.ts` and is re-exported below. The two
+ * "whole" exports are separate files of separate kinds ("vault" for
+ * conversations, "capsule-collection" for capsules) rather than one
+ * combined file, so the already-shipped "vault" format didn't change.
  *
  * Naming note: "vault" in this step's own plan text is a *portability*
  * term ("your whole collection of data"), unrelated to
@@ -157,3 +162,10 @@ export function importAllConversations(
   const { conversations } = parsePortable<PortableVault>(json, VAULT_KIND);
   return conversations.map((entry) => restoreConversation(db, entry));
 }
+
+export {
+  exportCapsule,
+  importCapsule,
+  exportAllCapsules,
+  importAllCapsules,
+} from "./capsules";
