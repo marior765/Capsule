@@ -13,9 +13,12 @@ import { getString, remove, setString } from "@/shared/storage";
 import {
   DEFAULT_EMBEDDING_MODEL,
   EMBEDDING_MODEL_PATH_KEY,
+  cancelEmbeddingDownload,
   deleteEmbeddingModel,
   downloadEmbeddingModel,
   getEmbeddingModelUri,
+  isEmbeddingModelDownloading,
+  waitForEmbeddingDownload,
 } from "../index";
 
 let db: SQLiteDatabase;
@@ -201,5 +204,137 @@ describe("deleteEmbeddingModel", () => {
   it("is a no-op when nothing was downloaded", () => {
     expect(() => deleteEmbeddingModel()).not.toThrow();
     expect(__deletedUris).toEqual([]);
+  });
+});
+
+describe("cancelEmbeddingDownload (e.g. a full wipe while downloading)", () => {
+  it("a download that finishes after cancel stores nothing, writes no audit entry, and deletes its file", async () => {
+    let finish: () => void = () => {};
+    download.mockImplementationOnce(
+      (_url: string, dir: { uri: string }) =>
+        new Promise((resolve) => {
+          finish = () => {
+            const file = new File(`${dir.uri}/bge.gguf`);
+            file.size = 35;
+            resolve(file);
+          };
+        }),
+    );
+
+    const pending = downloadEmbeddingModel(db);
+    await Promise.resolve();
+    cancelEmbeddingDownload();
+    finish();
+
+    await expect(pending).rejects.toThrow(/cancel/i);
+    expect(getString(EMBEDDING_MODEL_PATH_KEY)).toBeUndefined();
+    expect(getAllAuditEntries(db)).toEqual([]);
+    expect(__deletedUris).toContain(
+      "file:///document/embedding-models/bge.gguf",
+    );
+    expect(isEgressActive()).toBe(false);
+  });
+
+  it("does not affect a download started after the cancel", async () => {
+    cancelEmbeddingDownload();
+    await expect(downloadEmbeddingModel(db)).resolves.toMatch(/^file:\/\//);
+    expect(getString(EMBEDDING_MODEL_PATH_KEY)).toBeDefined();
+  });
+
+  it("a download requested after a cancel waits for the cancelled one to settle, so its file can't be deleted by it (same file name, as in production)", async () => {
+    const name = DEFAULT_EMBEDDING_MODEL.url.split("/").pop();
+    const target = `file:///document/embedding-models/${name}`;
+    let finishFirst: () => void = () => {};
+    download
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFirst = () => resolve(new File(target));
+          }),
+      )
+      .mockImplementationOnce(async () => new File(target));
+
+    const first = downloadEmbeddingModel(db);
+    await Promise.resolve();
+    cancelEmbeddingDownload();
+    expect(isEmbeddingModelDownloading()).toBe(true); // still settling
+    const second = downloadEmbeddingModel(db);
+    await Promise.resolve();
+    expect(download).toHaveBeenCalledTimes(1); // second hasn't started yet
+
+    finishFirst();
+    await expect(first).rejects.toThrow(/cancel/i);
+    await expect(second).resolves.toBe(target);
+
+    // The cancelled download's cleanup ran BEFORE the second wrote its file:
+    // one delete, then the second's file stays put and is stored.
+    expect(__deletedUris).toEqual([target]);
+    expect(download).toHaveBeenCalledTimes(2);
+    expect(getEmbeddingModelUri()).toBe(target);
+    expect(getAllAuditEntries(db)).toHaveLength(1);
+    expect(isEmbeddingModelDownloading()).toBe(false);
+  });
+
+  it("isEmbeddingModelDownloading stays true after a cancel until the cancelled download settles", async () => {
+    let finish: () => void = () => {};
+    download.mockImplementationOnce(
+      (_u: string, dir: { uri: string }) =>
+        new Promise((resolve) => {
+          finish = () => resolve(new File(`${dir.uri}/x.gguf`));
+        }),
+    );
+    const pending = downloadEmbeddingModel(db).catch(() => undefined);
+    await Promise.resolve();
+    cancelEmbeddingDownload();
+    expect(isEmbeddingModelDownloading()).toBe(true);
+    finish();
+    await pending;
+    expect(isEmbeddingModelDownloading()).toBe(false);
+  });
+});
+
+describe("isEmbeddingModelDownloading", () => {
+  it("is true only while a download is in flight", async () => {
+    expect(isEmbeddingModelDownloading()).toBe(false);
+    const pending = downloadEmbeddingModel(db);
+    expect(isEmbeddingModelDownloading()).toBe(true);
+    await pending;
+    expect(isEmbeddingModelDownloading()).toBe(false);
+  });
+});
+
+describe("waitForEmbeddingDownload", () => {
+  it("resolves (never rejects) once the current download settles, even if it failed", async () => {
+    download.mockRejectedValueOnce(new Error("offline"));
+    const pending = downloadEmbeddingModel(db).catch(() => undefined);
+    await expect(waitForEmbeddingDownload()).resolves.toBeUndefined();
+    await pending;
+    expect(isEmbeddingModelDownloading()).toBe(false);
+  });
+
+  it("resolves immediately when nothing is downloading", async () => {
+    await expect(waitForEmbeddingDownload()).resolves.toBeUndefined();
+  });
+});
+
+describe("no network after a cancel", () => {
+  it("a download queued behind a cancelled one, then cancelled itself, never makes its request", async () => {
+    let finishFirst: () => void = () => {};
+    download.mockImplementationOnce(
+      (_u: string, dir: { uri: string }) =>
+        new Promise((resolve) => {
+          finishFirst = () => resolve(new File(`${dir.uri}/x.gguf`));
+        }),
+    );
+    const first = downloadEmbeddingModel(db).catch(() => undefined);
+    await Promise.resolve();
+    cancelEmbeddingDownload(); // e.g. a wipe
+    const second = downloadEmbeddingModel(db); // user taps Download again
+    cancelEmbeddingDownload(); // another wipe before the first settles
+    finishFirst();
+    await first;
+    await expect(second).rejects.toThrow(/cancel/i);
+    expect(download).toHaveBeenCalledTimes(1); // the second never hit the network
+    expect(isEgressActive()).toBe(false);
   });
 });

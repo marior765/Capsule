@@ -2,7 +2,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb, useLlm } from "@/app/providers";
+import { useDb, useEmbeddings, useLlm } from "@/app/providers";
 import { RECOMMENDED_MODELS } from "@/shared/config";
 import { getActiveModel, type Model } from "@/entities/model";
 import {
@@ -11,6 +11,18 @@ import {
   listModels,
   selectModel,
 } from "@/features/manage-models";
+import {
+  DEFAULT_EMBEDDING_MODEL,
+  deleteEmbeddingModel,
+  downloadEmbeddingModel,
+  getEmbeddingModelUri,
+  isEmbeddingModelDownloading,
+  waitForEmbeddingDownload,
+} from "@/features/manage-embedding-model";
+import {
+  EmbeddingModelCard,
+  type EmbeddingModelState,
+} from "@/widgets/EmbeddingModelCard";
 
 type ModelSpec = (typeof RECOMMENDED_MODELS)[number];
 
@@ -20,11 +32,54 @@ export default function ModelsScreen() {
   const [models, setModels] = useState<Model[]>([]);
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const embeddings = useEmbeddings();
+  const readEmbeddingState = (): EmbeddingModelState =>
+    isEmbeddingModelDownloading()
+      ? "downloading"
+      : getEmbeddingModelUri()
+        ? "ready"
+        : "missing";
+  const [embeddingState, setEmbeddingState] =
+    useState<EmbeddingModelState>(readEmbeddingState);
+  const [embeddingError, setEmbeddingError] = useState<string | null>(null);
+
+  // User-initiated: the only path that downloads the embedding model.
+  const handleDownloadEmbeddingModel = async () => {
+    setEmbeddingError(null);
+    setEmbeddingState("downloading");
+    try {
+      await downloadEmbeddingModel(db);
+      embeddings.reload(); // load it and index existing capsules
+    } catch (e) {
+      setEmbeddingError(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setEmbeddingState(readEmbeddingState());
+    }
+  };
+
+  const handleDeleteEmbeddingModel = () => {
+    setEmbeddingError(null);
+    deleteEmbeddingModel();
+    embeddings.reload(); // releases the loaded context
+    setEmbeddingState(readEmbeddingState());
+  };
 
   const refresh = useCallback(() => setModels(listModels(db)), [db]);
   useFocusEffect(
     useCallback(() => {
       refresh();
+      setEmbeddingState(readEmbeddingState());
+      // A download started from an earlier visit to this screen: only that
+      // visit's handler learned when it ended, so wait for it here too.
+      let active = true;
+      if (isEmbeddingModelDownloading()) {
+        void waitForEmbeddingDownload().then(() => {
+          if (active) setEmbeddingState(readEmbeddingState());
+        });
+      }
+      return () => {
+        active = false;
+      };
     }, [refresh]),
   );
 
@@ -101,6 +156,16 @@ export default function ModelsScreen() {
           </View>
         );
       })}
+
+      <Text style={styles.heading}>Capsule search</Text>
+      <EmbeddingModelCard
+        modelName={DEFAULT_EMBEDDING_MODEL.name}
+        sizeLabel={DEFAULT_EMBEDDING_MODEL.sizeLabel}
+        state={embeddingState}
+        error={embeddingError}
+        onDownload={handleDownloadEmbeddingModel}
+        onDelete={handleDeleteEmbeddingModel}
+      />
 
       <Text style={styles.heading}>Download</Text>
       {error && (

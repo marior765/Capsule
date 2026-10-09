@@ -34,6 +34,8 @@ const EMBEDDING_MODEL_DIRECTORY = "embedding-models";
 export const DEFAULT_EMBEDDING_MODEL = {
   name: "BGE small English v1.5 (Q8_0)",
   url: "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf",
+  /** Approximate download size, for the UI (the server's actual size may differ slightly). */
+  sizeLabel: "35 MB",
   /** Tokens per input; capsule text beyond this is truncated by the model. */
   contextLength: 512,
 };
@@ -54,7 +56,44 @@ export function getEmbeddingModelUri(): string | undefined {
   return path === undefined ? undefined : resolveAppPath(path);
 }
 
-let inFlight: Promise<string> | null = null;
+// Bumped by `cancelEmbeddingDownload`. A download remembers the generation
+// it started in; if that changed by the time the bytes land (e.g. a full
+// wipe ran meanwhile), it deletes the file and stores nothing.
+let generation = 0;
+let inFlight: { generation: number; promise: Promise<string> } | null = null;
+
+/**
+ * True while an embedding-model download is in progress — including a
+ * cancelled one that hasn't finished yet (its bytes are still arriving and
+ * it still has cleanup to do).
+ */
+export function isEmbeddingModelDownloading(): boolean {
+  return inFlight !== null;
+}
+
+/** Resolves once the current download (if any) has settled. Never rejects. */
+export function waitForEmbeddingDownload(): Promise<void> {
+  return inFlight === null
+    ? Promise.resolve()
+    : inFlight.promise.then(
+        () => undefined,
+        () => undefined,
+      );
+}
+
+/**
+ * Makes any in-flight download discard its result. Call this when the
+ * app's data is being wiped, so a download that finishes afterwards can't
+ * put the model (or its stored path) back.
+ *
+ * The cancelled download keeps running until its bytes land (there's no
+ * native abort here) and then deletes them. Every attempt writes the SAME
+ * file name, so a download requested meanwhile waits for the cancelled one
+ * to settle first — otherwise that cleanup would delete the new file.
+ */
+export function cancelEmbeddingDownload(): void {
+  generation++;
+}
 
 /**
  * Downloads the default embedding model if it isn't already present and
@@ -69,21 +108,48 @@ let inFlight: Promise<string> | null = null;
 export function downloadEmbeddingModel(db: SQLiteDatabase): Promise<string> {
   const existing = storedPath();
   if (existing !== undefined) return Promise.resolve(resolveAppPath(existing));
-  if (inFlight === null) {
-    inFlight = runDownload(db).finally(() => {
-      inFlight = null;
-    });
+  if (inFlight !== null && inFlight.generation === generation) {
+    return inFlight.promise;
   }
-  return inFlight;
+  const startedIn = generation;
+  // A stale (cancelled) download may still be running — let it finish its
+  // cleanup before this one writes the same file name.
+  const previous = waitForEmbeddingDownload();
+  const entry = {
+    generation: startedIn,
+    promise: previous
+      .then(() => runDownload(db, startedIn))
+      .finally(() => {
+        if (inFlight === entry) inFlight = null;
+      }),
+  };
+  inFlight = entry;
+  return entry.promise;
 }
 
-async function runDownload(db: SQLiteDatabase): Promise<string> {
+async function runDownload(
+  db: SQLiteDatabase,
+  startedIn: number,
+): Promise<string> {
+  // Cancelled while waiting behind an earlier download: never touch the
+  // network at all (a wipe means no more traffic, not "download, then delete").
+  if (startedIn !== generation) {
+    throw new Error("Embedding model download was cancelled");
+  }
   const endEgress = beginEgress();
   try {
     const { relativePath } = await downloadFileInto(
       DEFAULT_EMBEDDING_MODEL.url,
       [EMBEDDING_MODEL_DIRECTORY],
     );
+    if (startedIn !== generation) {
+      try {
+        deleteAppFileIfExists(relativePath);
+      } catch {
+        // best effort; the wipe already removed the folder in most cases
+      }
+      throw new Error("Embedding model download was cancelled");
+    }
     insertAuditEntry(db, {
       id: generateId(),
       action: "model_download",

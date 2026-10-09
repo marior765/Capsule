@@ -4,6 +4,10 @@ import { Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { remigrateDb, useDb, useEmbeddings } from "@/app/providers";
 import { getAllAuditEntries, type AuditEntry } from "@/entities/audit";
+import {
+  cancelEmbeddingDownload,
+  deleteEmbeddingModel,
+} from "@/features/manage-embedding-model";
 import { PrivacyBanner } from "@/widgets/PrivacyBanner";
 import { EgressLog } from "@/widgets/EgressLog";
 import { AppLockSettings } from "@/widgets/AppLockSettings";
@@ -27,7 +31,11 @@ export default function PrivacyScreen() {
   // showing pre-wipe data or hitting "no such table."
   const handleWiped = () => {
     remigrateDb();
-    // The embedding model file is gone; drop its loaded context too.
+    // An embedding-model download still in flight must not put the model
+    // back after the wipe: cancel it, forget anything that already landed,
+    // then drop the loaded context.
+    cancelEmbeddingDownload();
+    deleteEmbeddingModel();
     embeddings.reload();
     router.replace("/");
   };
