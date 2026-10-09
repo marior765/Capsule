@@ -4277,4 +4277,26 @@ Gate: tsc clean, jest 936/936 (73 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 65 — 5.4 part 1: CSV, JSON, Markdown importers
+
+Split 5.4 by format: this beat does CSV/JSON/Markdown, the next does the
+Claude export importer. Design call made here: these three import into the
+**capsule** domain, not chat — a spreadsheet row or a Markdown note has no
+conversation structure. CSV/JSON rows become capsules of a fresh type (one
+field per column, title from a title/name column, field types inferred);
+Markdown notes become "Note" capsules titled from their `# ` heading.
+
+Checker round 1 failed on a nasty real-world bug: in my hand-written CSV
+tokenizer, any `"` opened quoted mode, so a cell like `6" tall` silently
+swallowed the following rows into one cell — no error. Also four Markdown
+misparses (`# C#` → "C", YAML front matter read as the title, mismatched
+fence markers, indentation stripped by `.trim()`). All fixed with
+regression tests confirmed red first; round 2 passed. Three minor
+Markdown edge cases noted in state.json, not fixed.
+
+Gate: tsc clean, jest 969/969 (74 suites), eslint clean. Checkpoint
+`7d32b76`. 5.4 stays in_progress, box unchecked. Cursor stays at 5.4.
+
+---
+
 <!-- Append new beats above this line. -->

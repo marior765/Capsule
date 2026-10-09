@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 64,
+    "beat": 65,
     "status": "running",
     "completedAt": "2026-09-15T00:55:00Z",
     "completionNote": "Every step is now done, blocked (awaiting a device/dev-build check), or deferred (awaiting a human decision) -- see .claude/loop/BLOCKED.md for the full list. No step remains pending or in_progress. Two logic-class steps (5.2, 5.4) are recorded as 'done' with their own plan-line annotations describing real, named remaining work (capsule-scope import/export; four of five migration importer formats) -- flagged in BLOCKED.md rather than silently reopened as new unscoped work at the tail end of an unrelated run. A future scope=5.2 or scope=5.4 /safe-loop invocation, or a human decision recorded in BLOCKED.md, is what picks those up next, not another 'all' run finding nothing else to do.",
@@ -172,12 +172,13 @@
     "5.4": {
       "status": "in_progress",
       "class": "logic",
-      "attempts": 2,
+      "attempts": 3,
       "failureSignatures": [
-        "checker: fail -- single-pass tree resolution depended on Object.entries(mapping) key order, which JSON does not guarantee to be parent-before-child; a child listed before its parent in source JSON would silently mis-root as a spurious top-level message"
+        "checker: fail -- single-pass tree resolution depended on Object.entries(mapping) key order, which JSON does not guarantee to be parent-before-child; a child listed before its parent in source JSON would silently mis-root as a spurious top-level message",
+        "checker: fail -- CSV mid-field quote (6\" tall) opened quoted mode and silently merged rows; Markdown '# C#' lost trailing #, front matter scanned for title, fences closed on wrong marker, body .trim() dropped indentation"
       ],
-      "checkpoint": "31337e1",
-      "notes": "DONE for its achievable scope this beat -- ChatGPT export only (Claude export, CSV, generic JSON, Markdown genuinely unstarted, each needs its own schema/design decision -- CSV/Markdown/generic-JSON have no fixed schema at all). parseChatGptExport (pure) + importChatGptExport (parses + inserts as new conversations, fresh ids, same semantics as 5.2's import). Handles ChatGPT's branching mapping tree, skips synthetic root/unsupported roles/non-text content defensively, converts seconds->milliseconds. 18 tests. Checker failed round 1 on a REAL algorithmic bug, independent of the (honestly disclosed) schema-uncertainty caveat: single-pass parentIndex resolution depended on JS object key iteration order, which JSON never guarantees to be parent-first -- verified myself two ways before fixing (empirically confirmed JSON.parse preserves literal source key order; reproduced the exact bug by reverting to old logic and watching a new regression test go red exactly as predicted). Fixed with a proper two-pass approach (collect all importable nodes+indices first, resolve every parentIndex only after the id map is fully populated) -- checker confirmed on re-review this is structurally immune to ordering for arbitrary-depth reversed chains, not just patched for the one tested case. Wrote the BLOCKED.md '5.4' entry (schema-uncertainty caveat, concrete next steps: get a real ChatGPT export, verify against it) BEFORE the code comment that cites it, per the loop's own rule. docs/DEVELOPMENT_PLAN.md 5.4 stays UNCHECKED, annotated with real status (1 of 5 formats, unverified against a real export file). | DECISION 2026-10-09 (user): add CSV/JSON/Markdown importers + Claude export importer built from public docs (mark unverified like ChatGPT)."
+      "checkpoint": "7d32b76",
+      "notes": "DONE for its achievable scope this beat -- ChatGPT export only (Claude export, CSV, generic JSON, Markdown genuinely unstarted, each needs its own schema/design decision -- CSV/Markdown/generic-JSON have no fixed schema at all). parseChatGptExport (pure) + importChatGptExport (parses + inserts as new conversations, fresh ids, same semantics as 5.2's import). Handles ChatGPT's branching mapping tree, skips synthetic root/unsupported roles/non-text content defensively, converts seconds->milliseconds. 18 tests. Checker failed round 1 on a REAL algorithmic bug, independent of the (honestly disclosed) schema-uncertainty caveat: single-pass parentIndex resolution depended on JS object key iteration order, which JSON never guarantees to be parent-first -- verified myself two ways before fixing (empirically confirmed JSON.parse preserves literal source key order; reproduced the exact bug by reverting to old logic and watching a new regression test go red exactly as predicted). Fixed with a proper two-pass approach (collect all importable nodes+indices first, resolve every parentIndex only after the id map is fully populated) -- checker confirmed on re-review this is structurally immune to ordering for arbitrary-depth reversed chains, not just patched for the one tested case. Wrote the BLOCKED.md '5.4' entry (schema-uncertainty caveat, concrete next steps: get a real ChatGPT export, verify against it) BEFORE the code comment that cites it, per the loop's own rule. docs/DEVELOPMENT_PLAN.md 5.4 stays UNCHECKED, annotated with real status (1 of 5 formats, unverified against a real export file). | DECISION 2026-10-09 (user): add CSV/JSON/Markdown importers + Claude export importer built from public docs (mark unverified like ChatGPT). | BEAT 65 (7d32b76): CSV/JSON/Markdown importers into the capsule domain (capsuleImporters.ts). 33 new tests. Known minor gaps from checker round 2, not fixed: BOM-prefixed .md falls back to filename title; a ```lang line closes an open fence; '# #' gives title '#'. Remaining: Claude export importer (from public docs, mark unverified)."
     },
     "6.1": {
       "status": "done",
@@ -426,8 +427,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-09T18:10:00Z",
-    "head": "b4407cb",
-    "note": "73 suites, 936 tests after 5.2 capsule scope"
+    "at": "2026-10-09T18:45:00Z",
+    "head": "7d32b76",
+    "note": "74 suites, 969 tests after 5.4 CSV/JSON/Markdown"
   }
 }
