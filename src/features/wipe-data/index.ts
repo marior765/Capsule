@@ -18,7 +18,7 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
  * database, so a single `deleteDb()` covers them at once — no per-table
  * deletes needed. Files on disk are separate from their rows and need
  * their own deletion: chat models (`models/`), speech-to-text models
- * (`stt-models/`), capsule attachments (`attachments/`), and the pickers'
+ * (`stt-models/`), the embedding model (`embedding-models/`), capsule attachments (`attachments/`), and the pickers'
  * temporary copies in the cache directory, all through `shared/fs`. One
  * known exception it can't reach: the iOS document picker's own
  * `tmp/<bundle-id>-Inbox/` copy (see `shared/fs`'s cache-section note).
@@ -50,6 +50,7 @@ export async function wipeAllData(db: SQLiteDatabase): Promise<void> {
   // models, and capsule attachments.
   deleteAppDirectoryIfExists("models");
   deleteAppDirectoryIfExists("stt-models");
+  deleteAppDirectoryIfExists("embedding-models");
   deleteAppDirectoryIfExists(ATTACHMENTS_DIRECTORY);
   // Pickers' temporary copies of files the user picked (shared/picker).
   PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);

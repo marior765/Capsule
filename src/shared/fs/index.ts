@@ -16,7 +16,9 @@ import { Directory, File, Paths } from "expo-file-system";
  * a relative one is re-resolved against the current document directory
  * every time. Every relative path is validated segment by segment, so
  * nothing here can reach outside the app's own storage — including the
- * delete functions. Purely local: no network.
+ * delete functions. Network: only `downloadFileInto`, which callers must
+ * invoke solely for the one allowed action (a user-initiated model
+ * download); everything else is purely local.
  */
 
 function assertSafeSegment(segment: string, what: string): void {
@@ -71,6 +73,41 @@ export async function copyFileInto(
   directory.create({ intermediates: true, idempotent: true });
   await new File(sourceUri).copy(new File(directory, fileName));
   return [...directorySegments, fileName].join("/");
+}
+
+/** Whether a file exists at an app-relative path. Throws for an unsafe path. */
+export function appFileExists(relativePath: string): boolean {
+  return new File(Paths.document, ...splitRelativePath(relativePath)).exists;
+}
+
+/**
+ * Downloads `url` into `<documents>/<directorySegments...>/`, creating the
+ * directory if needed, and returns the file's app-relative path and size.
+ * The file name comes from the server/URL (expo-file-system decides it).
+ * This performs a network request — callers are responsible for it being
+ * user-initiated and for marking egress (`shared/egress`), as
+ * `features/manage-models` does.
+ */
+export async function downloadFileInto(
+  url: string,
+  directorySegments: string[],
+): Promise<{ relativePath: string; size: number }> {
+  const directory = appDirectory(directorySegments);
+  directory.create({ intermediates: true, idempotent: true });
+  // `idempotent: true` overwrites an existing file of the same name. The
+  // name comes from the response, so every attempt targets the same file;
+  // without this, a partial file left by a failed download (Android
+  // streams straight into the target) makes every retry fail with
+  // DestinationAlreadyExists.
+  const file = await File.downloadFileAsync(url, directory, {
+    idempotent: true,
+  });
+  const name = file.uri.split("/").pop() ?? "";
+  assertSafeSegment(name, "downloaded file name");
+  return {
+    relativePath: [...directorySegments, name].join("/"),
+    size: file.size,
+  };
 }
 
 /** Deletes a file under app storage, by app-relative path, if it exists; a missing file is not an error. */

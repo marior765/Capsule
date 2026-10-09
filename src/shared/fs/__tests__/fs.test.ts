@@ -1,5 +1,6 @@
 // Tests for 6.8's shared/fs wrapper — written before implementation (TDD)
 import {
+  File as MockFile,
   __copiedFiles,
   __createdDirectoryUris,
   __deletedDirectoryUris,
@@ -9,6 +10,8 @@ import {
 } from "@/__mocks__/expo-file-system";
 import {
   appDirectoryUri,
+  appFileExists,
+  downloadFileInto,
   copyFileInto,
   deleteAppDirectoryIfExists,
   deleteAppFileIfExists,
@@ -143,5 +146,30 @@ describe("cache cleanup (picker temporary copies)", () => {
   it("deletes a named folder inside the cache directory", () => {
     deleteCacheDirectoryIfExists("DocumentPicker");
     expect(__deletedDirectoryUris).toEqual(["file:///cache/DocumentPicker"]);
+  });
+});
+
+describe("downloadFileInto / appFileExists", () => {
+  it("creates the directory, downloads into it, and returns a relative path plus size", async () => {
+    const result = await downloadFileInto("https://example.test/m.gguf", [
+      "embedding-models",
+    ]);
+    expect(MockFile.downloadFileAsync).toHaveBeenCalledWith(
+      "https://example.test/m.gguf",
+      expect.objectContaining({ uri: "file:///document/embedding-models" }),
+      { idempotent: true },
+    );
+    expect(__createdDirectoryUris).toContain(
+      "file:///document/embedding-models",
+    );
+    expect(result.relativePath).toMatch(/^embedding-models\/[^/]+$/);
+    expect(result.relativePath).not.toContain("file://");
+    expect(result.size).toBeGreaterThan(0);
+  });
+
+  it("appFileExists reports a stored relative path's presence", () => {
+    expect(appFileExists("embedding-models/a.gguf")).toBe(true);
+    __missingUris.add("file:///document/embedding-models/a.gguf");
+    expect(appFileExists("embedding-models/a.gguf")).toBe(false);
   });
 });

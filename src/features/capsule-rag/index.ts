@@ -23,13 +23,11 @@ export { cosineSimilarity } from "./cosineSimilarity";
  * a plain string, not the vector, is what makes that check possible
  * without loading a model at all when nothing needs re-embedding.
  *
- * `ctx: LlamaContext` — no live embedding context exists anywhere in the
- * app yet (Providers only loads a chat completion context); wiring this
- * to fire automatically on capsule create/edit waits on 7.1's own open
- * decision (llama.rn's built-in embedding vs. a dedicated small model),
- * tracked in `BLOCKED.md`. This function is complete and tested
- * independent of that decision — whichever model wins, it's still called
- * the same way, through the same `embedText` contract.
+ * `ctx: LlamaContext` — a context from `initEmbeddingContext` loaded with
+ * the dedicated embedding model (decided 2026-10-09; downloaded by
+ * `features/manage-embedding-model`). Loading that context at the app
+ * level and calling this on capsule create/edit is the remaining 7.2
+ * wiring, not done yet.
  */
 export async function indexCapsule(
   db: SQLiteDatabase,

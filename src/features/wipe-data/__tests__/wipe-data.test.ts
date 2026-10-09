@@ -47,6 +47,13 @@ describe("wipeAllData — happy path", () => {
     );
   });
 
+  it("deletes the downloaded embedding model folder", async () => {
+    await wipeAllData(openDb());
+    expect(__deletedDirectoryUris).toContain(
+      "file:///document/embedding-models",
+    );
+  });
+
   it("clears all MMKV settings", async () => {
     setString("some.setting", "value");
     await wipeAllData(openDb());
@@ -102,6 +109,7 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///document/models");
     __missingUris.add("file:///document/stt-models");
     __missingUris.add("file:///document/attachments");
+    __missingUris.add("file:///document/embedding-models");
     __missingUris.add("file:///cache/DocumentPicker");
     __missingUris.add("file:///cache/ImagePicker");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
