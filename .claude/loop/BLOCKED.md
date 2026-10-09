@@ -561,11 +561,14 @@ llama.cpp uses the file's own setting — CLS for BGE); if similarities look
 random, pooling is the first suspect. (d) llama.rn caches the embedding
 width in a function-level `static` (`rn-completion.cpp`), computed once per
 process — never call `embedding()` on a different model in the same app run,
-or BGE vectors come back the wrong length. Still to build:
-the download control in the UI. (Beat 70 added the app-level
+or BGE vectors come back the wrong length. The download control
+is on the Models screen, under "Capsule search" (beat 71); a full wipe cancels
+an in-flight download and deletes anything that already landed. (Beat 70 added the app-level
 `EmbeddingProvider`: loads the model only if already downloaded, re-indexes
 a capsule after create/edit/restore, backfills on app start.) **Add to the
-device check:** (e) with the model downloaded, create and edit a few
+device check:** (e) on the Models screen, tap "Download" under Capsule search
+(privacy banner shows during the download; Privacy → activity log gets a
+model download entry), then create and edit a few
 capsules, relaunch, and confirm `capsule_embeddings` rows exist and update;
 (f) app start time and memory with the embedding model loaded alongside a
 chat model.

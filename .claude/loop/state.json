@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 70,
+    "beat": 71,
     "status": "running",
     "completedAt": "2026-09-15T00:55:00Z",
     "completionNote": "Every step is now done, blocked (awaiting a device/dev-build check), or deferred (awaiting a human decision) -- see .claude/loop/BLOCKED.md for the full list. No step remains pending or in_progress. Two logic-class steps (5.2, 5.4) are recorded as 'done' with their own plan-line annotations describing real, named remaining work (capsule-scope import/export; four of five migration importer formats) -- flagged in BLOCKED.md rather than silently reopened as new unscoped work at the tail end of an unrelated run. A future scope=5.2 or scope=5.4 /safe-loop invocation, or a human decision recorded in BLOCKED.md, is what picks those up next, not another 'all' run finding nothing else to do.",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened after user resolved blocker decisions (see BLOCKED.md \"Resolved (2026-10-09)\")."
   },
   "cursor": {
-    "step": "7.2",
+    "step": "7.3",
     "phase": 7
   },
   "steps": {
@@ -315,15 +315,16 @@
       "notes": "Both halves done -- validateFieldValue logic layer (021b4c8, beat 41) + validateFields + CapsuleEditor errors prop + new.tsx/[id]/edit.tsx wiring (a23d3b6, beat 42/continuation after a session gap). Both save flows now block on invalid fields."
     },
     "7.2": {
-      "status": "in_progress",
-      "class": "logic",
-      "attempts": 3,
+      "status": "done",
+      "class": "native",
+      "attempts": 4,
       "failureSignatures": [
         "checker: fail -- downloadFileAsync without idempotent + response-named file: a partial Android download wedges every retry with DestinationAlreadyExists",
-        "checker: fail -- EmbeddingProvider kept one indexer in a ref and disposed it in effect cleanup; Fast Refresh re-runs the effect, so the dead indexer was reused and all later indexing silently dropped"
+        "checker: fail -- EmbeddingProvider kept one indexer in a ref and disposed it in effect cleanup; Fast Refresh re-runs the effect, so the dead indexer was reused and all later indexing silently dropped",
+        "checker: fail -- cancel cleared inFlight while the cancelled download was still running; it then deleted a newer download's same-named file, leaving a stored key pointing at nothing"
       ],
-      "checkpoint": "9e10743",
-      "notes": "Mechanism fully done and tested (entities/capsule embedding storage, buildCapsuleText, cosineSimilarity, indexCapsule, retrieveRelevantCapsules). Not wired into any route -- no live embedding context exists yet, blocked on 7.1s model decision. docs/DEVELOPMENT_PLAN.md box stays unchecked (annotated); BLOCKED.md updated to note 7.2 wiring now also waits on 7.1s device check. STATUS CORRECTED beat 62: was recorded as 'done', which caused step-selection to silently skip it the same way an actually-finished step would, indistinguishable from 7.3/7.4 -- both of which correctly show 'blocked' for the exact same underlying reason (waiting on 7.1's embedding-model decision). Relabeled 'blocked' to match its siblings; no code changed, this is a status-field correction only, verified safe because 'blocked' and 'done' already produced identical selection behavior (both skip) -- only the record was wrong, not the run. | DECISION 2026-10-09 (user): dedicated small embedding GGUF (user-initiated download like chat models); wire Providers-level embedding context + indexCapsule/retrieve call sites against mocks, device check still required. | BEAT 69 (c5be48e): embedding-model download layer done (manage-embedding-model + shared/fs downloadFileInto). Next 7.2 beats: app-level embedding context (Provider), index on capsule create/edit, download control UI. When building the UI: a full wipe during an in-flight download can re-store the MMKV key after clearAllSettings -- have the wipe await/cancel it or use a generation counter. | BEAT 70 (9e10743): EmbeddingProvider + embeddingIndexer (serial, never-rejecting, mount-scoped lifecycle); indexing wired into create/quick capture/edit/restore; backfill on start; reload after wipe. Remaining: download control UI (handle wipe-during-download race)."
+      "checkpoint": "dd0c6dd",
+      "notes": "Mechanism fully done and tested (entities/capsule embedding storage, buildCapsuleText, cosineSimilarity, indexCapsule, retrieveRelevantCapsules). Not wired into any route -- no live embedding context exists yet, blocked on 7.1s model decision. docs/DEVELOPMENT_PLAN.md box stays unchecked (annotated); BLOCKED.md updated to note 7.2 wiring now also waits on 7.1s device check. STATUS CORRECTED beat 62: was recorded as 'done', which caused step-selection to silently skip it the same way an actually-finished step would, indistinguishable from 7.3/7.4 -- both of which correctly show 'blocked' for the exact same underlying reason (waiting on 7.1's embedding-model decision). Relabeled 'blocked' to match its siblings; no code changed, this is a status-field correction only, verified safe because 'blocked' and 'done' already produced identical selection behavior (both skip) -- only the record was wrong, not the run. | DECISION 2026-10-09 (user): dedicated small embedding GGUF (user-initiated download like chat models); wire Providers-level embedding context + indexCapsule/retrieve call sites against mocks, device check still required. | BEAT 69 (c5be48e): embedding-model download layer done (manage-embedding-model + shared/fs downloadFileInto). Next 7.2 beats: app-level embedding context (Provider), index on capsule create/edit, download control UI. When building the UI: a full wipe during an in-flight download can re-store the MMKV key after clearAllSettings -- have the wipe await/cancel it or use a generation counter. | BEAT 70 (9e10743): EmbeddingProvider + embeddingIndexer (serial, never-rejecting, mount-scoped lifecycle); indexing wired into create/quick capture/edit/restore; backfill on start; reload after wipe. Remaining: download control UI (handle wipe-during-download race). | BEAT 71 (dd0c6dd): download control UI (Models > Capsule search) + wipe-safe cancellation. 7.2 DONE IN CODE; reclassified native -- box stays unchecked pending BLOCKED.md device check (model URL, pooling, retrieval quality, indexing on device)."
     },
     "7.3": {
       "status": "pending",
@@ -434,8 +435,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-09T21:45:00Z",
-    "head": "9e10743",
-    "note": "82 suites, 1067 tests after 7.2 indexing wiring"
+    "at": "2026-10-09T22:20:00Z",
+    "head": "dd0c6dd",
+    "note": "82 suites, 1075 tests after 7.2 download UI"
   }
 }

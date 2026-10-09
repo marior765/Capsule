@@ -4424,4 +4424,29 @@ Gate: tsc clean, jest 1067/1067 (82 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 71 — 7.2 finished in code: embedding model download control
+
+The Models screen gets a "Capsule search" card: one tap downloads the
+~35 MB embedding model (plain copy about it being the one network action),
+the EmbeddingProvider then loads it and indexes existing capsules; delete
+releases it. A wipe now cancels an in-flight download.
+
+Checker round 1 found a race in my cancellation: cancel cleared the
+"downloading" flag while the cancelled download was still running, so the
+user could start a new one — and because every attempt writes the same
+file name, the cancelled one's cleanup then deleted the NEW model, leaving
+the app believing it was downloaded. My test had hidden it by giving the
+two downloads different names. Fixed: cancel only marks the attempt stale,
+"downloading" stays true until it settles, and a new download waits for
+that cleanup. After the pass I also applied the checker's privacy note: a
+download cancelled while still queued never touches the network at all
+(confirmed by the checker).
+
+7.2 is now done in code; reclassified native — the model URL, pooling, and
+retrieval quality can only be judged on a device (BLOCKED.md). Box stays
+unchecked. Gate: tsc clean, jest 1075/1075 (82 suites), eslint clean.
+Checkpoint `dd0c6dd`. Cursor → 7.3.
+
+---
+
 <!-- Append new beats above this line. -->
