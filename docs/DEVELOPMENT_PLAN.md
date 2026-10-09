@@ -133,7 +133,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.5 Search, filter, sort
 - [x] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature
-- [ ] 6.8 Relation + attachment field types — relation done (RelationPicker, wired into capsule detail); attachment file layer done (pickers installed, files copied into app storage, deleted with the capsule and on wipe); picker UI on the capsule screen not built yet
+- [ ] 6.8 Relation + attachment field types — relation done (RelationPicker, wired into capsule detail); attachment done in code (file/photo pickers via shared/picker, files copied into app storage, AttachmentList on the capsule screen, deleted with the capsule and on wipe) — needs a device check before ticking (see BLOCKED.md); non-image files can't be opened yet (expo-sharing decision)
 - [x] 6.9 `entities/link` with graceful missing-target handling
 - [x] 6.10 Field validation
 

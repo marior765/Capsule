@@ -132,6 +132,39 @@ Flagged, not fixed (2026-09-15 — see journal beat 62).
 
 ## Needs a device / dev build
 
+### 6.8 — attachment pickers on a real device (logic done, native unverified)
+Built and tested against mocked natives: `shared/picker` (expo-document-picker
++ expo-image-picker), `features/manage-attachments`, `widgets/AttachmentList`
+on the capsule detail screen, and the `expo-image-picker` config plugin in
+`app.json` (`photosPermission` text, `cameraPermission: false`). Needs a dev
+build (`expo prebuild` / `expo run:*`) — not run unattended.
+
+**Device check:**
+1. On a capsule whose type has an attachment field: "Add file" opens the
+   system file picker; picking a PDF adds a row with the right name/size.
+   "Add photo" opens the photo library; the photo appears with a thumbnail.
+2. Kill and relaunch the app: attachments still listed, thumbnails still
+   load (stored paths are relative, re-resolved each launch).
+3. Remove one attachment; delete a capsule that has attachments; run the
+   full wipe. Afterwards nothing remains under `Documents/attachments`, and
+   `Caches/DocumentPicker` / `Caches/ImagePicker` are gone after the wipe.
+   **Also check `tmp/<bundle-id>-Inbox/` on iOS:** the document picker opens
+   files "as copy", which makes iOS put a copy there first. `expo-file-system`
+   has no API for `tmp`, so neither adding an attachment nor the full wipe
+   can delete it — iOS purges `tmp` itself eventually. If copies linger
+   there, a guaranteed wipe needs a small native helper (a decision for
+   you: new native code).
+4. iOS `Info.plist` after prebuild: `NSPhotoLibraryUsageDescription` has the
+   custom text, there is no `NSCameraUsageDescription` added by this plugin,
+   and `NSMicrophoneUsageDescription` still shows expo-audio's text (voice
+   input). Android manifest: `CAMERA` is blocked, `RECORD_AUDIO` still
+   present (voice input needs it — that's why `microphonePermission` was
+   deliberately NOT set to `false`).
+
+**Decision, not a device check:** there's no way to *open* a non-image
+attachment (e.g. view a PDF) yet. That needs `expo-sharing` (share sheet /
+"open in…") or a viewer — a new dependency, so your call.
+
 ### 4.5 — `features/wipe-data` — secure full wipe (models, chats, settings)
 Implemented and green: `wipeAllData(db)` deletes the on-disk models
 directory, writes a "wipe" audit entry (before deleting anything else —

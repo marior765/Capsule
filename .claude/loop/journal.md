@@ -4352,4 +4352,32 @@ Gate: tsc clean, jest 1009/1009 (77 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 68 — 6.8 part 2: attachment picker UI (code complete, device check pending)
+
+`shared/picker` wraps both native pickers; `AttachmentList` on the capsule
+screen lists files (thumbnails for images) with Add file / Add photo /
+remove. The picker's temporary cache copy is deleted after every add, and
+the wipe clears the picker cache folders. `app.json` gets the image-picker
+plugin — camera blocked, microphone deliberately left alone because
+blocking it would also block voice input's `RECORD_AUDIO`.
+
+Found and fixed a real test-infrastructure bug on the way: better-sqlite3's
+native addon keeps the `SqliteError` class of the first test file in a jest
+worker, so in later files SQLite errors failed `instanceof Error` and
+`rejects.toThrow` said "did not throw". Reproduced deterministically 4
+times, fixed in the shared mock — very likely the unexplained single
+failure from beat 67.
+
+Checker round 1 failed on an honest-docs problem: iOS's document picker
+also leaves its own copy in `tmp/<bundle>-Inbox/`, which expo-file-system
+can't reach at all — so the wipe can't delete it, and my comments had
+implied all temp copies were cleaned. Now stated plainly, with a device
+check and a native-helper decision in BLOCKED.md. Passed round 2.
+
+Reclassified 6.8 as native: code complete against mocks, box stays
+unchecked until the device check. Gate: tsc clean, jest 1031/1031 (79
+suites), eslint clean. Checkpoint `582530f`. Cursor → 7.2.
+
+---
+
 <!-- Append new beats above this line. -->
