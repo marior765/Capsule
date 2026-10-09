@@ -257,3 +257,73 @@ export async function retrieveCapsuleContext(
   // Only report capsules that actually made it into the prompt.
   return { prompt, sources: sources.slice(0, included) };
 }
+
+export type PreparedGrounding = {
+  /** Pass to sendMessage / branchFromMessage; undefined means send ungrounded. */
+  groundingPrompt?: string;
+  sources: GroundingSource[];
+  /** One honest line for the user about what happened. */
+  notice: string;
+};
+
+/**
+ * Decides how one chat message is grounded when "My capsules" is on, and
+ * what to tell the user. `retrieve` is injected (the app layer's serial
+ * embedding queue). Retrieval is capped at `timeoutMs` so a message never
+ * waits behind start-up indexing; on timeout or failure the message goes
+ * out ungrounded and the notice says so — it's never silently dropped.
+ */
+export async function prepareGrounding(params: {
+  hasModel: boolean;
+  retrieve: (query: string) => Promise<CapsuleContext | null>;
+  query: string;
+  timeoutMs: number;
+}): Promise<PreparedGrounding> {
+  if (!params.hasModel) {
+    return {
+      sources: [],
+      notice:
+        "Capsule search needs its model — download it in Models → Capsule search. Answered without your capsules.",
+    };
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), params.timeoutMs);
+  });
+  let context: CapsuleContext | null | "timeout";
+  try {
+    context = await Promise.race([
+      // Promise.resolve().then(...) turns even a synchronous throw into a
+      // rejection, so a broken retrieve can never lose the user's message.
+      Promise.resolve()
+        .then(() => params.retrieve(params.query))
+        .catch(() => null),
+      timedOut,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (context === "timeout" || context === null) {
+    return {
+      sources: [],
+      notice:
+        "Capsule search unavailable right now — answered without your capsules.",
+    };
+  }
+  if (context.prompt === null || context.sources.length === 0) {
+    return {
+      sources: [],
+      notice: "No relevant capsules found — answered without them.",
+    };
+  }
+  const count = context.sources.length;
+  return {
+    groundingPrompt: context.prompt,
+    sources: context.sources,
+    notice: `Using ${count} capsule${count === 1 ? "" : "s"}: ${context.sources
+      .map((s) => s.title)
+      .join(", ")}`,
+  };
+}

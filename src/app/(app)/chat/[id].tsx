@@ -3,7 +3,10 @@ import { useCallback, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
-import { useDb, useLlm, useStt } from "@/app/providers";
+import { useDb, useEmbeddings, useLlm, useStt } from "@/app/providers";
+import { prepareGrounding } from "@/features/capsule-rag";
+import { getEmbeddingModelUri } from "@/features/manage-embedding-model";
+import { getBoolean, setBoolean } from "@/shared/storage";
 import { getConversationById } from "@/entities/conversation";
 import { getChildren, getMessagePath, type Message } from "@/entities/message";
 import {
@@ -24,6 +27,9 @@ import { ChatThread, type BranchPosition } from "@/widgets/ChatThread";
 import { InferenceStats } from "@/widgets/InferenceStats";
 import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
+
+/** How long a message waits for capsule search before going out ungrounded. */
+const CAPSULE_SEARCH_TIMEOUT_MS = 4000;
 
 const STATUS_MESSAGE: Record<string, string> = {
   "no-model": "Download a model to start chatting.",
@@ -55,6 +61,27 @@ export default function ChatScreen() {
   const [streaming, setStreaming] = useState("");
   const [editing, setEditing] = useState<Message | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // "My capsules" (7.3): ground replies in the user's own capsules. Remembered
+  // per conversation in local settings (the full wipe clears it).
+  const embeddings = useEmbeddings();
+  const useCapsulesKey = `chat.useCapsules.${id}`;
+  const [useCapsules, setUseCapsules] = useState(
+    () => getBoolean(useCapsulesKey) ?? false,
+  );
+  const [searchingCapsules, setSearchingCapsules] = useState(false);
+  const [groundingNotice, setGroundingNotice] = useState<string | null>(null);
+
+  const toggleUseCapsules = () => {
+    const next = !useCapsules;
+    setUseCapsules(next);
+    setBoolean(useCapsulesKey, next);
+    setGroundingNotice(
+      next && !getEmbeddingModelUri()
+        ? "Capsule search needs its model — download it in Models → Capsule search."
+        : null,
+    );
+  };
 
   // Recording state and the pending controller are separate: `isRecording`
   // is what VoiceRecordButton renders, `voiceControllerRef` is the in-flight
@@ -176,15 +203,40 @@ export default function ChatScreen() {
 
     const acc = { text: "" };
     try {
+      let groundingPrompt: string | undefined;
+      if (useCapsules) {
+        setSearchingCapsules(true);
+        try {
+          const prepared = await prepareGrounding({
+            hasModel: getEmbeddingModelUri() !== undefined,
+            retrieve: embeddings.retrieveContext,
+            query: text,
+            timeoutMs: CAPSULE_SEARCH_TIMEOUT_MS,
+          });
+          groundingPrompt = prepared.groundingPrompt;
+          setGroundingNotice(prepared.notice);
+        } finally {
+          setSearchingCapsules(false);
+        }
+      } else {
+        setGroundingNotice(null);
+      }
+
       if (target) {
-        await branchFromMessage(db, ctx, target.id, text, (t) =>
-          stream(t, acc),
+        await branchFromMessage(
+          db,
+          ctx,
+          target.id,
+          text,
+          (t) => stream(t, acc),
+          getInferenceSettings(),
+          groundingPrompt,
         );
       } else {
         await sendMessage(
           db,
           ctx,
-          { conversationId: id, text },
+          { conversationId: id, text, groundingPrompt },
           (t) => stream(t, acc),
           getInferenceSettings(),
         );
@@ -307,6 +359,15 @@ export default function ChatScreen() {
           </Text>
         </Pressable>
       )}
+      {canChat && (searchingCapsules || groundingNotice !== null) && (
+        <Text
+          testID={testIDs.texts.capsuleNotice}
+          style={styles.capsuleNotice}
+          accessibilityLiveRegion="polite"
+        >
+          {searchingCapsules ? "Searching your capsules…" : groundingNotice}
+        </Text>
+      )}
       {canChat ? (
         <>
           {showSnippetPicker && (
@@ -338,6 +399,23 @@ export default function ChatScreen() {
             >
               <Text style={styles.snippetsLabel}>
                 {showSnippetPicker ? "Close" : "Snippets"}
+              </Text>
+            </Pressable>
+            <Pressable
+              testID={testIDs.buttons.capsules}
+              style={styles.snippetsButton}
+              onPress={toggleUseCapsules}
+              accessibilityRole="switch"
+              accessibilityLabel="Use my capsules"
+              accessibilityState={{ checked: useCapsules }}
+            >
+              <Text
+                style={[
+                  styles.snippetsLabel,
+                  !useCapsules && styles.capsulesOff,
+                ]}
+              >
+                {useCapsules ? "Capsules: on" : "Capsules: off"}
               </Text>
             </Pressable>
             <View style={styles.inputFlex}>
@@ -420,6 +498,16 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 12,
   },
+  capsuleNotice: {
+    paddingHorizontal: theme.spacing.three,
+    paddingTop: theme.spacing.two,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
+  capsulesOff: {
+    color: theme.colors.textSecondary,
+  },
   error: {
     paddingHorizontal: theme.spacing.three,
     paddingTop: theme.spacing.two,
@@ -430,5 +518,6 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("ChatScreen", {
-  buttons: ["snippets", "export"] as const,
+  buttons: ["snippets", "export", "capsules"] as const,
+  texts: ["capsuleNotice"] as const,
 });
