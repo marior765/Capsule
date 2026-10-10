@@ -1,0 +1,163 @@
+import { Pressable, Text, View } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
+import type { Reminder } from "@/entities/reminder";
+import { createComponentTestIDs } from "@/shared/testing";
+import {
+  formatReminderTime,
+  type ReminderPreset,
+  type ReminderPresetKey,
+} from "./reminderTime";
+
+type ReminderListProps = {
+  reminders: Reminder[];
+  /** Quick choices to offer (from `reminderPresets(now)`). */
+  presets: ReminderPreset[];
+  /** Used to label times "Today"/"Tomorrow" and to mark passed ones. */
+  now: number;
+  /** Called with the tapped preset's key; the caller resolves its time at tap time (`resolvePreset`). */
+  onAdd: (presetKey: ReminderPresetKey) => void;
+  onCancel: (reminderId: string) => void;
+  /** True while a reminder is being set or cancelled — every button is disabled. */
+  busy: boolean;
+  error: string | null;
+};
+
+/**
+ * A capsule's reminders (8.8) plus quick "remind me" choices. Purely
+ * controlled like `AttachmentList` — the route asks for permission,
+ * schedules and cancels. A reminder with no scheduled notification says
+ * so: it is saved, but nothing will pop up unless notifications are on.
+ */
+export function ReminderList({
+  reminders,
+  presets,
+  now,
+  onAdd,
+  onCancel,
+  busy,
+  error,
+}: ReminderListProps) {
+  return (
+    <View testID={testIDs.containers.root} style={styles.root}>
+      {reminders.length === 0 && (
+        <Text testID={testIDs.texts.empty} style={styles.meta}>
+          No reminders.
+        </Text>
+      )}
+
+      {reminders.map((reminder) => {
+        const when = formatReminderTime(reminder.remindAt, now);
+        return (
+          <View key={reminder.id} style={styles.row}>
+            <View style={styles.rowText}>
+              <Text style={styles.name}>{when}</Text>
+              {reminder.notificationId === null && reminder.remindAt > now && (
+                <Text style={styles.meta}>
+                  Not scheduled — notifications are off for Capsule.
+                </Text>
+              )}
+            </View>
+            <Pressable
+              testID={`${testIDs.buttons.cancel}_${reminder.id}`}
+              onPress={() => onCancel(reminder.id)}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel={`Cancel reminder ${when}`}
+              accessibilityState={{ disabled: busy, busy }}
+            >
+              <Text style={styles.removeLabel}>✕</Text>
+            </Pressable>
+          </View>
+        );
+      })}
+
+      {error !== null && (
+        <Text
+          testID={testIDs.texts.error}
+          style={styles.error}
+          accessibilityLiveRegion="polite"
+        >
+          {error}
+        </Text>
+      )}
+
+      <View style={styles.actions}>
+        {presets.map((preset) => (
+          <Pressable
+            key={preset.key}
+            testID={`${testIDs.buttons.preset}_${preset.key}`}
+            style={styles.action}
+            onPress={() => onAdd(preset.key)}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={`Remind me: ${preset.label}`}
+            accessibilityState={{ disabled: busy, busy }}
+          >
+            <Text style={styles.actionLabel}>{preset.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create((theme) => ({
+  root: {
+    marginTop: theme.spacing.two,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.two,
+    paddingVertical: theme.spacing.one,
+  },
+  rowText: {
+    flex: 1,
+  },
+  name: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+  },
+  meta: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
+  removeLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    paddingHorizontal: theme.spacing.one,
+  },
+  error: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.one,
+  },
+  actions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.two,
+    marginTop: theme.spacing.two,
+  },
+  action: {
+    paddingHorizontal: theme.spacing.three,
+    paddingVertical: theme.spacing.two,
+    borderRadius: theme.spacing.two,
+    backgroundColor: theme.colors.backgroundSelected,
+  },
+  actionLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.rounded,
+    fontSize: 13,
+  },
+}));
+
+const testIDs = createComponentTestIDs("ReminderList", {
+  containers: ["root"] as const,
+  texts: ["empty", "error"] as const,
+  buttons: ["preset", "cancel"] as const,
+});
+
+ReminderList.testIDs = testIDs;

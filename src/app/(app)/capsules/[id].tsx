@@ -17,6 +17,7 @@ import { getFieldsByCapsuleType, type CapsuleField } from "@/entities/field";
 import { getTagsByCapsule, type Tag } from "@/entities/tag";
 import { getLinksFromByField } from "@/entities/link";
 import { getAttachmentsByCapsuleField } from "@/entities/attachment";
+import { getRemindersByCapsule, type Reminder } from "@/entities/reminder";
 import { deleteCapsule } from "@/features/delete-capsule";
 import { tagCapsule, untagCapsule } from "@/features/tag-capsule";
 import { linkCapsules, unlinkCapsules } from "@/features/link-capsules";
@@ -27,6 +28,7 @@ import {
   removeAttachment,
 } from "@/features/manage-attachments";
 import { pickDocument, pickImage, type PickedSource } from "@/shared/picker";
+import { addReminder, cancelReminder } from "@/features/manage-reminders";
 import {
   getCapsuleHistory,
   restoreCapsuleVersion,
@@ -37,6 +39,12 @@ import { RelationPicker, type RelationEntry } from "@/widgets/RelationPicker";
 import { VersionHistory } from "@/widgets/VersionHistory";
 import { ParentPicker } from "@/widgets/ParentPicker";
 import { AttachmentList, type AttachmentEntry } from "@/widgets/AttachmentList";
+import {
+  ReminderList,
+  reminderPresets,
+  resolvePreset,
+  type ReminderPresetKey,
+} from "@/widgets/ReminderList";
 
 export default function CapsuleDetailScreen() {
   const db = useDb();
@@ -55,6 +63,12 @@ export default function CapsuleDetailScreen() {
   const [parent, setParent] = useState<Capsule | null>(null);
   const [children, setChildren] = useState<Capsule[]>([]);
   const [parentError, setParentError] = useState<string | null>(null);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  // The time presets and "Today"/"passed" labels are computed against.
+  // Refreshed on focus and after each reminder change, not ticking.
+  const [now, setNow] = useState(() => Date.now());
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderError, setReminderError] = useState<string | null>(null);
   const [attachmentsByFieldId, setAttachmentsByFieldId] = useState<
     Record<string, AttachmentEntry[]>
   >({});
@@ -115,6 +129,8 @@ export default function CapsuleDetailScreen() {
             : null,
         );
         setChildren(getChildCapsules(db, found.id));
+        setReminders(getRemindersByCapsule(db, found.id));
+        setNow(Date.now());
 
         const relationFields = capsuleFields.filter(
           (field) => field.fieldType === "relation",
@@ -196,6 +212,54 @@ export default function CapsuleDetailScreen() {
     }
     refreshAttachmentField(fieldId);
   };
+
+  // One reminder change at a time; a ref so a double tap can't schedule
+  // two notifications before the busy re-render lands.
+  const reminderInFlight = useRef(false);
+
+  const runReminderChange = async (
+    change: () => Promise<string | null>,
+    fallback: string,
+  ) => {
+    if (reminderInFlight.current) return;
+    reminderInFlight.current = true;
+    setReminderError(null);
+    setReminderBusy(true);
+    try {
+      setReminderError(await change());
+    } catch (e) {
+      setReminderError(e instanceof Error ? e.message : fallback);
+    } finally {
+      reminderInFlight.current = false;
+      setReminderBusy(false);
+      setReminders(getRemindersByCapsule(db, id));
+      setNow(Date.now());
+    }
+  };
+
+  // addReminder asks for notification permission the first time. If it's
+  // refused the reminder is still saved; the list marks it "not scheduled".
+  // The preset's time is recomputed now: the screen may have been open a
+  // while, so "In 1 hour" must mean from the tap, and a passed "This
+  // evening" is refused rather than scheduled in the past.
+  const handleAddReminder = (presetKey: ReminderPresetKey) =>
+    runReminderChange(async () => {
+      const at = resolvePreset(presetKey, Date.now());
+      if (at === null) return "That time has already passed.";
+      const { scheduled } = await addReminder(db, {
+        capsuleId: id,
+        remindAt: at,
+      });
+      return scheduled
+        ? null
+        : "Saved, but notifications are off for Capsule — allow them in Settings to be reminded.";
+    }, "Couldn't set the reminder.");
+
+  const handleCancelReminder = (reminderId: string) =>
+    runReminderChange(async () => {
+      await cancelReminder(db, reminderId);
+      return null;
+    }, "Couldn't cancel the reminder.");
 
   const handleDelete = () => {
     // deleteCapsule removes attachment files before any rows, so a failure
@@ -349,6 +413,19 @@ export default function CapsuleDetailScreen() {
             />
           </View>
         ))}
+
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>Reminders</Text>
+        <ReminderList
+          reminders={reminders}
+          presets={reminderPresets(now)}
+          now={now}
+          onAdd={handleAddReminder}
+          onCancel={handleCancelReminder}
+          busy={reminderBusy}
+          error={reminderError}
+        />
+      </View>
 
       <TagPicker
         tags={tags}
