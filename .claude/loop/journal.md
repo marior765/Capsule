@@ -4585,4 +4585,24 @@ Gate: tsc clean, jest 1155/1155 (89 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 79 — 8.4 finished in code: images in chat
+
+With the vision model active, chat shows an "Image" button; a picked photo
+previews above the input, is stored with the message and appears in the
+bubble. Planning surfaced a correctness issue first: stored images were
+being attached to every model call, so after switching to a text-only
+model they'd be handed to a context with no projector (undefined in
+llama.rn). Images now go to the model only while a vision model is loaded.
+
+Checker round 1 caught a race: the pending image was claimed only after the
+up-to-4-second capsule search, so tapping ✕ or picking another photo during
+that wait deleted the file being sent. Now it's claimed before any await
+and the image controls are locked for the whole send. Passed round 2.
+
+8.4 is done in code, native — box unchecked pending the device check.
+Gate: tsc clean, jest 1157/1157 (89 suites), eslint clean. Checkpoint
+`9464ce8`. Cursor → 8.8 (local reminders, expo-notifications now installed).
+
+---
+
 <!-- Append new beats above this line. -->

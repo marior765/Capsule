@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 78,
+    "beat": 79,
     "status": "running",
     "completedAt": "2026-09-15T00:55:00Z",
     "completionNote": "Every step is now done, blocked (awaiting a device/dev-build check), or deferred (awaiting a human decision) -- see .claude/loop/BLOCKED.md for the full list. No step remains pending or in_progress. Two logic-class steps (5.2, 5.4) are recorded as 'done' with their own plan-line annotations describing real, named remaining work (capsule-scope import/export; four of five migration importer formats) -- flagged in BLOCKED.md rather than silently reopened as new unscoped work at the tail end of an unrelated run. A future scope=5.2 or scope=5.4 /safe-loop invocation, or a human decision recorded in BLOCKED.md, is what picks those up next, not another 'all' run finding nothing else to do.",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened after user resolved blocker decisions (see BLOCKED.md \"Resolved (2026-10-09)\")."
   },
   "cursor": {
-    "step": "8.4",
+    "step": "8.8",
     "phase": 8
   },
   "steps": {
@@ -373,16 +373,17 @@
       "notes": "exportConversationAsMarkdown (pure) + Export button in chat/[id].tsx (expo-clipboard, mirrors ChatBubbles copy pattern). Not wired into chat/ephemeral.tsx -- no persisted Conversation entity exists there at all (checker-confirmed genuine scope boundary, not an oversight). Self-caught bug via checker round 1 (trimEnd ate real trailing whitespace off the last messages content), fixed + 2 regression tests, checker round 2 pass."
     },
     "8.4": {
-      "status": "in_progress",
+      "status": "done",
       "class": "native",
-      "attempts": 4,
+      "attempts": 5,
       "failureSignatures": [
         "checker: fail -- stale docs (shared/fs header, BLOCKED.md) still said manage-models used expo-file-system directly",
         "checker: fail -- insert-failure cleanup deleted the downloaded file even when the UNIQUE clash meant an existing (possibly active) model row still used it",
-        "checker: fail -- image row inserted after the message with no compensation, so a failed row insert left an invisible user message; deleteAppDirectoryIfExists on unvalidated conversation ids made delete/restore throw"
+        "checker: fail -- image row inserted after the message with no compensation, so a failed row insert left an invisible user message; deleteAppDirectoryIfExists on unvalidated conversation ids made delete/restore throw",
+        "checker: fail -- pending image read after the capsule-search await, so removing/replacing it during the wait deleted the file being sent; plan line stale"
       ],
-      "checkpoint": "13cad44",
-      "notes": "Implemented against mocked natives only -- shared/llm gained initMultimodalSupport/isMultimodalEnabled/getMultimodalSupport/releaseMultimodalSupport (same context as initLlm, not separate like embeddings) + ChatMessage.imageUrl support in runCompletion. Blocked on TWO decisions: the same missing image-picker dependency as 6.8, and a separate vision-model+mmproj-pair choice structurally like 7.1s. Full breakdown in BLOCKED.md. docs/DEVELOPMENT_PLAN.md box stays unchecked per native-class convention. | DECISION 2026-10-09 (user): picker = expo-image-picker; one recommended small vision base+mmproj pair added to recommended models; wire picker into chat; device check still required. | BEAT 76 (dc205dc): model layer -- mmproj_path (v24), manage-models on shared/fs (relative paths, legacy re-map, idempotent, decoded names), vision pair in RECOMMENDED_MODELS. Next: LlmProvider initMultimodal when active model has mmprojPath (expose vision support), then chat image attach + persistence. Minor: removeUnreferenced's delete could mask the original insert error if it throws. | BEAT 77 (e585b73): projector loaded via loadModelContext; LlmProvider exposes vision. Next: chat image attach (show button only when status==='ready' && vision; persist image with the message + export/backup round-trip; ephemeral chat too?). | BEAT 78 (13cad44): chat-image data layer (message_images v25, send/branch/delete/restore/wipe). Next: chat UI -- image button only when status==='ready' && vision, preview before send, image shown in the bubble; ephemeral chat images out of scope (nothing may be stored). Minor: branch inserts message before its image row without compensation."
+      "checkpoint": "9464ce8",
+      "notes": "Implemented against mocked natives only -- shared/llm gained initMultimodalSupport/isMultimodalEnabled/getMultimodalSupport/releaseMultimodalSupport (same context as initLlm, not separate like embeddings) + ChatMessage.imageUrl support in runCompletion. Blocked on TWO decisions: the same missing image-picker dependency as 6.8, and a separate vision-model+mmproj-pair choice structurally like 7.1s. Full breakdown in BLOCKED.md. docs/DEVELOPMENT_PLAN.md box stays unchecked per native-class convention. | DECISION 2026-10-09 (user): picker = expo-image-picker; one recommended small vision base+mmproj pair added to recommended models; wire picker into chat; device check still required. | BEAT 76 (dc205dc): model layer -- mmproj_path (v24), manage-models on shared/fs (relative paths, legacy re-map, idempotent, decoded names), vision pair in RECOMMENDED_MODELS. Next: LlmProvider initMultimodal when active model has mmprojPath (expose vision support), then chat image attach + persistence. Minor: removeUnreferenced's delete could mask the original insert error if it throws. | BEAT 77 (e585b73): projector loaded via loadModelContext; LlmProvider exposes vision. Next: chat image attach (show button only when status==='ready' && vision; persist image with the message + export/backup round-trip; ephemeral chat too?). | BEAT 78 (13cad44): chat-image data layer (message_images v25, send/branch/delete/restore/wipe). Next: chat UI -- image button only when status==='ready' && vision, preview before send, image shown in the bubble; ephemeral chat images out of scope (nothing may be stored). Minor: branch inserts message before its image row without compensation. | BEAT 79 (9464ce8): chat image UI. 8.4 DONE IN CODE; native -- box unchecked pending BLOCKED.md 8.4 device check (vision pair URLs + does the model actually describe photos)."
     },
     "8.5": {
       "status": "done",
@@ -443,8 +444,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-10T17:30:00Z",
-    "head": "13cad44",
-    "note": "89 suites, 1155 tests after 8.4 chat-image data layer"
+    "at": "2026-10-10T18:30:00Z",
+    "head": "9464ce8",
+    "note": "89 suites, 1157 tests after 8.4 chat image UI"
   }
 }

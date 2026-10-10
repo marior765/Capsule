@@ -837,7 +837,16 @@ active model has one (`app/providers/loadModelContext`) and exposes
 `vision`; a projector that fails to load leaves the model usable as text
 with `vision: false`. Device check: with the vision model active,
 `vision` should be true (the image button in chat will depend on it).
-Still to build: image attach in chat.
+**Update (beat 79):** image attach in chat is built. Device check: with
+SmolVLM active, an "Image" button appears in chat (not with a text-only
+model, not while editing); pick a photo → "Image: <name>" with ✕ above the
+input; send a question about it → the photo shows in your bubble and the
+reply is about the photo's contents (the real test of the vision pair).
+Switch to a text-only model and keep chatting: images stay visible but are
+no longer sent to the model. Delete the conversation → its
+`Documents/chat-images/<id>` folder is gone. Known limits: a message needs some text — an
+image on its own can't be sent (`ChatInput` ignores empty text); images
+aren't offered in ephemeral chats (nothing there may be stored).
 
 **Known limit (manage-models):** downloads are idempotent (overwrite), and
 the file name comes from the server, so re-downloading a model whose file
