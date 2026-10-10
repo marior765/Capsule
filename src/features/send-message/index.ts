@@ -39,8 +39,15 @@ export type SendMessageInput = {
    * `branchFromMessage` (editing a message) takes the same grounding.
    */
   grounding?: Grounding;
-  /** An image to send with this message (8.4; needs a vision-capable model). */
+  /** An image to attach to this message (8.4). Always stored with it. */
   image?: MessageImageInput;
+  /**
+   * Whether to send the conversation's images to the model — only when the
+   * loaded context is vision-capable (`LlmProvider.vision`). A text-only
+   * context has no projector, and llama.rn's behaviour when handed an image
+   * then is undefined, so the default is to send text only.
+   */
+  withImages?: boolean;
 };
 
 export type MessageImageInput = {
@@ -205,7 +212,7 @@ export async function sendMessage(
   const messages = buildMessages(
     history,
     joinSystemPrompts(persona?.systemPrompt, input.grounding?.prompt),
-    imageUrlFor(db),
+    input.withImages ? imageUrlFor(db) : undefined,
   );
 
   let tokenCount = 0;

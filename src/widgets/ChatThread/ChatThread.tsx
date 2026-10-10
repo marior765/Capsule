@@ -18,6 +18,8 @@ type ChatThreadProps = {
   /** Capsules that grounded each answer (7.4), keyed by message id. */
   sources?: Record<string, SourceChip[]>;
   onOpenSource?: (capsuleId: string) => void;
+  /** Current `file://` URI of each message's attached image (8.4), keyed by message id. */
+  images?: Record<string, string>;
 };
 
 export function ChatThread({
@@ -28,6 +30,7 @@ export function ChatThread({
   onSwitchBranch,
   sources,
   onOpenSource,
+  images,
 }: ChatThreadProps) {
   const streamingMessage: Message | null = streamingText
     ? {
@@ -49,7 +52,11 @@ export function ChatThread({
 
     return (
       <View>
-        <ChatBubble message={item} onEdit={onEdit} />
+        <ChatBubble
+          message={item}
+          onEdit={onEdit}
+          imageUri={images?.[item.id]}
+        />
         {sources?.[item.id] && onOpenSource && (
           <MessageSources chips={sources[item.id]} onOpen={onOpenSource} />
         )}

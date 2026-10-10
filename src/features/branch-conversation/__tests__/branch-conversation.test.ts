@@ -348,6 +348,10 @@ describe("branchFromMessage — images (8.4)", () => {
       ctx,
       "u2",
       "Edited question",
+      undefined,
+      undefined,
+      undefined,
+      { withImages: true },
     );
     expect(getImageByMessage(db, userMessage.id)?.path).toBe(
       "chat-images/conv-1/u2-photo.jpg",
@@ -360,5 +364,21 @@ describe("branchFromMessage — images (8.4)", () => {
       content: "Edited question",
       imageUrl: "file:///document/chat-images/conv-1/u2-photo.jpg",
     });
+  });
+});
+
+describe("branchFromMessage — images only for a vision-capable model", () => {
+  it("keeps the image row but doesn't send it without withImages", async () => {
+    insertMessageImage(db, {
+      messageId: "u2",
+      conversationId: "conv-1",
+      path: "chat-images/conv-1/u2.jpg",
+    });
+    const { userMessage } = await branchFromMessage(db, ctx, "u2", "Edited");
+    expect(getImageByMessage(db, userMessage.id)).not.toBeNull();
+    const sent = (
+      mockRunCompletion.mock.calls[0][1] as { messages: ChatMessage[] }
+    ).messages;
+    expect(sent.some((m) => m.imageUrl)).toBe(false);
   });
 });

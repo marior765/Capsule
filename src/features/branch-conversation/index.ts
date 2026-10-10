@@ -54,6 +54,8 @@ export async function branchFromMessage(
     prompt: string;
     sources: { capsuleId: string; title: string }[];
   },
+  /** Send the conversation's images only to a vision-capable context (same rule as `sendMessage`'s `withImages`). */
+  options: { withImages?: boolean } = {},
 ): Promise<{ userMessage: Message; assistantMessage: Message }> {
   const original = findMessage(db, messageId);
   if (!original) {
@@ -95,7 +97,7 @@ export async function branchFromMessage(
       ? [{ role: "system" as const, content: systemPrompt }]
       : []),
     ...history.map((m) => {
-      const image = getImageByMessage(db, m.id);
+      const image = options.withImages ? getImageByMessage(db, m.id) : null;
       return image
         ? {
             role: m.role,

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
+import { Image } from "expo-image";
 import Markdown, {
   type ASTNode,
   type RenderRules,
@@ -15,6 +16,8 @@ type ChatBubbleProps = {
   message: Message;
   /** Only offered on user messages — editing forks a new branch. */
   onEdit?: (message: Message) => void;
+  /** Current `file://` URI of an image attached to this message (8.4), if any. */
+  imageUri?: string;
 };
 
 // One instance is enough — it holds no per-message state, so it doesn't need
@@ -116,7 +119,7 @@ function markdownRules(messageId: string): RenderRules {
   };
 }
 
-export function ChatBubble({ message, onEdit }: ChatBubbleProps) {
+export function ChatBubble({ message, onEdit, imageUri }: ChatBubbleProps) {
   const { theme } = useUnistyles();
   const isUser = message.role === "user";
   const canEdit = isUser && onEdit != null;
@@ -126,6 +129,16 @@ export function ChatBubble({ message, onEdit }: ChatBubbleProps) {
       testID={`${testIDs.containers.root}_${message.id}`}
       style={[styles.bubble, isUser ? styles.user : styles.assistant]}
     >
+      {imageUri && (
+        <Image
+          testID={`${testIDs.images.attached}_${message.id}`}
+          source={{ uri: imageUri }}
+          style={styles.image}
+          contentFit="cover"
+          accessible
+          accessibilityLabel="Attached image"
+        />
+      )}
       <View testID={testIDs.texts.content}>
         <Markdown
           rules={markdownRules(message.id)}
@@ -167,6 +180,13 @@ const styles = StyleSheet.create((theme) => ({
     alignSelf: "flex-start",
     backgroundColor: theme.colors.backgroundElement,
   },
+  image: {
+    width: 200,
+    height: 200,
+    borderRadius: theme.spacing.two,
+    marginBottom: theme.spacing.two,
+    backgroundColor: theme.colors.backgroundElement,
+  },
   edit: {
     marginTop: theme.spacing.one,
     color: theme.colors.textSecondary,
@@ -204,6 +224,7 @@ const testIDs = createComponentTestIDs("ChatBubble", {
   containers: ["root"] as const,
   texts: ["content"] as const,
   buttons: ["edit", "copyCode"] as const,
+  images: ["attached"] as const,
 });
 
 ChatBubble.testIDs = testIDs;

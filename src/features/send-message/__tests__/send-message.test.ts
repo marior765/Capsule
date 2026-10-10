@@ -317,6 +317,7 @@ describe("sendMessage — images (8.4)", () => {
       conversationId: "conv-1",
       text: "What is this?",
       image,
+      withImages: true,
     });
 
     expect(__copiedFiles).toHaveLength(1);
@@ -341,7 +342,11 @@ describe("sendMessage — images (8.4)", () => {
       image,
     });
     mockRunCompletion.mockClear();
-    await sendMessage(db, ctx, { conversationId: "conv-1", text: "And now?" });
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "And now?",
+      withImages: true,
+    });
     const withImages = sentMessages().filter((m) => m.imageUrl);
     expect(withImages).toHaveLength(1);
     expect(withImages[0].content).toBe("Look");
@@ -398,5 +403,24 @@ describe("sendMessage — image storage failures leave nothing behind", () => {
     expect(getMessagesByConversation(db, "conv-1")).toEqual([]);
     expect(__deletedUris).toContain(__copiedFiles[0].to);
     expect(mockRunCompletion).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendMessage — images only go to a vision-capable model", () => {
+  beforeEach(() => __resetFsMock());
+
+  it("never sends stored images when withImages isn't set (e.g. the user switched to a text-only model)", async () => {
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Look",
+      image: { sourceUri: "file:///cache/ImagePicker/a.jpg", name: "a.jpg" },
+      withImages: true,
+    });
+    mockRunCompletion.mockClear();
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Later, text model",
+    });
+    expect(sentMessages().some((m) => m.imageUrl)).toBe(false);
   });
 });

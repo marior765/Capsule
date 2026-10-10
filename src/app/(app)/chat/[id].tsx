@@ -10,11 +10,14 @@ import { getBoolean, setBoolean } from "@/shared/storage";
 import { getConversationById } from "@/entities/conversation";
 import {
   getChildren,
+  getImageByMessage,
   getMessagePath,
   getSourcesByMessage,
   type Message,
 } from "@/entities/message";
 import { getCapsuleById } from "@/entities/capsule";
+import { deleteCacheFileIfExists, resolveAppPath } from "@/shared/fs";
+import { pickImage, type PickedSource } from "@/shared/picker";
 import {
   branchFromMessage,
   switchBranch,
@@ -48,7 +51,7 @@ const STATUS_MESSAGE: Record<string, string> = {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useDb();
-  const { ctx, status } = useLlm();
+  const { ctx, status, vision } = useLlm();
   const { ensureReady } = useStt();
 
   /**
@@ -67,6 +70,39 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>(readPath);
   const [streaming, setStreaming] = useState("");
   const [editing, setEditing] = useState<Message | null>(null);
+  // Image picked for the next message (8.4) — a picker's temporary cache
+  // copy until it's sent (then copied into app storage) or removed.
+  const [pendingImage, setPendingImage] = useState<PickedSource | null>(null);
+  // True for the whole send (capsule search + generation): the image
+  // controls are locked so the image being sent can't be removed/replaced.
+  const [sending, setSending] = useState(false);
+
+  const discardPendingImage = (image: PickedSource | null) => {
+    if (!image) return;
+    try {
+      deleteCacheFileIfExists(image.uri);
+    } catch {
+      // best effort — the OS clears its cache; the wipe clears picker folders
+    }
+  };
+
+  const handleAttachImage = async () => {
+    try {
+      const picked = await pickImage();
+      if (picked === null) return;
+      discardPendingImage(pendingImage);
+      setPendingImage(picked);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Couldn't open the photo library.",
+      );
+    }
+  };
+
+  const handleRemovePendingImage = () => {
+    discardPendingImage(pendingImage);
+    setPendingImage(null);
+  };
   const [error, setError] = useState<string | null>(null);
 
   // "My capsules" (7.3): ground replies in the user's own capsules. Remembered
@@ -207,6 +243,17 @@ export default function ChatScreen() {
     }
   }
 
+  // Attached images for the visible messages (8.4), resolved against the
+  // current document directory.
+  const images = useMemo(() => {
+    const byMessage: Record<string, string> = {};
+    for (const message of messages) {
+      const image = getImageByMessage(db, message.id);
+      if (image) byMessage[message.id] = resolveAppPath(image.path);
+    }
+    return byMessage;
+  }, [db, messages]);
+
   // Which capsules grounded each visible answer (7.4). Recomputed when the
   // message list changes — including on every return to this screen (see
   // the focus effect), so a capsule renamed or deleted meanwhile shows its
@@ -236,6 +283,12 @@ export default function ChatScreen() {
     const target = editing;
     setEditing(null);
     setError(null);
+    // Claim the pending image BEFORE any await (capsule search can take
+    // seconds), so nothing the user does meanwhile can delete or swap the
+    // file being sent. An edit doesn't take a new image — it stays pending.
+    const image = target ? null : pendingImage;
+    if (image) setPendingImage(null);
+    setSending(true);
 
     const acc = { text: "" };
     try {
@@ -270,12 +323,27 @@ export default function ChatScreen() {
           (t) => stream(t, acc),
           getInferenceSettings(),
           grounding,
+          { withImages: vision },
         );
       } else {
+        // Handed over to sendMessage, which copies it into app storage and
+        // removes the picker's temp copy whether or not the send succeeds.
         await sendMessage(
           db,
           ctx,
-          { conversationId: id, text, grounding },
+          {
+            conversationId: id,
+            text,
+            grounding,
+            withImages: vision,
+            image: image
+              ? {
+                  sourceUri: image.uri,
+                  name: image.name,
+                  sourceIsTemporaryCopy: true,
+                }
+              : undefined,
+          },
           (t) => stream(t, acc),
           getInferenceSettings(),
         );
@@ -286,6 +354,7 @@ export default function ChatScreen() {
       setError(e instanceof Error ? e.message : "Generation failed.");
     } finally {
       setStreaming("");
+      setSending(false);
       refresh();
     }
   };
@@ -365,6 +434,7 @@ export default function ChatScreen() {
         branches={branches}
         onSwitchBranch={handleSwitchBranch}
         sources={sources}
+        images={images}
         onOpenSource={(capsuleId) => router.push(`/capsules/${capsuleId}`)}
       />
       {editing && (
@@ -408,6 +478,27 @@ export default function ChatScreen() {
         >
           {searchingCapsules ? "Searching your capsules…" : groundingNotice}
         </Text>
+      )}
+      {canChat && pendingImage && !editing && (
+        <View
+          testID={testIDs.containers.pendingImage}
+          style={styles.pendingImage}
+        >
+          <Text style={styles.pendingImageLabel} numberOfLines={1}>
+            Image: {pendingImage.name}
+          </Text>
+          <Pressable
+            testID={testIDs.buttons.removeImage}
+            onPress={handleRemovePendingImage}
+            disabled={sending}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove image ${pendingImage.name}`}
+            accessibilityState={{ disabled: sending }}
+          >
+            <Text style={styles.snippetsLabel}>✕</Text>
+          </Pressable>
+        </View>
       )}
       {canChat ? (
         <>
@@ -459,6 +550,19 @@ export default function ChatScreen() {
                 {useCapsules ? "Capsules: on" : "Capsules: off"}
               </Text>
             </Pressable>
+            {vision && !editing && (
+              <Pressable
+                testID={testIDs.buttons.image}
+                style={styles.snippetsButton}
+                onPress={handleAttachImage}
+                disabled={sending}
+                accessibilityRole="button"
+                accessibilityLabel="Attach image"
+                accessibilityState={{ disabled: sending }}
+              >
+                <Text style={styles.snippetsLabel}>Image</Text>
+              </Pressable>
+            )}
             <View style={styles.inputFlex}>
               <ChatInput
                 key={`${editing?.id ?? "new"}-${draftInsertKey}`}
@@ -546,6 +650,20 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 12,
   },
+  pendingImage: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.two,
+    paddingHorizontal: theme.spacing.three,
+    paddingTop: theme.spacing.two,
+  },
+  pendingImageLabel: {
+    flex: 1,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
   capsulesOff: {
     color: theme.colors.textSecondary,
   },
@@ -559,6 +677,7 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("ChatScreen", {
-  buttons: ["snippets", "export", "capsules"] as const,
+  buttons: ["snippets", "export", "capsules", "image", "removeImage"] as const,
   texts: ["capsuleNotice"] as const,
+  containers: ["pendingImage"] as const,
 });
