@@ -1,6 +1,7 @@
 export type { Model } from "./model";
 export {
   modelsMigration,
+  modelsMmprojMigration,
   getAllModels,
   getModelById,
   getActiveModel,

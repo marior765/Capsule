@@ -7,6 +7,7 @@ import {
 } from "react";
 import { getActiveModel, getAllModels, type Model } from "@/entities/model";
 import { getInferenceSettings } from "@/features/configure-inference";
+import { resolveModelPath } from "@/features/manage-models";
 import { openDb } from "@/shared/db";
 import { initLlm, releaseLlm, type LlamaContext } from "@/shared/llm";
 
@@ -58,7 +59,7 @@ export function LlmProvider({ children }: PropsWithChildren) {
         // Context length is fixed at load time, so it is read here rather than
         // per completion — `reload` is what applies a change to it.
         loaded = await initLlm(
-          model.path,
+          resolveModelPath(model.path),
           getInferenceSettings().contextLength,
         );
         if (cancelled) {

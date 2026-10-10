@@ -6,6 +6,7 @@ import {
   getModelById,
   insertModel,
   modelsMigration,
+  modelsMmprojMigration,
   setActiveModel,
   updateModel,
   type Model,
@@ -21,6 +22,7 @@ const makeModel = (overrides: Partial<Model> = {}): Model => ({
   quantization: "Q4_K_M",
   isActive: false,
   downloadedAt: Date.now(),
+  mmprojPath: null,
   ...overrides,
 });
 
@@ -29,7 +31,7 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [modelsMigration]);
+  runMigrations(db, [modelsMigration, modelsMmprojMigration]);
 });
 
 describe("entities/model — happy path", () => {
@@ -113,5 +115,18 @@ describe("entities/model — error handling", () => {
     expect(() =>
       insertModel(db, makeModel({ id: "other", path: "/same.gguf" })),
     ).toThrow();
+  });
+});
+
+describe("entities/model — vision projector (8.4)", () => {
+  it("round-trips a model's projector path, and null for a plain model", () => {
+    const vision = makeModel({ mmprojPath: "models/mmproj-v.gguf" });
+    const plain = makeModel({ path: "models/plain.gguf" });
+    insertModel(db, vision);
+    insertModel(db, plain);
+    expect(getModelById(db, vision.id)?.mmprojPath).toBe(
+      "models/mmproj-v.gguf",
+    );
+    expect(getModelById(db, plain.id)?.mmprojPath).toBeNull();
   });
 });

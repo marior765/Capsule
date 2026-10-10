@@ -4,10 +4,11 @@ import { Directory, File, Paths } from "expo-file-system";
  * `shared/fs` — owns `expo-file-system` interaction for app-managed files,
  * per docs/ARCHITECTURE.md's own extraction rule ("when a second slice
  * needs the filesystem ... same principle as `shared/llm` owning
- * llama.rn"). Introduced for 6.8's attachments. `features/manage-models`
- * and `features/manage-stt-model` still call `expo-file-system` directly;
- * moving them onto this wrapper is a separate follow-up (see
- * `.claude/loop/BLOCKED.md`, "`shared/fs` extraction").
+ * llama.rn"). Introduced for 6.8's attachments; also used by model,
+ * embedding-model, and attachment storage and the full wipe. Only
+ * `features/manage-stt-model` still calls `expo-file-system` directly;
+ * moving it here is a tracked follow-up (see `.claude/loop/BLOCKED.md`,
+ * "`shared/fs` extraction").
  *
  * Files are addressed by a path RELATIVE to the app's document directory
  * (e.g. `attachments/<capsuleId>/<name>`), never by an absolute `file://`
@@ -29,6 +30,15 @@ function assertSafeSegment(segment: string, what: string): void {
     /[/\\:]/.test(segment)
   ) {
     throw new Error(`Invalid ${what}: "${segment}"`);
+  }
+}
+
+/** decodeURIComponent that leaves a malformed sequence as-is instead of throwing. */
+export function safeDecode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
   }
 }
 
@@ -102,7 +112,10 @@ export async function downloadFileInto(
   const file = await File.downloadFileAsync(url, directory, {
     idempotent: true,
   });
-  const name = file.uri.split("/").pop() ?? "";
+  // The URI's last segment is percent-encoded (expo-file-system encodes
+  // each segment on join); store the decoded name, since resolveAppPath
+  // encodes again when it rebuilds the path.
+  const name = safeDecode(file.uri.split("/").pop() ?? "");
   assertSafeSegment(name, "downloaded file name");
   return {
     relativePath: [...directorySegments, name].join("/"),

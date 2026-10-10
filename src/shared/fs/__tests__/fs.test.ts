@@ -173,3 +173,19 @@ describe("downloadFileInto / appFileExists", () => {
     expect(appFileExists("embedding-models/a.gguf")).toBe(false);
   });
 });
+
+describe("downloadFileInto — encoded names", () => {
+  it("returns the decoded file name in the relative path", async () => {
+    (MockFile.downloadFileAsync as jest.Mock).mockImplementationOnce(
+      async (_url: string, dir: { uri: string }) => {
+        const f = new MockFile(`${dir.uri}/a%20b.gguf`);
+        f.size = 1;
+        return f;
+      },
+    );
+    const { relativePath } = await downloadFileInto("https://x/a%20b.gguf", [
+      "models",
+    ]);
+    expect(relativePath).toBe("models/a b.gguf");
+  });
+});

@@ -21,7 +21,14 @@ export const QUANTIZATIONS = [
 export type Quantization = (typeof QUANTIZATIONS)[number];
 
 /** Model parameter-count tiers, ordered small → large. */
-export const PARAMETER_SIZES = ["1B", "3B", "7B", "13B", "70B"] as const;
+export const PARAMETER_SIZES = [
+  "0.5B",
+  "1B",
+  "3B",
+  "7B",
+  "13B",
+  "70B",
+] as const;
 export type ParameterSize = (typeof PARAMETER_SIZES)[number];
 
 /**
@@ -42,11 +49,25 @@ export const RECOMMENDED_MODELS = [
     parameters: "3B",
     quantization: "Q4_K_M",
   },
+  {
+    // Vision (8.4): a small image-understanding model plus its multimodal
+    // projector, downloaded together. Chosen for size (~0.5 GB total) so it
+    // fits alongside everything else on a phone. URLs picked from public
+    // knowledge of the ggml-org GGUF repos, not fetched here — verified on
+    // device (see .claude/loop/BLOCKED.md, 8.4).
+    name: "SmolVLM 500M Instruct — vision (Q8_0)",
+    url: "https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf",
+    mmprojUrl:
+      "https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf",
+    parameters: "0.5B",
+    quantization: "Q8_0",
+  },
 ] as const satisfies readonly {
   name: string;
   url: string;
   parameters: ParameterSize;
   quantization: Quantization;
+  mmprojUrl?: string;
 }[];
 
 /**

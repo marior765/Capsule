@@ -1,5 +1,5 @@
 import type { Migration } from "@/shared/db";
-import { modelsMigration } from "@/entities/model";
+import { modelsMigration, modelsMmprojMigration } from "@/entities/model";
 import {
   conversationsLeafMigration,
   conversationsMigration,
@@ -65,4 +65,5 @@ export const migrations: Migration[] = [
   capsuleVersionsMigration,
   remindersMigration,
   messageSourcesMigration,
+  modelsMmprojMigration,
 ];

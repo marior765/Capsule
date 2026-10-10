@@ -7,6 +7,7 @@ const model = (id: string, sizeGB: number): Model => ({
   id,
   name: `model-${id}`,
   path: `/models/${id}.gguf`,
+  mmprojPath: null,
   size: sizeGB * GB,
   parameters: "3B",
   quantization: "Q4_K_M",

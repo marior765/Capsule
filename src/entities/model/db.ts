@@ -20,6 +20,17 @@ export const modelsMigration: Migration = {
   },
 };
 
+/**
+ * Adds `mmproj_path` (8.4): the multimodal projector file of a vision
+ * model, null for every existing (plain chat) model.
+ */
+export const modelsMmprojMigration: Migration = {
+  version: 24,
+  up: (db: SQLiteDatabase) => {
+    db.execSync("ALTER TABLE models ADD COLUMN mmproj_path TEXT;");
+  },
+};
+
 export function getAllModels(db: SQLiteDatabase): Model[] {
   const rows = db.getAllSync(
     "SELECT * FROM models ORDER BY downloaded_at DESC;",
@@ -44,8 +55,8 @@ export function getActiveModel(db: SQLiteDatabase): Model | null {
 
 export function insertModel(db: SQLiteDatabase, model: Model): void {
   db.runSync(
-    `INSERT INTO models (id, name, path, size, parameters, quantization, is_active, downloaded_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+    `INSERT INTO models (id, name, path, size, parameters, quantization, is_active, downloaded_at, mmproj_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     model.id,
     model.name,
     model.path,
@@ -54,6 +65,7 @@ export function insertModel(db: SQLiteDatabase, model: Model): void {
     model.quantization,
     model.isActive ? 1 : 0,
     model.downloadedAt,
+    model.mmprojPath,
   );
 }
 
@@ -92,6 +104,10 @@ export function updateModel(
   if (patch.downloadedAt !== undefined) {
     fields.push("downloaded_at = ?");
     values.push(patch.downloadedAt);
+  }
+  if (patch.mmprojPath !== undefined) {
+    fields.push("mmproj_path = ?");
+    values.push(patch.mmprojPath);
   }
 
   if (fields.length === 0) return;
