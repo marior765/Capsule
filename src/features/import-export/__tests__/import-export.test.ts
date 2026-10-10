@@ -15,6 +15,9 @@ import {
   messagesMigration,
   messagesParentMigration,
   type Message,
+  getSourcesByMessage,
+  insertMessageSources,
+  messageSourcesMigration,
 } from "@/entities/message";
 import { PortableFormatError } from "@/shared/format";
 import { auditMigration, getAllAuditEntries } from "@/entities/audit";
@@ -62,6 +65,7 @@ beforeEach(() => {
     messagesMigration,
     messagesParentMigration,
     auditMigration,
+    messageSourcesMigration,
   ]);
 });
 
@@ -281,5 +285,44 @@ describe("exportAllConversations / importAllConversations — the 'whole vault' 
     const secondMessages = getMessagesByConversation(db, importedSecond.id);
     expect(firstMessages.map((m) => m.content)).toEqual(["only in first"]);
     expect(secondMessages.map((m) => m.content)).toEqual(["only in second"]);
+  });
+});
+
+describe("conversation export/import — grounding sources (7.4)", () => {
+  it("round-trips each reply's sources, re-pointed at the imported message ids", () => {
+    insertConversation(db, makeConversation("c1", "Chat"));
+    insertMessage(db, makeMessage("u1", "c1", null, "When is my dentist?"));
+    insertMessage(db, {
+      ...makeMessage("a1", "c1", "u1", "Tuesday."),
+      role: "assistant",
+    });
+    insertMessageSources(db, "a1", "c1", [
+      { capsuleId: "cap-1", title: "Dentist" },
+    ]);
+
+    const imported = importConversation(db, exportConversation(db, "c1"));
+
+    const reply = getMessagesByConversation(db, imported.id).find(
+      (m) => m.content === "Tuesday.",
+    )!;
+    expect(reply.id).not.toBe("a1");
+    expect(getSourcesByMessage(db, reply.id)).toEqual([
+      {
+        messageId: reply.id,
+        conversationId: imported.id,
+        capsuleId: "cap-1",
+        title: "Dentist",
+        rank: 0,
+      },
+    ]);
+  });
+
+  it("still imports an older export that has no sources at all", () => {
+    insertConversation(db, makeConversation("c1", "Chat"));
+    insertMessage(db, makeMessage("u1", "c1", null, "hi"));
+    const json = exportConversation(db, "c1");
+    const legacy = JSON.parse(json) as { data: { sources?: unknown } };
+    delete legacy.data.sources;
+    expect(() => importConversation(db, JSON.stringify(legacy))).not.toThrow();
   });
 });

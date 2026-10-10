@@ -9,7 +9,10 @@ import {
 } from "@/entities/conversation";
 import {
   getMessagesByConversation,
+  getSourcesByConversation,
   insertMessage,
+  insertMessageSources,
+  messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
   type Message,
@@ -43,6 +46,7 @@ beforeEach(() => {
     conversationsPersonaMigration,
     messagesParentMigration,
     conversationsLeafMigration,
+    messageSourcesMigration,
   ]);
 });
 
@@ -157,5 +161,19 @@ describe("listConversations", () => {
     nowSpy.mockRestore();
 
     expect(listConversations(db).map((c) => c.id)).toEqual([a.id, b.id]);
+  });
+});
+
+describe("deleteConversation — grounding sources (7.4)", () => {
+  it("also deletes the conversation's grounding sources, leaving other conversations' alone", () => {
+    const a = createConversation(db, { modelId: null });
+    const b = createConversation(db, { modelId: null });
+    insertMessageSources(db, "m1", a.id, [{ capsuleId: "c", title: "C" }]);
+    insertMessageSources(db, "m2", b.id, [{ capsuleId: "d", title: "D" }]);
+
+    deleteConversation(db, a.id);
+
+    expect(getSourcesByConversation(db, a.id)).toEqual([]);
+    expect(getSourcesByConversation(db, b.id)).toHaveLength(1);
   });
 });

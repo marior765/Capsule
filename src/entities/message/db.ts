@@ -1,6 +1,13 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import type { Migration } from "@/shared/db";
-import { rowToMessage, type Message, type MessageRow } from "./model";
+import {
+  rowToMessage,
+  rowToMessageSource,
+  type Message,
+  type MessageRow,
+  type MessageSource,
+  type MessageSourceRow,
+} from "./model";
 
 export const messagesMigration: Migration = {
   version: 3,
@@ -117,4 +124,84 @@ export function deleteMessagesByConversation(
   conversationId: string,
 ): void {
   db.runSync("DELETE FROM messages WHERE conversation_id = ?;", conversationId);
+}
+
+// --- Grounding sources (7.4) ---
+
+/**
+ * `message_sources`: which capsules grounded each assistant reply. No FK
+ * (codebase convention); `conversation_id` is stored so a conversation's
+ * sources can be deleted or exported together without a join.
+ */
+export const messageSourcesMigration: Migration = {
+  version: 23,
+  up: (db: SQLiteDatabase) => {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS message_sources (
+        message_id TEXT NOT NULL,
+        conversation_id TEXT NOT NULL,
+        capsule_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        rank INTEGER NOT NULL,
+        PRIMARY KEY (message_id, rank)
+      );
+    `);
+    db.execSync(
+      `CREATE INDEX IF NOT EXISTS idx_message_sources_conversation
+       ON message_sources (conversation_id);`,
+    );
+  },
+};
+
+/** Stores a reply's sources in the given order (rank 0 = best match). */
+export function insertMessageSources(
+  db: SQLiteDatabase,
+  messageId: string,
+  conversationId: string,
+  sources: { capsuleId: string; title: string }[],
+): void {
+  sources.forEach((source, rank) => {
+    db.runSync(
+      `INSERT INTO message_sources (message_id, conversation_id, capsule_id, title, rank)
+       VALUES (?, ?, ?, ?, ?);`,
+      messageId,
+      conversationId,
+      source.capsuleId,
+      source.title,
+      rank,
+    );
+  });
+}
+
+export function getSourcesByMessage(
+  db: SQLiteDatabase,
+  messageId: string,
+): MessageSource[] {
+  const rows = db.getAllSync(
+    "SELECT * FROM message_sources WHERE message_id = ? ORDER BY rank ASC;",
+    messageId,
+  ) as MessageSourceRow[];
+  return rows.map(rowToMessageSource);
+}
+
+export function getSourcesByConversation(
+  db: SQLiteDatabase,
+  conversationId: string,
+): MessageSource[] {
+  const rows = db.getAllSync(
+    `SELECT * FROM message_sources WHERE conversation_id = ?
+     ORDER BY message_id ASC, rank ASC;`,
+    conversationId,
+  ) as MessageSourceRow[];
+  return rows.map(rowToMessageSource);
+}
+
+export function deleteSourcesByConversation(
+  db: SQLiteDatabase,
+  conversationId: string,
+): void {
+  db.runSync(
+    "DELETE FROM message_sources WHERE conversation_id = ?;",
+    conversationId,
+  );
 }

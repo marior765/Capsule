@@ -18,6 +18,9 @@ import {
   messagesMigration,
   messagesParentMigration,
   type Message,
+  getSourcesByConversation,
+  insertMessageSources,
+  messageSourcesMigration,
 } from "@/entities/message";
 import { auditMigration, getAllAuditEntries } from "@/entities/audit";
 import { PortableFormatError } from "@/shared/format";
@@ -58,6 +61,7 @@ const runAllMigrations = (database: SQLiteDatabase) =>
     messagesMigration,
     messagesParentMigration,
     auditMigration,
+    messageSourcesMigration,
   ]);
 
 beforeEach(() => {
@@ -210,5 +214,52 @@ describe("createBackup — empty vault", () => {
     const backup = createBackup(db);
     expect(() => restoreBackup(db, backup)).not.toThrow();
     expect(getAllConversations(db)).toEqual([]);
+  });
+});
+
+describe("backup — grounding sources (7.4)", () => {
+  it("preserves sources exactly through a backup and restore", () => {
+    insertConversation(db, makeConversation("c1"));
+    insertMessage(db, makeMessage("m1", "c1", null, "hi"));
+    insertMessageSources(db, "m1", "c1", [
+      { capsuleId: "cap-1", title: "Dentist" },
+    ]);
+    const backup = createBackup(db);
+
+    _resetDbForTesting();
+    db = openDb();
+    runAllMigrations(db);
+    restoreBackup(db, backup);
+
+    expect(getSourcesByConversation(db, "c1")).toEqual([
+      {
+        messageId: "m1",
+        conversationId: "c1",
+        capsuleId: "cap-1",
+        title: "Dentist",
+        rank: 0,
+      },
+    ]);
+  });
+
+  it("restoring replaces existing sources instead of piling up duplicates", () => {
+    insertConversation(db, makeConversation("c1"));
+    insertMessage(db, makeMessage("m1", "c1", null, "hi"));
+    insertMessageSources(db, "m1", "c1", [{ capsuleId: "cap-1", title: "D" }]);
+    const backup = createBackup(db);
+
+    restoreBackup(db, backup);
+    restoreBackup(db, backup);
+
+    expect(getSourcesByConversation(db, "c1")).toHaveLength(1);
+  });
+
+  it("restores an older backup that has no sources", () => {
+    insertConversation(db, makeConversation("c1"));
+    const legacy = JSON.parse(createBackup(db)) as {
+      data: { sources?: unknown };
+    };
+    delete legacy.data.sources;
+    expect(() => restoreBackup(db, JSON.stringify(legacy))).not.toThrow();
   });
 });

@@ -12,7 +12,9 @@ import {
   getChildren,
   getMessagePath,
   getMessagesByConversation,
+  getSourcesByMessage,
   insertMessage,
+  messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
   type Message,
@@ -54,6 +56,7 @@ beforeEach(() => {
     conversationsPersonaMigration,
     messagesParentMigration,
     conversationsLeafMigration,
+    messageSourcesMigration,
   ]);
 
   insertConversation(db, {
@@ -273,7 +276,7 @@ describe("branchFromMessage — capsule grounding (7.3)", () => {
       "Edited question",
       undefined,
       undefined,
-      "CAPSULES: [1] Dentist",
+      { prompt: "CAPSULES: [1] Dentist", sources: [] },
     );
     expect(sent()[0]).toEqual({
       role: "system",
@@ -282,19 +285,34 @@ describe("branchFromMessage — capsule grounding (7.3)", () => {
   });
 
   it("never stores the grounding text", async () => {
-    await branchFromMessage(
+    await branchFromMessage(db, ctx, "u2", "Edited", undefined, undefined, {
+      prompt: "CAPSULES: private",
+      sources: [],
+    });
+    expect(
+      getMessagesByConversation(db, "conv-1").some((m) =>
+        m.content.includes("CAPSULES"),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("branchFromMessage — grounding sources (7.4)", () => {
+  it("stores the sources against the new assistant reply", async () => {
+    const { assistantMessage } = await branchFromMessage(
       db,
       ctx,
       "u2",
       "Edited",
       undefined,
       undefined,
-      "CAPSULES: private",
+      {
+        prompt: "CAPSULES",
+        sources: [{ capsuleId: "cap-1", title: "Dentist" }],
+      },
     );
     expect(
-      getMessagesByConversation(db, "conv-1").some((m) =>
-        m.content.includes("CAPSULES"),
-      ),
-    ).toBe(false);
+      getSourcesByMessage(db, assistantMessage.id).map((s) => s.capsuleId),
+    ).toEqual(["cap-1"]);
   });
 });

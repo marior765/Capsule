@@ -7,8 +7,11 @@ import {
 } from "@/entities/conversation";
 import {
   getMessagesByConversation,
+  getSourcesByConversation,
   insertMessage,
+  insertMessageSources,
   type Message,
+  type MessageSource,
 } from "@/entities/message";
 import { serializePortable, parsePortable } from "@/shared/format";
 import { generateId } from "@/shared/lib";
@@ -58,6 +61,13 @@ const VAULT_KIND = "vault";
 type PortableConversation = {
   conversation: Conversation;
   messages: Message[];
+  /**
+   * Which capsules grounded each reply (7.4). Optional so exports made
+   * before 7.4 still import. Capsule ids aren't remapped — on another
+   * device they usually won't exist, and the stored title still says what
+   * was used.
+   */
+  sources?: MessageSource[];
 };
 
 type PortableVault = {
@@ -72,7 +82,7 @@ type PortableVault = {
  */
 function restoreConversation(
   db: SQLiteDatabase,
-  { conversation, messages }: PortableConversation,
+  { conversation, messages, sources = [] }: PortableConversation,
 ): Conversation {
   const idMap = new Map<string, string>();
   for (const message of messages) {
@@ -102,6 +112,24 @@ function restoreConversation(
     });
   }
 
+  // Group by the reply they belong to, keep rank order, re-point at new ids.
+  const byMessage = new Map<string, MessageSource[]>();
+  for (const source of sources) {
+    const newMessageId = idMap.get(source.messageId);
+    if (newMessageId === undefined) continue; // reply not in this export
+    const list = byMessage.get(newMessageId) ?? [];
+    list.push(source);
+    byMessage.set(newMessageId, list);
+  }
+  for (const [newMessageId, list] of byMessage) {
+    insertMessageSources(
+      db,
+      newMessageId,
+      newConversationId,
+      list.sort((a, b) => a.rank - b.rank),
+    );
+  }
+
   return restored;
 }
 
@@ -118,6 +146,7 @@ export function exportConversation(
   const json = serializePortable<PortableConversation>(CONVERSATION_KIND, {
     conversation,
     messages,
+    sources: getSourcesByConversation(db, conversationId),
   });
   insertAuditEntry(db, {
     id: generateId(),
@@ -143,6 +172,7 @@ export function exportAllConversations(db: SQLiteDatabase): string {
   const conversations = allConversations.map((conversation) => ({
     conversation,
     messages: getMessagesByConversation(db, conversation.id),
+    sources: getSourcesByConversation(db, conversation.id),
   }));
   const json = serializePortable<PortableVault>(VAULT_KIND, { conversations });
   insertAuditEntry(db, {

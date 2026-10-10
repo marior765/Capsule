@@ -5,7 +5,11 @@ import {
   conversationsMigration,
   conversationsPersonaMigration,
 } from "@/entities/conversation";
-import { messagesMigration, messagesParentMigration } from "@/entities/message";
+import {
+  messageSourcesMigration,
+  messagesMigration,
+  messagesParentMigration,
+} from "@/entities/message";
 import { personasMigration } from "@/entities/persona";
 import { auditMigration } from "@/entities/audit";
 import { capsuleTypesMigration } from "@/entities/capsule-type";
@@ -60,4 +64,5 @@ export const migrations: Migration[] = [
   capsuleParentIdMigration,
   capsuleVersionsMigration,
   remindersMigration,
+  messageSourcesMigration,
 ];

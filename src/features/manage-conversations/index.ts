@@ -6,7 +6,10 @@ import {
   updateConversation,
   type Conversation,
 } from "@/entities/conversation";
-import { deleteMessagesByConversation } from "@/entities/message";
+import {
+  deleteMessagesByConversation,
+  deleteSourcesByConversation,
+} from "@/entities/message";
 import { generateId } from "@/shared/lib";
 
 export type CreateConversationInput = {
@@ -46,6 +49,7 @@ export function renameConversation(
  * here in the feature layer — the entities themselves stay independent.
  */
 export function deleteConversation(db: SQLiteDatabase, id: string): void {
+  deleteSourcesByConversation(db, id);
   deleteMessagesByConversation(db, id);
   deleteConversationRecord(db, id);
 }

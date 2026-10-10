@@ -15,7 +15,7 @@ import {
 } from "@/features/branch-conversation";
 import { getInferenceSettings } from "@/features/configure-inference";
 import { exportConversationAsMarkdown } from "@/features/export-chat";
-import { sendMessage } from "@/features/send-message";
+import { sendMessage, type Grounding } from "@/features/send-message";
 import {
   createVoiceInputController,
   type VoiceInputController,
@@ -203,7 +203,7 @@ export default function ChatScreen() {
 
     const acc = { text: "" };
     try {
-      let groundingPrompt: string | undefined;
+      let grounding: Grounding | undefined;
       if (useCapsules) {
         setSearchingCapsules(true);
         try {
@@ -213,7 +213,10 @@ export default function ChatScreen() {
             query: text,
             timeoutMs: CAPSULE_SEARCH_TIMEOUT_MS,
           });
-          groundingPrompt = prepared.groundingPrompt;
+          grounding =
+            prepared.groundingPrompt !== undefined
+              ? { prompt: prepared.groundingPrompt, sources: prepared.sources }
+              : undefined;
           setGroundingNotice(prepared.notice);
         } finally {
           setSearchingCapsules(false);
@@ -230,13 +233,13 @@ export default function ChatScreen() {
           text,
           (t) => stream(t, acc),
           getInferenceSettings(),
-          groundingPrompt,
+          grounding,
         );
       } else {
         await sendMessage(
           db,
           ctx,
-          { conversationId: id, text, groundingPrompt },
+          { conversationId: id, text, grounding },
           (t) => stream(t, acc),
           getInferenceSettings(),
         );

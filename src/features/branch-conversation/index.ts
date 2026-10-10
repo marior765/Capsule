@@ -5,6 +5,7 @@ import {
 import {
   getMessagePath,
   insertMessage,
+  insertMessageSources,
   type Message,
 } from "@/entities/message";
 import { getPersonaById } from "@/entities/persona";
@@ -41,8 +42,15 @@ export async function branchFromMessage(
   newText: string,
   onToken?: (token: string) => void,
   settings: InferenceSettings = DEFAULT_INFERENCE,
-  /** Optional per-turn capsule grounding (7.3) — same contract as `sendMessage`'s; never stored. */
-  groundingPrompt?: string,
+  /**
+   * Optional per-turn capsule grounding (7.3/7.4) — same contract as
+   * `sendMessage`'s: the prompt is never stored, the sources are stored
+   * against the new reply.
+   */
+  grounding?: {
+    prompt: string;
+    sources: { capsuleId: string; title: string }[];
+  },
 ): Promise<{ userMessage: Message; assistantMessage: Message }> {
   const original = findMessage(db, messageId);
   if (!original) {
@@ -71,7 +79,7 @@ export async function branchFromMessage(
   const history = getMessagePath(db, userMessage.id);
   const systemPrompt = joinSystemPrompts(
     persona?.systemPrompt,
-    groundingPrompt,
+    grounding?.prompt,
   );
   const messages: ChatMessage[] = [
     ...(systemPrompt
@@ -108,6 +116,14 @@ export async function branchFromMessage(
     createdAt: Date.now(),
   };
   insertMessage(db, assistantMessage);
+  if (grounding) {
+    insertMessageSources(
+      db,
+      assistantMessage.id,
+      original.conversationId,
+      grounding.sources,
+    );
+  }
 
   // Only now does the new branch become the visible one — a failed generation
   // above leaves the original branch active.

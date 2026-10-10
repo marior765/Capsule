@@ -36,3 +36,36 @@ export function rowToMessage(row: MessageRow): Message {
     createdAt: row.created_at,
   };
 }
+
+/**
+ * One capsule that grounded an assistant reply (7.3/7.4), kept so the chat
+ * can show the user which of their capsules an answer drew on. `title` is a
+ * snapshot taken at answer time: the capsule may later be renamed, deleted,
+ * or simply not exist on another device after an export/import, and the
+ * record must still say something meaningful. `rank` is 0 for the best match.
+ */
+export type MessageSource = {
+  messageId: string;
+  conversationId: string;
+  capsuleId: string;
+  title: string;
+  rank: number;
+};
+
+export type MessageSourceRow = {
+  message_id: string;
+  conversation_id: string;
+  capsule_id: string;
+  title: string;
+  rank: number;
+};
+
+export function rowToMessageSource(row: MessageSourceRow): MessageSource {
+  return {
+    messageId: row.message_id,
+    conversationId: row.conversation_id,
+    capsuleId: row.capsule_id,
+    title: row.title,
+    rank: row.rank,
+  };
+}

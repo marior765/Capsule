@@ -10,6 +10,10 @@ import {
   deleteMessagesByConversation,
   insertMessage,
   type Message,
+  getSourcesByConversation,
+  insertMessageSources,
+  deleteSourcesByConversation,
+  type MessageSource,
 } from "@/entities/message";
 import { serializePortable, parsePortable } from "@/shared/format";
 import { insertAuditEntry } from "@/entities/audit";
@@ -73,6 +77,8 @@ const BACKUP_KIND = "backup";
 type BackupConversation = {
   conversation: Conversation;
   messages: Message[];
+  /** Grounding sources (7.4), ids unchanged. Optional: pre-7.4 backups have none. */
+  sources?: MessageSource[];
 };
 
 type Backup = {
@@ -84,6 +90,7 @@ export function createBackup(db: SQLiteDatabase): string {
   const conversations = getAllConversations(db).map((conversation) => ({
     conversation,
     messages: getMessagesByConversation(db, conversation.id),
+    sources: getSourcesByConversation(db, conversation.id),
   }));
   const json = serializePortable<Backup>(BACKUP_KIND, { conversations });
   insertAuditEntry(db, {
@@ -103,14 +110,29 @@ export function restoreBackup(db: SQLiteDatabase, json: string): void {
   const { conversations } = parsePortable<Backup>(json, BACKUP_KIND);
 
   for (const existing of getAllConversations(db)) {
+    deleteSourcesByConversation(db, existing.id);
     deleteMessagesByConversation(db, existing.id);
     deleteConversationRecord(db, existing.id);
   }
 
-  for (const { conversation, messages } of conversations) {
+  for (const { conversation, messages, sources = [] } of conversations) {
     insertConversation(db, conversation);
     for (const message of messages) {
       insertMessage(db, message);
+    }
+    const byMessage = new Map<string, MessageSource[]>();
+    for (const source of sources) {
+      const list = byMessage.get(source.messageId) ?? [];
+      list.push(source);
+      byMessage.set(source.messageId, list);
+    }
+    for (const [messageId, list] of byMessage) {
+      insertMessageSources(
+        db,
+        messageId,
+        conversation.id,
+        list.sort((a, b) => a.rank - b.rank),
+      );
     }
   }
 

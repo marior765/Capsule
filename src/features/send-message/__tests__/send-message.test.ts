@@ -12,6 +12,8 @@ import {
 } from "@/entities/conversation";
 import {
   getMessagesByConversation,
+  getSourcesByMessage,
+  messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
 } from "@/entities/message";
@@ -38,6 +40,7 @@ beforeEach(() => {
     conversationsPersonaMigration,
     messagesParentMigration,
     conversationsLeafMigration,
+    messageSourcesMigration,
   ]);
   insertConversation(db, {
     id: "conv-1",
@@ -196,7 +199,7 @@ describe("sendMessage — capsule grounding (7.3)", () => {
     await sendMessage(db, ctx, {
       conversationId: "conv-1",
       text: "When is my dentist?",
-      groundingPrompt: "CAPSULES: Dentist — Tuesday 3pm",
+      grounding: { prompt: "CAPSULES: Dentist — Tuesday 3pm", sources: [] },
     });
     expect(sentMessages()[0]).toEqual({
       role: "system",
@@ -209,7 +212,7 @@ describe("sendMessage — capsule grounding (7.3)", () => {
     await sendMessage(db, ctx, {
       conversationId: "conv-1",
       text: "Hello",
-      groundingPrompt: "CAPSULES: x",
+      grounding: { prompt: "CAPSULES: x", sources: [] },
     });
     expect(sentMessages()[0]).toEqual({
       role: "system",
@@ -221,7 +224,7 @@ describe("sendMessage — capsule grounding (7.3)", () => {
     const { userMessage } = await sendMessage(db, ctx, {
       conversationId: "conv-1",
       text: "Hello",
-      groundingPrompt: "CAPSULES: secret capsule text",
+      grounding: { prompt: "CAPSULES: secret capsule text", sources: [] },
     });
     expect(userMessage.content).toBe("Hello");
     const stored = getMessagesByConversation(db, "conv-1");
@@ -234,8 +237,48 @@ describe("sendMessage — capsule grounding (7.3)", () => {
     await sendMessage(db, ctx, {
       conversationId: "conv-1",
       text: "Hello",
-      groundingPrompt: "   ",
+      grounding: { prompt: "   ", sources: [] },
     });
     expect(sentMessages().some((m) => m.role === "system")).toBe(false);
+  });
+});
+
+describe("sendMessage — grounding sources (7.4)", () => {
+  it("stores which capsules grounded the reply, against the assistant message", async () => {
+    const { userMessage, assistantMessage } = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "When is my dentist?",
+      grounding: {
+        prompt: "CAPSULES: [1] Dentist",
+        sources: [
+          { capsuleId: "cap-1", title: "Dentist" },
+          { capsuleId: "cap-2", title: "Insurance" },
+        ],
+      },
+    });
+    expect(
+      getSourcesByMessage(db, assistantMessage.id).map((s) => s.title),
+    ).toEqual(["Dentist", "Insurance"]);
+    expect(getSourcesByMessage(db, userMessage.id)).toEqual([]);
+  });
+
+  it("stores no sources for an ungrounded reply, or when the completion fails", async () => {
+    const { assistantMessage } = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hi",
+    });
+    expect(getSourcesByMessage(db, assistantMessage.id)).toEqual([]);
+
+    mockRunCompletion.mockRejectedValueOnce(new Error("llm down"));
+    await expect(
+      sendMessage(db, ctx, {
+        conversationId: "conv-1",
+        text: "Hi",
+        grounding: { prompt: "x", sources: [{ capsuleId: "c", title: "C" }] },
+      }),
+    ).rejects.toThrow();
+    expect(
+      db.getAllSync("SELECT * FROM message_sources;") as unknown[],
+    ).toHaveLength(0);
   });
 });
