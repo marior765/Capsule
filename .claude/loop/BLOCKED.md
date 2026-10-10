@@ -583,7 +583,12 @@ capsule answers — the line above the input should read "Using N capsules: …"
 and the reply should use them; ask something unrelated — "No relevant
 capsules found"; with the embedding model deleted — the Models hint. Check
 how long "Searching your capsules…" shows right after app start (capped at
-4 s, then the message goes out ungrounded with a notice).
+4 s, then the message goes out ungrounded with a notice). (i) **7.4
+sources under answers**: after a grounded answer, a "From your capsules:" row
+appears under it; tapping a capsule opens it. Rename that capsule — the chip
+shows the new name; delete it — the chip shows the old name "(not on this
+device)" and isn't tappable. Export the conversation and import it on
+another device (or after a wipe): the chips show "(not on this device)".
 
 **Beat 62 correction:** `state.json`'s `7.2` status was recorded as
 `"done"` despite this entry already describing it as blocked on 7.1's

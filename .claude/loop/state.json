@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 74,
+    "beat": 75,
     "status": "running",
     "completedAt": "2026-09-15T00:55:00Z",
     "completionNote": "Every step is now done, blocked (awaiting a device/dev-build check), or deferred (awaiting a human decision) -- see .claude/loop/BLOCKED.md for the full list. No step remains pending or in_progress. Two logic-class steps (5.2, 5.4) are recorded as 'done' with their own plan-line annotations describing real, named remaining work (capsule-scope import/export; four of five migration importer formats) -- flagged in BLOCKED.md rather than silently reopened as new unscoped work at the tail end of an unrelated run. A future scope=5.2 or scope=5.4 /safe-loop invocation, or a human decision recorded in BLOCKED.md, is what picks those up next, not another 'all' run finding nothing else to do.",
@@ -10,8 +10,8 @@
     "resumeNote": "Reopened after user resolved blocker decisions (see BLOCKED.md \"Resolved (2026-10-09)\")."
   },
   "cursor": {
-    "step": "7.4",
-    "phase": 7
+    "step": "8.4",
+    "phase": 8
   },
   "steps": {
     "1.2": {
@@ -337,12 +337,14 @@
       "notes": "Structurally blocked on 7.1s open device decision (which embedding model/source to load) and the Providers-level wiring that decision unlocks -- \"grounds responses in the users data\" cannot be built or meaningfully tested without a live embedding context. Not attempted. See BLOCKED.md 7.1 entry. | DECISION 2026-10-09 (user): unblocked by 7.2 decision (dedicated embedding model). | BEAT 72 (1324fdc): grounding logic done (retrieveCapsuleContext, buildGroundingPrompt, groundingPrompt on sendMessage + branchFromMessage, indexer.retrieve, EmbeddingProvider.retrieveContext). Next: chat toggle UI in chat/[id].tsx. For the UI beat: (1) the first grounded message after launch can wait behind the start-up backfill -- show a 'searching your capsules' state or skip grounding if retrieval is slow; (2) grounding is silently dropped when a capsule title alone exceeds the budget -- surface 'no relevant capsules' honestly. | BEAT 73 (9153a73): chat toggle UI + prepareGrounding. 7.3 DONE IN CODE; native -- box unchecked pending BLOCKED.md (h). Follow-ups logged in BLOCKED.md: double-send while searching/streaming (pre-existing race); abandoned post-timeout retrievals still occupy the embedding queue; stale chat.useCapsules.<id> keys after conversation delete (harmless; wipe clears them)."
     },
     "7.4": {
-      "status": "in_progress",
-      "class": "ui",
-      "attempts": 1,
-      "failureSignatures": [],
-      "checkpoint": "2760d0e",
-      "notes": "Depends on 7.3 existing at all (shows which capsules a RAG response referenced) -- transitively blocked on the same 7.1 device decision. Not attempted. | DECISION 2026-10-09 (user): unblocked by 7.2 decision. | BEAT 74 (2760d0e): data layer -- message_sources (v23), stored by send/branch, cascaded on delete, round-tripped by export/import + backup. Next: UI under each assistant answer (ChatBubble/ChatThread) with tap-through to the capsule (fall back to stored title when missing). Minors from checker: add a 'through the real migration set' test for message_sources; restore doesn't validate sources' messageId belongs to the conversation; 'sources: null' in a crafted file throws (same no-validation stance); don't store sources when grounding.prompt is blank."
+      "status": "done",
+      "class": "native",
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- chips went stale after renaming/deleting a capsule and returning: the chat tab stays mounted and ChatScreen never re-read on focus"
+      ],
+      "checkpoint": "b9c8238",
+      "notes": "Depends on 7.3 existing at all (shows which capsules a RAG response referenced) -- transitively blocked on the same 7.1 device decision. Not attempted. | DECISION 2026-10-09 (user): unblocked by 7.2 decision. | BEAT 74 (2760d0e): data layer -- message_sources (v23), stored by send/branch, cascaded on delete, round-tripped by export/import + backup. Next: UI under each assistant answer (ChatBubble/ChatThread) with tap-through to the capsule (fall back to stored title when missing). Minors from checker: add a 'through the real migration set' test for message_sources; restore doesn't validate sources' messageId belongs to the conversation; 'sources: null' in a crafted file throws (same no-validation stance); don't store sources when grounding.prompt is blank. | BEAT 75 (b9c8238): sources UI done. 7.4 DONE IN CODE; native -- box unchecked pending BLOCKED.md (i). Phase 7 now code-complete (7.1-7.4 all device-check pending)."
     },
     "8.2": {
       "status": "done",
@@ -437,8 +439,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-10T14:20:00Z",
-    "head": "2760d0e",
-    "note": "86 suites, 1116 tests after 7.4 data layer"
+    "at": "2026-10-10T15:00:00Z",
+    "head": "b9c8238",
+    "note": "87 suites, 1122 tests after 7.4 sources UI"
   }
 }

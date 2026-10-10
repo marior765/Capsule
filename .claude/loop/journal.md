@@ -4507,4 +4507,25 @@ eslint clean. Checkpoint `2760d0e`. 7.4 in_progress; cursor stays at 7.4.
 
 ---
 
+## Beat 75 — 7.4 finished in code: "From your capsules" under each answer
+
+A row of capsule chips under every grounded answer: tap to open; a capsule
+that's since been deleted (or never existed on this device, after an
+import) shows its remembered title, not tappable. Also applied two of last
+beat's checker minors (no sources stored when the prompt was blank; a
+real-migration-set test).
+
+Checker round 1 caught a stale-UI bug: the chat tab stays mounted while
+you're elsewhere and never re-read on return, so renaming or deleting a
+capsule from a chip left the chip showing the old state — exactly the flow
+the device check asks to test. Fixed with a focus refresh (and the chip
+lookups are now memoized instead of re-running on every streaming token).
+Passed round 2.
+
+Phase 7 is now code-complete; all four steps await the device check.
+Gate: tsc clean, jest 1122/1122 (87 suites), eslint clean. Checkpoint
+`b9c8238`. Cursor → 8.4 (image input).
+
+---
+
 <!-- Append new beats above this line. -->
