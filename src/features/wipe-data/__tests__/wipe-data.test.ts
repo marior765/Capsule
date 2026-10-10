@@ -11,6 +11,10 @@ import {
   __resetFsMock,
 } from "@/__mocks__/expo-file-system";
 import { wipeAllData } from "../index";
+import {
+  __resetNotificationsMock,
+  cancelAllScheduledNotificationsAsync,
+} from "@/__mocks__/expo-notifications";
 
 beforeEach(() => {
   _resetDbForTesting();
@@ -57,6 +61,12 @@ describe("wipeAllData — happy path", () => {
   it("deletes the chat images folder", async () => {
     await wipeAllData(openDb());
     expect(__deletedDirectoryUris).toContain("file:///document/chat-images");
+  });
+
+  it("cancels every scheduled reminder notification", async () => {
+    __resetNotificationsMock();
+    await wipeAllData(openDb());
+    expect(cancelAllScheduledNotificationsAsync).toHaveBeenCalled();
   });
 
   it("clears all MMKV settings", async () => {

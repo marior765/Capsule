@@ -1,7 +1,11 @@
 // Tests for step 8.8 — written before implementation (TDD)
 import type { SQLiteDatabase } from "expo-sqlite";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
-import { getRemindersByCapsule, remindersMigration } from "@/entities/reminder";
+import {
+  getRemindersByCapsule,
+  remindersMigration,
+  remindersNotificationIdMigration,
+} from "@/entities/reminder";
 import { createReminder, rescheduleReminder, removeReminder } from "../index";
 
 let db: SQLiteDatabase;
@@ -9,7 +13,7 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [remindersMigration]);
+  runMigrations(db, [remindersMigration, remindersNotificationIdMigration]);
 });
 
 describe("createReminder", () => {

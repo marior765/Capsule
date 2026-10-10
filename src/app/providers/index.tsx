@@ -2,6 +2,7 @@ import "@/shared/ui/unistyles";
 
 import { useState, type PropsWithChildren } from "react";
 import { openDb, runMigrations } from "@/shared/db";
+import { configureNotificationDisplay } from "@/shared/notifications";
 import { migrations } from "./migrations";
 import { LlmProvider } from "./LlmProvider";
 import { SttProvider } from "./SttProvider";
@@ -12,6 +13,8 @@ export function Providers({ children }: PropsWithChildren) {
   // LlmProvider, which reads the active model) mounts.
   useState(() => {
     runMigrations(openDb(), migrations);
+    // Reminders (8.8) also show while the app is open. Local only.
+    configureNotificationDisplay();
     return null;
   });
 

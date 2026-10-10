@@ -29,7 +29,16 @@ import {
   getAttachmentsByCapsuleField,
   insertAttachment,
 } from "@/entities/attachment";
-import { getRemindersByCapsule, remindersMigration } from "@/entities/reminder";
+import {
+  getRemindersByCapsule,
+  insertReminder,
+  remindersMigration,
+  remindersNotificationIdMigration,
+} from "@/entities/reminder";
+import {
+  __resetNotificationsMock,
+  cancelScheduledNotificationAsync,
+} from "@/__mocks__/expo-notifications";
 import { createCapsule } from "@/features/create-capsule";
 import { tagCapsule } from "@/features/tag-capsule";
 import { linkCapsules } from "@/features/link-capsules";
@@ -59,6 +68,7 @@ beforeEach(() => {
     capsuleParentIdMigration,
     capsuleVersionsMigration,
     remindersMigration,
+    remindersNotificationIdMigration,
   ]);
 });
 
@@ -289,5 +299,30 @@ describe("deleteCapsule", () => {
     createReminder(db, { capsuleId: b.id, remindAt: 2000 });
     deleteCapsule(db, a.id);
     expect(getRemindersByCapsule(db, b.id)).toHaveLength(1);
+  });
+});
+
+describe("deleteCapsule — scheduled reminder notifications (8.8)", () => {
+  it("cancels each of the capsule's scheduled reminder notifications", () => {
+    __resetNotificationsMock();
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1" });
+    for (const [id, notificationId] of [
+      ["r1", "notif-a"],
+      ["r2", null],
+    ] as const) {
+      insertReminder(db, {
+        id,
+        capsuleId: capsule.id,
+        remindAt: 5000,
+        message: null,
+        notificationId,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+    }
+    deleteCapsule(db, capsule.id);
+    expect(cancelScheduledNotificationAsync).toHaveBeenCalledTimes(1);
+    expect(cancelScheduledNotificationAsync).toHaveBeenCalledWith("notif-a");
+    expect(getRemindersByCapsule(db, capsule.id)).toEqual([]);
   });
 });

@@ -214,7 +214,14 @@ function restoreSet(db: SQLiteDatabase, set: PortableCapsuleSet): Capsule[] {
     }
 
     for (const reminder of reminders) {
-      insertReminder(db, { ...reminder, id: generateId(), capsuleId: newId });
+      // Imported reminders are records only: any notification id belonged to
+      // the exporting device/time and means nothing here (8.8).
+      insertReminder(db, {
+        ...reminder,
+        id: generateId(),
+        capsuleId: newId,
+        notificationId: null,
+      });
     }
   }
 

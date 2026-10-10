@@ -14,7 +14,11 @@ import {
   getAttachmentsByCapsule,
 } from "@/entities/attachment";
 import { deleteAppDirectoryIfExists, deleteAppFileIfExists } from "@/shared/fs";
-import { deleteRemindersByCapsule } from "@/entities/reminder";
+import {
+  deleteRemindersByCapsule,
+  getRemindersByCapsule,
+} from "@/entities/reminder";
+import { cancelLocalNotification } from "@/shared/notifications";
 
 /**
  * Deletes a capsule, all of its field values, its tag attachments (never
@@ -49,12 +53,15 @@ import { deleteRemindersByCapsule } from "@/entities/reminder";
  * delete can be retried — never a capsule gone with its bytes left on disk.
  *
  * `deleteRemindersByCapsule` (8.8) removes a deleted capsule's own
- * reminders — a reminder pointing at a capsule that no longer exists
- * would otherwise keep firing (once notification scheduling actually
- * exists) for something the user can never open. Same-entity structural
- * data, same active-cleanup reasoning as version history/embedding above.
+ * reminders, and their scheduled notifications are cancelled — otherwise
+ * they'd keep firing for something the user can never open. The ids are
+ * read first but cancelled only after every row is gone, so a failed file
+ * delete above leaves the capsule AND its armed reminders intact.
  */
 export function deleteCapsule(db: SQLiteDatabase, id: string): void {
+  const notificationIds = getRemindersByCapsule(db, id)
+    .map((reminder) => reminder.notificationId)
+    .filter((nid): nid is string => nid !== null);
   for (const attachment of getAttachmentsByCapsule(db, id)) {
     deleteAppFileIfExists(attachment.storagePath);
   }
@@ -69,4 +76,11 @@ export function deleteCapsule(db: SQLiteDatabase, id: string): void {
   deleteRemindersByCapsule(db, id);
   orphanChildCapsules(db, id);
   deleteCapsuleRecord(db, id);
+
+  // Scheduled reminder notifications (8.8). Fire-and-forget — this function
+  // is synchronous and `cancelLocalNotification` never rejects; if the OS
+  // can't cancel one, tapping it just opens "This capsule no longer exists".
+  for (const notificationId of notificationIds) {
+    void cancelLocalNotification(notificationId);
+  }
 }

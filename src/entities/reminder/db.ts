@@ -18,6 +18,14 @@ export const remindersMigration: Migration = {
   },
 };
 
+/** Adds `notification_id` (8.8): the scheduled OS notification for a reminder, null for none. */
+export const remindersNotificationIdMigration: Migration = {
+  version: 26,
+  up: (db: SQLiteDatabase) => {
+    db.execSync("ALTER TABLE reminders ADD COLUMN notification_id TEXT;");
+  },
+};
+
 export function getReminderById(
   db: SQLiteDatabase,
   id: string,
@@ -56,12 +64,13 @@ export function getDueReminders(db: SQLiteDatabase, now: number): Reminder[] {
 
 export function insertReminder(db: SQLiteDatabase, reminder: Reminder): void {
   db.runSync(
-    `INSERT INTO reminders (id, capsule_id, remind_at, message, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?);`,
+    `INSERT INTO reminders (id, capsule_id, remind_at, message, notification_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?);`,
     reminder.id,
     reminder.capsuleId,
     reminder.remindAt,
     reminder.message,
+    reminder.notificationId,
     reminder.createdAt,
     reminder.updatedAt,
   );
@@ -82,6 +91,10 @@ export function updateReminder(
   if (patch.message !== undefined) {
     fields.push("message = ?");
     values.push(patch.message);
+  }
+  if (patch.notificationId !== undefined) {
+    fields.push("notification_id = ?");
+    values.push(patch.notificationId);
   }
   if (patch.createdAt !== undefined) {
     fields.push("created_at = ?");

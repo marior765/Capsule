@@ -9,6 +9,7 @@ import {
   getRemindersByCapsule,
   insertReminder,
   remindersMigration,
+  remindersNotificationIdMigration,
   updateReminder,
   type Reminder,
 } from "../index";
@@ -18,6 +19,7 @@ const makeReminder = (overrides: Partial<Reminder> = {}): Reminder => ({
   capsuleId: "c-1",
   remindAt: 1000,
   message: null,
+  notificationId: null,
   createdAt: 1000,
   updatedAt: 1000,
   ...overrides,
@@ -28,7 +30,7 @@ let db: SQLiteDatabase;
 beforeEach(() => {
   _resetDbForTesting();
   db = openDb();
-  runMigrations(db, [remindersMigration]);
+  runMigrations(db, [remindersMigration, remindersNotificationIdMigration]);
 });
 
 describe("entities/reminder — CRUD", () => {
@@ -161,5 +163,15 @@ describe("entities/reminder — getDueReminders", () => {
   it("returns an empty array when nothing is due yet", () => {
     insertReminder(db, makeReminder({ remindAt: 5000 }));
     expect(getDueReminders(db, 1000)).toEqual([]);
+  });
+});
+
+describe("entities/reminder — notification id (8.8)", () => {
+  it("round-trips the scheduled notification's id and lets it be changed", () => {
+    const reminder = makeReminder({ notificationId: "notif-1" });
+    insertReminder(db, reminder);
+    expect(getReminderById(db, reminder.id)?.notificationId).toBe("notif-1");
+    updateReminder(db, reminder.id, { notificationId: null });
+    expect(getReminderById(db, reminder.id)?.notificationId).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
   deleteCacheDirectoryIfExists,
 } from "@/shared/fs";
 import { PICKER_CACHE_DIRECTORIES } from "@/shared/picker";
+import { cancelAllLocalNotifications } from "@/shared/notifications";
 import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
 
 /**
@@ -19,7 +20,8 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
  * deletes needed. Files on disk are separate from their rows and need
  * their own deletion: chat models (`models/`), speech-to-text models
  * (`stt-models/`), the embedding model (`embedding-models/`), chat images (`chat-images/`), capsule attachments (`attachments/`), and the pickers'
- * temporary copies in the cache directory, all through `shared/fs`. One
+ * temporary copies in the cache directory, all through `shared/fs`.
+ * Scheduled reminder notifications are cancelled too. One
  * known exception it can't reach: the iOS document picker's own
  * `tmp/<bundle-id>-Inbox/` copy (see `shared/fs`'s cache-section note).
  *
@@ -46,6 +48,10 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
  * .claude/loop/BLOCKED.md.
  */
 export async function wipeAllData(db: SQLiteDatabase): Promise<void> {
+  // Scheduled reminder notifications first (8.8): a failure here leaves
+  // everything else untouched, and after a wipe no reminder may still fire.
+  await cancelAllLocalNotifications();
+
   // Every app-managed folder of files: chat models, speech-to-text
   // models, and capsule attachments.
   deleteAppDirectoryIfExists("models");

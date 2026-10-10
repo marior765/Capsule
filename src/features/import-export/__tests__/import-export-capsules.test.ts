@@ -45,6 +45,7 @@ import {
   getRemindersByCapsule,
   insertReminder,
   remindersMigration,
+  remindersNotificationIdMigration,
 } from "@/entities/reminder";
 import { PortableFormatError } from "@/shared/format";
 import {
@@ -146,6 +147,7 @@ beforeEach(() => {
     capsuleParentIdMigration,
     capsuleVersionsMigration,
     remindersMigration,
+    remindersNotificationIdMigration,
   ]);
 });
 
@@ -253,6 +255,7 @@ describe("exportCapsule / importCapsule — single capsule round trip", () => {
       capsuleParentIdMigration,
       capsuleVersionsMigration,
       remindersMigration,
+      remindersNotificationIdMigration,
     ]);
     const imported = importCapsule(db, json);
 
@@ -292,6 +295,7 @@ describe("exportCapsule / importCapsule — single capsule round trip", () => {
       capsuleId: "c1",
       remindAt: 9_000,
       message: "Return to library",
+      notificationId: "notif-on-exporting-device",
       createdAt: 1,
       updatedAt: 1,
     });
@@ -303,6 +307,7 @@ describe("exportCapsule / importCapsule — single capsule round trip", () => {
     expect(reminders[0].id).not.toBe("r1");
     expect(reminders[0].remindAt).toBe(9_000);
     expect(reminders[0].message).toBe("Return to library");
+    expect(reminders[0].notificationId).toBeNull();
   });
 
   it("rejects a single-capsule envelope that contains no capsule", () => {
@@ -423,6 +428,7 @@ describe("exportAllCapsules / importAllCapsules — whole collection", () => {
       capsuleParentIdMigration,
       capsuleVersionsMigration,
       remindersMigration,
+      remindersNotificationIdMigration,
     ]);
     const imported = importAllCapsules(db, json);
 
@@ -512,6 +518,7 @@ describe("exportAllCapsules / importAllCapsules — whole collection", () => {
       capsuleParentIdMigration,
       capsuleVersionsMigration,
       remindersMigration,
+      remindersNotificationIdMigration,
     ]);
     expect(importAllCapsules(db, json)).toEqual([]);
     const types = getAllCapsuleTypes(db);
