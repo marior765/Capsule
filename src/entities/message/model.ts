@@ -69,3 +69,30 @@ export function rowToMessageSource(row: MessageSourceRow): MessageSource {
     rank: row.rank,
   };
 }
+
+/**
+ * An image the user attached to a chat message (8.4). `path` is relative
+ * to the app's document directory (resolve with `shared/fs`), never an
+ * absolute URI — iOS can move the app container. Kept in its own table so
+ * the core `Message` shape doesn't change. An edited message (a branch)
+ * reuses its original's image row path.
+ */
+export type MessageImage = {
+  messageId: string;
+  conversationId: string;
+  path: string;
+};
+
+export type MessageImageRow = {
+  message_id: string;
+  conversation_id: string;
+  path: string;
+};
+
+export function rowToMessageImage(row: MessageImageRow): MessageImage {
+  return {
+    messageId: row.message_id,
+    conversationId: row.conversation_id,
+    path: row.path,
+  };
+}

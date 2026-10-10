@@ -13,6 +13,8 @@ import {
 import {
   getMessagesByConversation,
   getSourcesByMessage,
+  getImageByMessage,
+  messageImagesMigration,
   messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
@@ -21,6 +23,12 @@ import { insertPersona, personasMigration } from "@/entities/persona";
 import { DEFAULT_INFERENCE } from "@/shared/config";
 import { sendMessage } from "../index";
 import { runCompletion } from "@/shared/llm";
+import {
+  File,
+  __copiedFiles,
+  __deletedUris,
+  __resetFsMock,
+} from "@/__mocks__/expo-file-system";
 
 jest.mock("@/shared/llm");
 const mockRunCompletion = runCompletion as jest.Mock;
@@ -41,6 +49,7 @@ beforeEach(() => {
     messagesParentMigration,
     conversationsLeafMigration,
     messageSourcesMigration,
+    messageImagesMigration,
   ]);
   insertConversation(db, {
     id: "conv-1",
@@ -291,5 +300,103 @@ describe("sendMessage — blank grounding prompt", () => {
       grounding: { prompt: "   ", sources: [{ capsuleId: "c", title: "C" }] },
     });
     expect(getSourcesByMessage(db, assistantMessage.id)).toEqual([]);
+  });
+});
+
+describe("sendMessage — images (8.4)", () => {
+  beforeEach(() => __resetFsMock());
+
+  const image = {
+    sourceUri: "file:///cache/ImagePicker/IMG_1.jpg",
+    name: "IMG 1.jpg",
+    sourceIsTemporaryCopy: true,
+  };
+
+  it("copies the image into app storage, records it on the user message, and sends it to the model", async () => {
+    const { userMessage } = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "What is this?",
+      image,
+    });
+
+    expect(__copiedFiles).toHaveLength(1);
+    expect(__copiedFiles[0].from).toBe(image.sourceUri);
+    const stored = getImageByMessage(db, userMessage.id)!;
+    expect(stored.path).toMatch(/^chat-images\/conv-1\//);
+    expect(stored.path).not.toContain("file://");
+    expect(`file:///document/${stored.path}`).toBe(__copiedFiles[0].to);
+
+    const last = sentMessages()[sentMessages().length - 1];
+    expect(last).toEqual({
+      role: "user",
+      content: "What is this?",
+      imageUrl: __copiedFiles[0].to,
+    });
+  });
+
+  it("keeps sending earlier images in the conversation history", async () => {
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Look",
+      image,
+    });
+    mockRunCompletion.mockClear();
+    await sendMessage(db, ctx, { conversationId: "conv-1", text: "And now?" });
+    const withImages = sentMessages().filter((m) => m.imageUrl);
+    expect(withImages).toHaveLength(1);
+    expect(withImages[0].content).toBe("Look");
+  });
+
+  it("deletes the picker's temporary copy after storing the image", async () => {
+    await sendMessage(db, ctx, { conversationId: "conv-1", text: "x", image });
+    expect(__deletedUris).toContain(image.sourceUri);
+  });
+
+  it("stores nothing if copying the image fails", async () => {
+    const spy = jest
+      .spyOn(File.prototype, "copy")
+      .mockRejectedValueOnce(new Error("disk full"));
+    await expect(
+      sendMessage(db, ctx, { conversationId: "conv-1", text: "x", image }),
+    ).rejects.toThrow("disk full");
+    expect(getMessagesByConversation(db, "conv-1")).toEqual([]);
+    expect(mockRunCompletion).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+describe("sendMessage — image storage failures leave nothing behind", () => {
+  beforeEach(() => __resetFsMock());
+  const image = { sourceUri: "file:///cache/ImagePicker/x.jpg", name: "x.jpg" };
+
+  it("stores no user message (and deletes the copy) when the image row can't be written", async () => {
+    _resetDbForTesting();
+    db = openDb();
+    runMigrations(db, [
+      conversationsMigration,
+      messagesMigration,
+      personasMigration,
+      conversationsPersonaMigration,
+      messagesParentMigration,
+      conversationsLeafMigration,
+      messageSourcesMigration,
+      // message_images deliberately missing → insertMessageImage throws
+    ]);
+    insertConversation(db, {
+      id: "conv-1",
+      title: "Chat",
+      modelId: null,
+      personaId: null,
+      activeLeafId: null,
+      createdAt: 0,
+      updatedAt: 0,
+    });
+
+    await expect(
+      sendMessage(db, ctx, { conversationId: "conv-1", text: "x", image }),
+    ).rejects.toThrow(/no such table/);
+    expect(getMessagesByConversation(db, "conv-1")).toEqual([]);
+    expect(__deletedUris).toContain(__copiedFiles[0].to);
+    expect(mockRunCompletion).not.toHaveBeenCalled();
   });
 });

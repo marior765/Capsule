@@ -2,9 +2,12 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import type { Migration } from "@/shared/db";
 import {
   rowToMessage,
+  rowToMessageImage,
   rowToMessageSource,
   type Message,
   type MessageRow,
+  type MessageImage,
+  type MessageImageRow,
   type MessageSource,
   type MessageSourceRow,
 } from "./model";
@@ -202,6 +205,66 @@ export function deleteSourcesByConversation(
 ): void {
   db.runSync(
     "DELETE FROM message_sources WHERE conversation_id = ?;",
+    conversationId,
+  );
+}
+
+// --- Message images (8.4) ---
+
+/** `message_images`: at most one image per message. No FK (codebase convention). */
+export const messageImagesMigration: Migration = {
+  version: 25,
+  up: (db: SQLiteDatabase) => {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS message_images (
+        message_id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        path TEXT NOT NULL
+      );
+    `);
+    db.execSync(
+      `CREATE INDEX IF NOT EXISTS idx_message_images_conversation
+       ON message_images (conversation_id);`,
+    );
+  },
+};
+
+export function insertMessageImage(
+  db: SQLiteDatabase,
+  image: MessageImage,
+): void {
+  db.runSync(
+    "INSERT INTO message_images (message_id, conversation_id, path) VALUES (?, ?, ?);",
+    image.messageId,
+    image.conversationId,
+    image.path,
+  );
+}
+
+export function getImageByMessage(
+  db: SQLiteDatabase,
+  messageId: string,
+): MessageImage | null {
+  const row = db.getFirstSync(
+    "SELECT * FROM message_images WHERE message_id = ?;",
+    messageId,
+  ) as MessageImageRow | null;
+  return row ? rowToMessageImage(row) : null;
+}
+
+export function deleteImageByMessage(
+  db: SQLiteDatabase,
+  messageId: string,
+): void {
+  db.runSync("DELETE FROM message_images WHERE message_id = ?;", messageId);
+}
+
+export function deleteImagesByConversation(
+  db: SQLiteDatabase,
+  conversationId: string,
+): void {
+  db.runSync(
+    "DELETE FROM message_images WHERE conversation_id = ?;",
     conversationId,
   );
 }

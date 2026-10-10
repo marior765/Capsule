@@ -3,11 +3,14 @@ import {
   updateConversation,
 } from "@/entities/conversation";
 import {
+  getImageByMessage,
   getMessagePath,
   insertMessage,
+  insertMessageImage,
   insertMessageSources,
   type Message,
 } from "@/entities/message";
+import { resolveAppPath } from "@/shared/fs";
 import { getPersonaById } from "@/entities/persona";
 import { DEFAULT_INFERENCE, type InferenceSettings } from "@/shared/config";
 import { generateId, joinSystemPrompts } from "@/shared/lib";
@@ -70,6 +73,12 @@ export async function branchFromMessage(
     createdAt: Date.now(),
   };
   insertMessage(db, userMessage);
+  // An edit changes the text, not the attached image (8.4): the new
+  // sibling points at the same stored image file as the original.
+  const originalImage = getImageByMessage(db, original.id);
+  if (originalImage) {
+    insertMessageImage(db, { ...originalImage, messageId: userMessage.id });
+  }
 
   const conversation = getConversationById(db, original.conversationId);
   const persona = conversation?.personaId
@@ -85,7 +94,16 @@ export async function branchFromMessage(
     ...(systemPrompt
       ? [{ role: "system" as const, content: systemPrompt }]
       : []),
-    ...history.map((m) => ({ role: m.role, content: m.content })),
+    ...history.map((m) => {
+      const image = getImageByMessage(db, m.id);
+      return image
+        ? {
+            role: m.role,
+            content: m.content,
+            imageUrl: resolveAppPath(image.path),
+          }
+        : { role: m.role, content: m.content };
+    }),
   ];
 
   let tokenCount = 0;

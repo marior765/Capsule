@@ -14,7 +14,9 @@ import {
   insertMessageSources,
   deleteSourcesByConversation,
   type MessageSource,
+  deleteImagesByConversation,
 } from "@/entities/message";
+import { deleteAppDirectoryIfExists, isSafeSegment } from "@/shared/fs";
 import { serializePortable, parsePortable } from "@/shared/format";
 import { insertAuditEntry } from "@/entities/audit";
 import { generateId } from "@/shared/lib";
@@ -110,6 +112,13 @@ export function restoreBackup(db: SQLiteDatabase, json: string): void {
   const { conversations } = parsePortable<Backup>(json, BACKUP_KIND);
 
   for (const existing of getAllConversations(db)) {
+    // Chat images (8.4) aren't part of the backup format yet (see
+    // BLOCKED.md, "Attachments aren't part of the portable format"), so a
+    // replaced conversation's images are removed, not carried over.
+    if (isSafeSegment(existing.id)) {
+      deleteAppDirectoryIfExists("chat-images", existing.id);
+    }
+    deleteImagesByConversation(db, existing.id);
     deleteSourcesByConversation(db, existing.id);
     deleteMessagesByConversation(db, existing.id);
     deleteConversationRecord(db, existing.id);

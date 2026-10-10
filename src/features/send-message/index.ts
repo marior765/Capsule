@@ -3,11 +3,21 @@ import {
   updateConversation,
 } from "@/entities/conversation";
 import {
+  deleteImageByMessage,
+  getImageByMessage,
   getMessagePath,
   insertMessage,
+  insertMessageImage,
   insertMessageSources,
   type Message,
 } from "@/entities/message";
+import {
+  copyFileInto,
+  deleteAppFileIfExists,
+  deleteCacheFileIfExists,
+  resolveAppPath,
+  toSafeFileName,
+} from "@/shared/fs";
 import { getPersonaById } from "@/entities/persona";
 import { DEFAULT_INFERENCE, type InferenceSettings } from "@/shared/config";
 import { generateId, joinSystemPrompts } from "@/shared/lib";
@@ -29,7 +39,35 @@ export type SendMessageInput = {
    * `branchFromMessage` (editing a message) takes the same grounding.
    */
   grounding?: Grounding;
+  /** An image to send with this message (8.4; needs a vision-capable model). */
+  image?: MessageImageInput;
 };
+
+export type MessageImageInput = {
+  /** Where the picked image is now — usually a picker's temporary cache copy. */
+  sourceUri: string;
+  /** Original file name, used to build the stored name. */
+  name: string;
+  /** True for a picker's cache copy: deleted once the image is stored (or if storing fails). */
+  sourceIsTemporaryCopy?: boolean;
+};
+
+const CHAT_IMAGES_DIRECTORY = "chat-images";
+
+/**
+ * The `imageUrl` for each message on a history path that has an attached
+ * image — what lets a vision model keep "seeing" earlier images in later
+ * turns. (`branch-conversation` has the same few lines inline — features
+ * can't import each other.)
+ */
+export function imageUrlFor(
+  db: SQLiteDatabase,
+): (message: Message) => string | undefined {
+  return (message) => {
+    const image = getImageByMessage(db, message.id);
+    return image ? resolveAppPath(image.path) : undefined;
+  };
+}
 
 export type Grounding = {
   prompt: string;
@@ -55,12 +93,18 @@ const MAX_TOKENS = 512;
 export function buildMessages(
   history: Message[],
   systemPrompt?: string,
+  imageFor?: (message: Message) => string | undefined,
 ): ChatMessage[] {
   return [
     ...(systemPrompt
       ? [{ role: "system" as const, content: systemPrompt }]
       : []),
-    ...history.map((m) => ({ role: m.role, content: m.content })),
+    ...history.map((m) => {
+      const imageUrl = imageFor?.(m);
+      return imageUrl
+        ? { role: m.role, content: m.content, imageUrl }
+        : { role: m.role, content: m.content };
+    }),
   ];
 }
 
@@ -101,7 +145,52 @@ export async function sendMessage(
     tokenCount: 0,
     createdAt: Date.now(),
   };
-  insertMessage(db, userMessage);
+
+  // The image is copied into app storage BEFORE anything is saved, so a
+  // failed copy leaves no message behind; the picker's temporary copy is
+  // removed either way.
+  let imagePath: string | null = null;
+  if (input.image) {
+    try {
+      imagePath = await copyFileInto(
+        input.image.sourceUri,
+        [CHAT_IMAGES_DIRECTORY, input.conversationId],
+        `${userMessage.id}-${toSafeFileName(input.image.name) || "image"}`,
+      );
+    } finally {
+      if (input.image.sourceIsTemporaryCopy) {
+        try {
+          deleteCacheFileIfExists(input.image.sourceUri);
+        } catch {
+          // best effort — the OS clears its cache; the wipe clears picker folders
+        }
+      }
+    }
+  }
+
+  // Image row first, then the message: if either insert fails, undo what
+  // was written (row and file) so no message is left without its image.
+  // Cleanup errors never mask the original failure.
+  let imageRowWritten = false;
+  try {
+    if (imagePath !== null) {
+      insertMessageImage(db, {
+        messageId: userMessage.id,
+        conversationId: input.conversationId,
+        path: imagePath,
+      });
+      imageRowWritten = true;
+    }
+    insertMessage(db, userMessage);
+  } catch (error) {
+    try {
+      if (imageRowWritten) deleteImageByMessage(db, userMessage.id);
+      if (imagePath !== null) deleteAppFileIfExists(imagePath);
+    } catch {
+      // keep the original error
+    }
+    throw error;
+  }
   updateConversation(db, input.conversationId, {
     activeLeafId: userMessage.id,
   });
@@ -116,6 +205,7 @@ export async function sendMessage(
   const messages = buildMessages(
     history,
     joinSystemPrompts(persona?.systemPrompt, input.grounding?.prompt),
+    imageUrlFor(db),
   );
 
   let tokenCount = 0;

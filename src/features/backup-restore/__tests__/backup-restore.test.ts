@@ -21,10 +21,17 @@ import {
   getSourcesByConversation,
   insertMessageSources,
   messageSourcesMigration,
+  getImageByMessage,
+  insertMessageImage,
+  messageImagesMigration,
 } from "@/entities/message";
 import { auditMigration, getAllAuditEntries } from "@/entities/audit";
 import { PortableFormatError } from "@/shared/format";
 import { createBackup, restoreBackup } from "../index";
+import {
+  __deletedDirectoryUris,
+  __resetFsMock,
+} from "@/__mocks__/expo-file-system";
 
 let db: SQLiteDatabase;
 
@@ -62,6 +69,7 @@ const runAllMigrations = (database: SQLiteDatabase) =>
     messagesParentMigration,
     auditMigration,
     messageSourcesMigration,
+    messageImagesMigration,
   ]);
 
 beforeEach(() => {
@@ -261,5 +269,24 @@ describe("backup — grounding sources (7.4)", () => {
     };
     delete legacy.data.sources;
     expect(() => restoreBackup(db, JSON.stringify(legacy))).not.toThrow();
+  });
+});
+
+describe("restore — chat images (8.4)", () => {
+  it("removes the replaced conversations' image rows and files (images aren't in backups yet)", () => {
+    __resetFsMock();
+    insertConversation(db, makeConversation("c1"));
+    insertMessage(db, makeMessage("m1", "c1", null, "look"));
+    insertMessageImage(db, {
+      messageId: "m1",
+      conversationId: "c1",
+      path: "chat-images/c1/m1.jpg",
+    });
+    const backup = createBackup(db);
+
+    restoreBackup(db, backup);
+
+    expect(getImageByMessage(db, "m1")).toBeNull();
+    expect(__deletedDirectoryUris).toContain("file:///document/chat-images/c1");
   });
 });

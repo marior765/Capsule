@@ -22,15 +22,29 @@ import { Directory, File, Paths } from "expo-file-system";
  * download); everything else is purely local.
  */
 
-function assertSafeSegment(segment: string, what: string): void {
-  if (
+/** Whether a string can be used as one path segment under app storage. */
+export function isSafeSegment(segment: string): boolean {
+  return !(
     segment === "" ||
     segment === "." ||
     segment === ".." ||
     /[/\\:]/.test(segment)
-  ) {
+  );
+}
+
+function assertSafeSegment(segment: string, what: string): void {
+  if (!isSafeSegment(segment)) {
     throw new Error(`Invalid ${what}: "${segment}"`);
   }
+}
+
+/**
+ * A filesystem-safe single path segment derived from a user-facing file
+ * name (`[A-Za-z0-9._-]`, max 80 chars). Callers prefix it with an id so
+ * names stay unique; the original name is kept separately for display.
+ */
+export function toSafeFileName(name: string): string {
+  return name.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 80);
 }
 
 /** decodeURIComponent that leaves a malformed sequence as-is instead of throwing. */

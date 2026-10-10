@@ -54,6 +54,11 @@ describe("wipeAllData — happy path", () => {
     );
   });
 
+  it("deletes the chat images folder", async () => {
+    await wipeAllData(openDb());
+    expect(__deletedDirectoryUris).toContain("file:///document/chat-images");
+  });
+
   it("clears all MMKV settings", async () => {
     setString("some.setting", "value");
     await wipeAllData(openDb());
@@ -110,6 +115,7 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///document/stt-models");
     __missingUris.add("file:///document/attachments");
     __missingUris.add("file:///document/embedding-models");
+    __missingUris.add("file:///document/chat-images");
     __missingUris.add("file:///cache/DocumentPicker");
     __missingUris.add("file:///cache/ImagePicker");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();

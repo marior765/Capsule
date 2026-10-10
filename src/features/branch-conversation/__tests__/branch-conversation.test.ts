@@ -12,8 +12,11 @@ import {
   getChildren,
   getMessagePath,
   getMessagesByConversation,
+  getImageByMessage,
   getSourcesByMessage,
   insertMessage,
+  insertMessageImage,
+  messageImagesMigration,
   messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
@@ -57,6 +60,7 @@ beforeEach(() => {
     messagesParentMigration,
     conversationsLeafMigration,
     messageSourcesMigration,
+    messageImagesMigration,
   ]);
 
   insertConversation(db, {
@@ -329,5 +333,32 @@ describe("branchFromMessage — blank grounding prompt", () => {
       { prompt: "  ", sources: [{ capsuleId: "cap-1", title: "D" }] },
     );
     expect(getSourcesByMessage(db, assistantMessage.id)).toEqual([]);
+  });
+});
+
+describe("branchFromMessage — images (8.4)", () => {
+  it("an edited message keeps the original message's image, and sends it to the model", async () => {
+    insertMessageImage(db, {
+      messageId: "u2",
+      conversationId: "conv-1",
+      path: "chat-images/conv-1/u2-photo.jpg",
+    });
+    const { userMessage } = await branchFromMessage(
+      db,
+      ctx,
+      "u2",
+      "Edited question",
+    );
+    expect(getImageByMessage(db, userMessage.id)?.path).toBe(
+      "chat-images/conv-1/u2-photo.jpg",
+    );
+    const sent = (
+      mockRunCompletion.mock.calls[0][1] as { messages: ChatMessage[] }
+    ).messages;
+    expect(sent[sent.length - 1]).toEqual({
+      role: "user",
+      content: "Edited question",
+      imageUrl: "file:///document/chat-images/conv-1/u2-photo.jpg",
+    });
   });
 });

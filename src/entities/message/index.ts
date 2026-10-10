@@ -1,4 +1,9 @@
-export type { Message, MessageRole, MessageSource } from "./model";
+export type {
+  Message,
+  MessageImage,
+  MessageRole,
+  MessageSource,
+} from "./model";
 export {
   messagesMigration,
   messagesParentMigration,
@@ -12,4 +17,9 @@ export {
   getSourcesByMessage,
   getSourcesByConversation,
   deleteSourcesByConversation,
+  messageImagesMigration,
+  insertMessageImage,
+  getImageByMessage,
+  deleteImageByMessage,
+  deleteImagesByConversation,
 } from "./db";

@@ -7,9 +7,11 @@ import {
   type Conversation,
 } from "@/entities/conversation";
 import {
+  deleteImagesByConversation,
   deleteMessagesByConversation,
   deleteSourcesByConversation,
 } from "@/entities/message";
+import { deleteAppDirectoryIfExists, isSafeSegment } from "@/shared/fs";
 import { generateId } from "@/shared/lib";
 
 export type CreateConversationInput = {
@@ -49,6 +51,12 @@ export function renameConversation(
  * here in the feature layer — the entities themselves stay independent.
  */
 export function deleteConversation(db: SQLiteDatabase, id: string): void {
+  // Image files first: if that throws, the conversation is still intact
+  // and the delete can be retried — never rows gone with bytes left behind.
+  // An id that isn't a valid folder name (only possible via a hand-edited
+  // backup) can't have an image folder — skip rather than block the delete.
+  if (isSafeSegment(id)) deleteAppDirectoryIfExists("chat-images", id);
+  deleteImagesByConversation(db, id);
   deleteSourcesByConversation(db, id);
   deleteMessagesByConversation(db, id);
   deleteConversationRecord(db, id);

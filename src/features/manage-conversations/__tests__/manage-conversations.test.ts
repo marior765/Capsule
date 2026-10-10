@@ -6,17 +6,25 @@ import {
   conversationsMigration,
   conversationsPersonaMigration,
   getConversationById,
+  insertConversation as insertConversationRecord,
 } from "@/entities/conversation";
 import {
   getMessagesByConversation,
   getSourcesByConversation,
   insertMessage,
   insertMessageSources,
+  getImageByMessage,
+  insertMessageImage,
+  messageImagesMigration,
   messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
   type Message,
 } from "@/entities/message";
+import {
+  __deletedDirectoryUris,
+  __resetFsMock,
+} from "@/__mocks__/expo-file-system";
 import {
   createConversation,
   deleteConversation,
@@ -47,6 +55,7 @@ beforeEach(() => {
     messagesParentMigration,
     conversationsLeafMigration,
     messageSourcesMigration,
+    messageImagesMigration,
   ]);
 });
 
@@ -175,5 +184,38 @@ describe("deleteConversation — grounding sources (7.4)", () => {
 
     expect(getSourcesByConversation(db, a.id)).toEqual([]);
     expect(getSourcesByConversation(db, b.id)).toHaveLength(1);
+  });
+});
+
+describe("deleteConversation — images (8.4)", () => {
+  it("deletes the conversation's image rows and its image folder", () => {
+    __resetFsMock();
+    const a = createConversation(db, { modelId: null });
+    insertMessageImage(db, {
+      messageId: "m1",
+      conversationId: a.id,
+      path: `chat-images/${a.id}/m1.jpg`,
+    });
+    deleteConversation(db, a.id);
+    expect(getImageByMessage(db, "m1")).toBeNull();
+    expect(__deletedDirectoryUris).toContain(
+      `file:///document/chat-images/${a.id}`,
+    );
+  });
+});
+
+describe("deleteConversation — unusual ids", () => {
+  it("still deletes a conversation whose id isn't a safe folder name (e.g. from a hand-edited backup)", () => {
+    insertConversationRecord(db, {
+      id: "weird/id",
+      title: "x",
+      modelId: null,
+      personaId: null,
+      activeLeafId: null,
+      createdAt: 0,
+      updatedAt: 0,
+    });
+    expect(() => deleteConversation(db, "weird/id")).not.toThrow();
+    expect(listConversations(db).some((c) => c.id === "weird/id")).toBe(false);
   });
 });

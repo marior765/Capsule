@@ -6,6 +6,7 @@ import {
   conversationsPersonaMigration,
 } from "@/entities/conversation";
 import {
+  messageImagesMigration,
   messageSourcesMigration,
   messagesMigration,
   messagesParentMigration,
@@ -66,4 +67,5 @@ export const migrations: Migration[] = [
   remindersMigration,
   messageSourcesMigration,
   modelsMmprojMigration,
+  messageImagesMigration,
 ];
