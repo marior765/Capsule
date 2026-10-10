@@ -905,6 +905,23 @@ yet either, deliberately deferred alongside the notification-scheduling
 half above (little point building a "set a reminder" screen before
 deciding whether reminders can actually notify anyone).
 
+
+**Update (beat 80):** decided and built — `expo-notifications` installed;
+`shared/notifications` wraps it (LOCAL notifications only, no push token
+ever requested); `manage-reminders` gained `addReminder` (permission asked
+on the user's first reminder; reminder kept but reported unscheduled if
+notifications are off), `moveReminder`, `cancelReminder`; reminders store
+their notification id (migration v26); capsule delete cancels a capsule's
+notifications; the full wipe cancels all; imported reminders come in
+unscheduled. The `expo-notifications` config plugin is deliberately NOT in
+`app.json` — it adds an iOS `aps-environment` (push) entitlement this app
+doesn't need. **Device check (needs a dev build):** local notifications
+fire without the plugin on iOS and Android (if Android needs the plugin for
+its default icon/channel, add it with push disabled); the permission prompt
+appears on the first reminder, not at app start; a reminder fires at its
+time with the app closed and in the foreground; capsule delete and the
+wipe cancel pending ones. Still to build: the reminder UI on the capsule
+screen.
 ### `src/app/` routes have no testID coverage at all
 CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
 always via the component's `testIDs` object, never a hardcoded string
@@ -969,7 +986,10 @@ key) but not the files the database pointed at: `attachments/` and
 (`features/wipe-data`) does delete them. Either have `resetVault` delete
 those folders too, or route "reset the vault" through the full wipe — the
 same open question already noted in wipe-data's doc comment about whether
-the two "erase everything" paths should be one. Your call.
+the two "erase everything" paths should be one. Your call. (Since 8.8 it also
+doesn't cancel scheduled reminder notifications, so after a vault reset they
+could still fire for capsules that no longer exist — another reason to route
+it through the full wipe.)
 
 ## Precedent set (informational — no action needed)
 

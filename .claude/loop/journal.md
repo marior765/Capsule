@@ -4605,4 +4605,27 @@ Gate: tsc clean, jest 1157/1157 (89 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 80 — 8.8 part 1: reminders that actually notify
+
+With expo-notifications installed, reminders now schedule LOCAL OS
+notifications through a new `shared/notifications` wrapper — no push token,
+nothing leaves the device; permission is asked on the user's first
+reminder. I deliberately left the library's config plugin out of app.json:
+it would add an iOS push entitlement a private offline app doesn't need
+(the checker confirmed local notifications work without it).
+
+Checker round 1 found an ordering bug that matters for a reminder app:
+moving a reminder cancelled the old notification before scheduling the new
+one, so a scheduling failure left a reminder that looked set but would
+never fire. Now the new one is scheduled and saved first. Also fixed: an
+orphan row when adding failed, capsule delete cancelling reminders before
+its own failure point, and three stale docs. Passed round 2. I also
+mis-reported one fix to the checker as done before it had applied; caught
+it, wrote it, and corrected the record with the checker.
+
+Gate: tsc clean, jest 1181/1181 (91 suites), eslint clean. Checkpoint
+`c7f8f00`. 8.8 in_progress; cursor stays at 8.8 (reminder UI next).
+
+---
+
 <!-- Append new beats above this line. -->
