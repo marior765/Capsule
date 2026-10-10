@@ -282,3 +282,14 @@ describe("sendMessage — grounding sources (7.4)", () => {
     ).toHaveLength(0);
   });
 });
+
+describe("sendMessage — blank grounding prompt", () => {
+  it("stores no sources when the grounding prompt is blank (nothing actually grounded the reply)", async () => {
+    const { assistantMessage } = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hi",
+      grounding: { prompt: "   ", sources: [{ capsuleId: "c", title: "C" }] },
+    });
+    expect(getSourcesByMessage(db, assistantMessage.id)).toEqual([]);
+  });
+});

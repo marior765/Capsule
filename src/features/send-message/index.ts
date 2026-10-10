@@ -138,7 +138,9 @@ export async function sendMessage(
     createdAt: Date.now(),
   };
   insertMessage(db, assistantMessage);
-  if (input.grounding) {
+  // Only when the prompt actually went to the model — otherwise nothing
+  // grounded the reply and listing sources would be untrue.
+  if (input.grounding?.prompt.trim()) {
     insertMessageSources(
       db,
       assistantMessage.id,

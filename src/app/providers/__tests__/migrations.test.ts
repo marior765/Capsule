@@ -40,6 +40,7 @@ import {
 import { hasCapsuleEdits, saveCapsuleEdits } from "@/features/edit-capsule";
 import { runBulkOperation } from "@/shared/lib";
 import { getRemindersByCapsule } from "@/entities/reminder";
+import { getSourcesByMessage, insertMessageSources } from "@/entities/message";
 import {
   createReminder,
   rescheduleReminder,
@@ -362,6 +363,21 @@ describe("Providers' registered migrations", () => {
 
     expect(getRemindersByCapsule(db, capsule.id)).toEqual([
       expect.objectContaining({ id: reminder.id, remindAt: 9000 }),
+    ]);
+  });
+
+  it("lets an answer's grounding sources actually be stored and read through the real migration set (7.4)", () => {
+    runMigrations(openDb(), migrations);
+    const db = openDb();
+    insertMessageSources(db, "m1", "c1", [
+      { capsuleId: "cap-1", title: "Dentist" },
+    ]);
+    expect(getSourcesByMessage(db, "m1")).toEqual([
+      expect.objectContaining({
+        capsuleId: "cap-1",
+        title: "Dentist",
+        rank: 0,
+      }),
     ]);
   });
 });

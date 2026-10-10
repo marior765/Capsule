@@ -316,3 +316,18 @@ describe("branchFromMessage — grounding sources (7.4)", () => {
     ).toEqual(["cap-1"]);
   });
 });
+
+describe("branchFromMessage — blank grounding prompt", () => {
+  it("stores no sources when the grounding prompt is blank", async () => {
+    const { assistantMessage } = await branchFromMessage(
+      db,
+      ctx,
+      "u2",
+      "Edited",
+      undefined,
+      undefined,
+      { prompt: "  ", sources: [{ capsuleId: "cap-1", title: "D" }] },
+    );
+    expect(getSourcesByMessage(db, assistantMessage.id)).toEqual([]);
+  });
+});

@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
@@ -8,7 +8,13 @@ import { prepareGrounding } from "@/features/capsule-rag";
 import { getEmbeddingModelUri } from "@/features/manage-embedding-model";
 import { getBoolean, setBoolean } from "@/shared/storage";
 import { getConversationById } from "@/entities/conversation";
-import { getChildren, getMessagePath, type Message } from "@/entities/message";
+import {
+  getChildren,
+  getMessagePath,
+  getSourcesByMessage,
+  type Message,
+} from "@/entities/message";
+import { getCapsuleById } from "@/entities/capsule";
 import {
   branchFromMessage,
   switchBranch,
@@ -27,6 +33,7 @@ import { ChatThread, type BranchPosition } from "@/widgets/ChatThread";
 import { InferenceStats } from "@/widgets/InferenceStats";
 import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
+import { toSourceChips, type SourceChip } from "@/widgets/MessageSources";
 
 /** How long a message waits for capsule search before going out ungrounded. */
 const CAPSULE_SEARCH_TIMEOUT_MS = 4000;
@@ -111,6 +118,16 @@ export default function ChatScreen() {
 
   const refresh = useCallback(() => setMessages(readPath()), [readPath]);
 
+  // Re-read on every return to this screen: the chat tab stays mounted while
+  // the user is elsewhere (e.g. after tapping a capsule chip), so anything
+  // changed meanwhile — a capsule renamed or deleted, a message elsewhere —
+  // must be picked up here, not on some later unrelated re-render.
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
+
   // The only way `editing` ever changes to a non-null value — routes
   // through here rather than `setEditing` directly so stale draft-insert
   // text from an earlier, unrelated voice recording or snippet pick can
@@ -189,6 +206,25 @@ export default function ChatScreen() {
       };
     }
   }
+
+  // Which capsules grounded each visible answer (7.4). Recomputed when the
+  // message list changes — including on every return to this screen (see
+  // the focus effect), so a capsule renamed or deleted meanwhile shows its
+  // current state — but not on every streaming token.
+  const sources = useMemo(() => {
+    const byMessage: Record<string, SourceChip[]> = {};
+    for (const message of messages) {
+      if (message.role !== "assistant") continue;
+      const stored = getSourcesByMessage(db, message.id);
+      if (stored.length > 0) {
+        byMessage[message.id] = toSourceChips(
+          stored,
+          (capsuleId) => getCapsuleById(db, capsuleId)?.title ?? null,
+        );
+      }
+    }
+    return byMessage;
+  }, [db, messages]);
 
   const stream = (token: string, acc: { text: string }) => {
     acc.text += token;
@@ -328,6 +364,8 @@ export default function ChatScreen() {
         onEdit={canChat ? beginEditing : undefined}
         branches={branches}
         onSwitchBranch={handleSwitchBranch}
+        sources={sources}
+        onOpenSource={(capsuleId) => router.push(`/capsules/${capsuleId}`)}
       />
       {editing && (
         <Pressable

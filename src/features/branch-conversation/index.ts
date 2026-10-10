@@ -116,7 +116,7 @@ export async function branchFromMessage(
     createdAt: Date.now(),
   };
   insertMessage(db, assistantMessage);
-  if (grounding) {
+  if (grounding?.prompt.trim()) {
     insertMessageSources(
       db,
       assistantMessage.id,

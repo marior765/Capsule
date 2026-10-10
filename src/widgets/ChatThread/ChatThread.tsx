@@ -2,6 +2,7 @@ import { FlatList, Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import type { Message } from "@/entities/message";
 import { ChatBubble } from "@/widgets/ChatBubble";
+import { MessageSources, type SourceChip } from "@/widgets/MessageSources";
 import { createComponentTestIDs } from "@/shared/testing";
 
 /** Position of a message among its siblings, e.g. `‹ 2/3 ›`. */
@@ -14,6 +15,9 @@ type ChatThreadProps = {
   /** Keyed by message id. Only entries with `total > 1` render navigation. */
   branches?: Record<string, BranchPosition>;
   onSwitchBranch?: (message: Message, direction: -1 | 1) => void;
+  /** Capsules that grounded each answer (7.4), keyed by message id. */
+  sources?: Record<string, SourceChip[]>;
+  onOpenSource?: (capsuleId: string) => void;
 };
 
 export function ChatThread({
@@ -22,6 +26,8 @@ export function ChatThread({
   onEdit,
   branches,
   onSwitchBranch,
+  sources,
+  onOpenSource,
 }: ChatThreadProps) {
   const streamingMessage: Message | null = streamingText
     ? {
@@ -44,6 +50,9 @@ export function ChatThread({
     return (
       <View>
         <ChatBubble message={item} onEdit={onEdit} />
+        {sources?.[item.id] && onOpenSource && (
+          <MessageSources chips={sources[item.id]} onOpen={onOpenSource} />
+        )}
         {hasSiblings && (
           <View testID={testIDs.containers.branchNav} style={styles.branchNav}>
             <Pressable
