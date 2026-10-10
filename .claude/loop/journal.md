@@ -4490,4 +4490,21 @@ Gate: tsc clean, jest 1103/1103 (85 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 74 — 7.4 part 1: grounding sources stored with each answer
+
+Resumed a beat that was cut off mid tests-first (tree had the new failing
+tests, no implementation) — finished it rather than resetting. A
+`message_sources` table now records which capsules grounded each assistant
+answer, with a title snapshot so the record still means something after a
+rename, a delete, or an import onto another device. Because it's a new
+persisted entity, it round-trips: conversation export/import (re-pointed
+at new message ids), the vault export, and backup/restore; deleting a
+conversation cleans it up. The grounding API became one object
+(`{ prompt, sources }`) — the prompt is still never stored.
+
+Checker passed on round 1. Gate: tsc clean, jest 1116/1116 (86 suites),
+eslint clean. Checkpoint `2760d0e`. 7.4 in_progress; cursor stays at 7.4.
+
+---
+
 <!-- Append new beats above this line. -->
