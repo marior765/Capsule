@@ -737,22 +737,20 @@ dedicated follow-up beat rather than folded in silently.
 `appDirectoryUri`. Files are addressed by paths relative to the document
 directory (validated segment by segment), so nothing can reach outside app
 storage and stored paths survive iOS moving the app's container.
-Attachments, capsule deletion, and the full wipe use it. Still calling
-`expo-file-system` directly: `features/manage-models` and
-`features/manage-stt-model` (download/delete of model files). Moving those
-two onto `shared/fs` is the remaining follow-up. Moving them matters beyond tidiness: both store an
-ABSOLUTE `file://` path (`manage-models` in the `models` table's `path`
-column, `manage-stt-model` in MMKV), which goes stale if iOS moves the app's
-data container after an update or restore — the same bug fixed for
-attachments in beat 67. The fix is the same: store a path relative to the
-document directory and resolve it at use time (needs a small migration for
-existing model rows). Also, `manage-stt-model`'s download doesn't call
-`beginEgress`, so the privacy banner doesn't show the STT model download. And both call
-`File.downloadFileAsync` without `{ idempotent: true }`: a partial file left
-by a failed download (Android streams into the target) makes every retry
-fail with DestinationAlreadyExists until a wipe. `shared/fs`'s
-`downloadFileInto` already passes it (beat 69); moving both onto it fixes
-this too.
+Attachments, capsule deletion, and the full wipe use it.
+**Update (beat 76):** `features/manage-models` now uses it too — relative
+paths (legacy absolute rows are re-mapped onto the current container by
+`resolveModelPath`), idempotent downloads. Still calling `expo-file-system`
+directly: only `features/manage-stt-model`. Moving it is the remaining
+follow-up. Why moving it matters beyond tidiness: it stores an
+ABSOLUTE `file://` path in MMKV, which goes stale if iOS moves the app's data
+container after an update or restore (the bug already fixed for attachments,
+the embedding model, and chat models); its download doesn't call
+`beginEgress`, so the privacy banner doesn't show the STT model download; and
+it calls `File.downloadFileAsync` without `{ idempotent: true }`, so a partial
+file left by a failed download makes every retry fail until a wipe. Moving it
+onto `shared/fs` (relative path, re-mapping the legacy absolute value at
+runtime the way `resolveModelPath` does for chat models) fixes all three.
 
 ### 6.8 — attachment field type: picker library decision + file-cleanup gap
 `entities/attachment` (this beat) is deliberately metadata-only — `Attachment`
@@ -825,6 +823,26 @@ a real embedding, so nothing here proves a vision model actually works.
 Not wired into `LlmProvider`, `ChatInput`, or any route — deliberately
 out of scope for a spike, and largely moot without the picker library
 from decision 1 to trigger it with anyway.
+
+**Update (beat 76):** both decisions are now made (pickers installed; one
+recommended small vision pair). Built: `models.mmproj_path` (migration v24);
+`downloadModel` fetches a vision model's projector alongside it (base file
+deleted again if the projector fails; one audit entry); the pair is in
+`RECOMMENDED_MODELS` — "SmolVLM 500M Instruct — vision (Q8_0)":
+`https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf`
+plus `mmproj-SmolVLM-500M-Instruct-Q8_0.gguf` from the same repo. **Both URLs
+were chosen from memory, not fetched** — the device check must confirm they
+download. Still to build: loading the projector when the vision model is
+active, and image attach in chat.
+
+**Known limit (manage-models):** downloads are idempotent (overwrite), and
+the file name comes from the server, so re-downloading a model whose file
+name matches an existing row overwrites that model's file before the
+UNIQUE `path` insert fails. Only files no row references are cleaned up
+afterwards, so the existing model keeps working (same bytes, normally). The
+Models screen hides recommended specs already downloaded *by name*, so this
+is only reachable if a future release renames a recommended entry while
+keeping its URL — worth a filename-based "already downloaded" check then.
 
 ### 8.8 — Local reminders: `expo-notifications` dependency decision
 Implemented and green: `entities/reminder` (`Reminder` — `capsuleId`,

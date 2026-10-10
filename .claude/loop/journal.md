@@ -4528,4 +4528,25 @@ Gate: tsc clean, jest 1122/1122 (87 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 76 — 8.4 part 1: vision model layer
+
+Image input needs a vision model plus its "projector" file. Models gained
+an optional projector path; a recommended SmolVLM 500M pair downloads both
+files together. On the way, chat-model downloads moved onto `shared/fs`,
+fixing the logged follow-up (absolute paths that go stale on iOS, and
+non-idempotent downloads that wedge retries) — old absolute rows are
+re-mapped at runtime, no migration needed.
+
+Three checker rounds. Round 1: two stale doc statements. Round 2 caught a
+data-loss bug I'd just introduced while adding cleanup: if a re-download
+collided with an existing model's file name, the "delete what I downloaded"
+cleanup would delete the file the existing — possibly active — model
+still used. Now only files no model row references are removed, and if the
+rows can't be read nothing is deleted. Passed round 3.
+
+Gate: tsc clean, jest 1136/1136 (87 suites), eslint clean. Checkpoint
+`dc205dc`. 8.4 in_progress; cursor stays at 8.4.
+
+---
+
 <!-- Append new beats above this line. -->
