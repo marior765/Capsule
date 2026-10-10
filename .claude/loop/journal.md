@@ -4628,4 +4628,26 @@ Gate: tsc clean, jest 1181/1181 (91 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 81 — 8.8 part 2: setting reminders from the capsule screen
+
+The capsule screen now lists a capsule's reminders and sets new ones from
+quick choices (in 1 hour, this evening 6pm, tomorrow 9am, in a week 9am) —
+no date-picker package is installed, so fixed choices instead of a picker.
+The time is worked out when you tap, not when the screen opened, so a
+screen left open for an hour never schedules a stale or past time. With
+notifications off, the reminder is still saved and plainly marked "Not
+scheduled".
+
+Checker passed twice. I took its cheap non-blocking notes before
+committing: stable preset keys (not display labels) for testIDs, the
+tap-time lookup moved into a tested pure helper, and busy state on the
+cancel button. Left as known gaps: tapping a notification doesn't open the
+capsule yet; the "notifications are off" notice uses the error slot.
+
+Gate: tsc clean, jest 1192/1192 (92 suites), eslint clean. Checkpoint
+`bbc64dd`. 8.8 done in code (native, box unchecked, device check in
+BLOCKED.md). Cursor → 8.10 (testID retrofit for every route).
+
+---
+
 <!-- Append new beats above this line. -->

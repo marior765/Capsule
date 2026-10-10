@@ -858,6 +858,23 @@ is only reachable if a future release renames a recommended entry while
 keeping its URL — worth a filename-based "already downloaded" check then.
 
 ### 8.8 — Local reminders: `expo-notifications` dependency decision
+
+> **Status (beat 81, 2026-10-10): done in code, box unchecked — device check
+> only.** Decisions 1–4 below were resolved 2026-10-09 (see "Resolved"
+> above): expo-notifications installed, permission asked on the first
+> reminder, local DATE-trigger notifications scheduled by the OS, body falls
+> back to the capsule title. The capsule screen now has the reminder UI
+> (quick presets, cancel, "Not scheduled — notifications are off").
+> **Please check on a device:** (a) tap "In 1 hour" — the OS permission
+> prompt appears once; allow it; (b) set a reminder a minute or two out by
+> temporarily using "In 1 hour" on a device clock you can move, or wait —
+> it fires with the app backgrounded AND killed (no config plugin in
+> app.json, by design — confirm iOS still delivers); (c) deny permission on
+> a fresh install — the reminder is saved and marked "Not scheduled", no
+> crash; (d) cancel (✕) a pending reminder — it never fires; (e) delete the
+> capsule / wipe all data — its pending notifications never fire. Tapping a
+> notification does NOT yet open the capsule (no deep-link handler) —
+> a known gap, not a failure.
 Implemented and green: `entities/reminder` (`Reminder` — `capsuleId`,
 `remindAt`, optional `message`; migration v22; full CRUD; `getDueReminders`
 for "what's due right now") + `features/manage-reminders`
