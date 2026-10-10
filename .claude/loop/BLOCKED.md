@@ -932,7 +932,12 @@ round-trip through the portable format". The format is a single JSON text
 file, so including attachments means a design choice: embed bytes as base64
 inside the JSON (simple, but large files make huge exports), or switch the
 export to a folder/zip with the JSON plus the files alongside it. Your call
-before it's built; not attempted unattended.
+before it's built; not attempted unattended. **Update (beat 78):** chat images (8.4) have the same
+gap — they live in `chat-images/<conversationId>/` and the `message_images`
+table, and neither conversation export/import nor backup/restore carries
+them (restore removes the replaced conversations' images; an imported
+conversation simply has no images). The same base64-vs-folder decision
+covers both.
 
 ### Chat: a message can be sent twice while the first is still in progress (found during 7.3)
 `ChatInput` is never disabled while a reply is generating — and, with "My
@@ -947,6 +952,15 @@ Related, for the 7.3 device check (h): a capsule search that times out still
 runs later in the serial embedding queue (there's no cancel), so during a
 long start-up backfill each send can leave one cheap abandoned job queued.
 If you see searches timing out one after another, that's why.
+
+### Vault reset leaves attachment and chat-image files on disk (found during 8.4)
+`features/encrypt-vault`'s `resetVault` deletes the database (and the vault
+key) but not the files the database pointed at: `attachments/` and
+`chat-images/` stay on disk with nothing referencing them. The full wipe
+(`features/wipe-data`) does delete them. Either have `resetVault` delete
+those folders too, or route "reset the vault" through the full wipe — the
+same open question already noted in wipe-data's doc comment about whether
+the two "erase everything" paths should be one. Your call.
 
 ## Precedent set (informational — no action needed)
 

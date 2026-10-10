@@ -4563,4 +4563,26 @@ Gate: tsc clean, jest 1142/1142 (88 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 78 — 8.4 part 3: storing images sent in chat
+
+Images attached to chat messages now have a home: copied into
+`chat-images/<conversation>/` before anything is saved, recorded in a
+separate `message_images` table (so the core Message type didn't change),
+and sent to the model for every history turn that has one. Edits keep the
+image; conversation delete, restore and the wipe clean up. Not in
+export/backup yet — same open decision as attachments.
+
+Checker round 1 failed on an ordering bug: the message was saved before
+its image row, so a failed row insert left an invisible user message on a
+hidden branch. Now the image row goes first and both are undone on
+failure. It also caught that unvalidated ids from a hand-edited backup
+could make conversation delete throw. Both fixed; passed round 2. Logged a
+pre-existing gap the checker noticed: vault reset leaves attachment and
+chat-image files on disk.
+
+Gate: tsc clean, jest 1155/1155 (89 suites), eslint clean. Checkpoint
+`13cad44`. 8.4 in_progress; cursor stays at 8.4 (chat UI next).
+
+---
+
 <!-- Append new beats above this line. -->
