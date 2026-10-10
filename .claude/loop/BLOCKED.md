@@ -832,8 +832,12 @@ deleted again if the projector fails; one audit entry); the pair is in
 `https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf`
 plus `mmproj-SmolVLM-500M-Instruct-Q8_0.gguf` from the same repo. **Both URLs
 were chosen from memory, not fetched** — the device check must confirm they
-download. Still to build: loading the projector when the vision model is
-active, and image attach in chat.
+download. **Update (beat 77):** `LlmProvider` now loads the projector when the
+active model has one (`app/providers/loadModelContext`) and exposes
+`vision`; a projector that fails to load leaves the model usable as text
+with `vision: false`. Device check: with the vision model active,
+`vision` should be true (the image button in chat will depend on it).
+Still to build: image attach in chat.
 
 **Known limit (manage-models):** downloads are idempotent (overwrite), and
 the file name comes from the server, so re-downloading a model whose file

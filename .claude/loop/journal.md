@@ -4549,4 +4549,18 @@ Gate: tsc clean, jest 1136/1136 (87 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 77 — 8.4 part 2: vision projector loaded with the model
+
+`LlmProvider` now loads a vision model's projector right after the model
+and exposes `vision`. The logic lives in a small injected-deps function
+(`loadModelContext`) so it's unit-tested: a projector that fails to load
+leaves a working text model rather than failing the whole load. Checker
+passed on round 1, confirming against llama.rn's source that releasing the
+context also frees the projector.
+
+Gate: tsc clean, jest 1142/1142 (88 suites), eslint clean. Checkpoint
+`e585b73`. 8.4 in_progress; cursor stays at 8.4 (chat image attach next).
+
+---
+
 <!-- Append new beats above this line. -->

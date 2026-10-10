@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 76,
+    "beat": 77,
     "status": "running",
     "completedAt": "2026-09-15T00:55:00Z",
     "completionNote": "Every step is now done, blocked (awaiting a device/dev-build check), or deferred (awaiting a human decision) -- see .claude/loop/BLOCKED.md for the full list. No step remains pending or in_progress. Two logic-class steps (5.2, 5.4) are recorded as 'done' with their own plan-line annotations describing real, named remaining work (capsule-scope import/export; four of five migration importer formats) -- flagged in BLOCKED.md rather than silently reopened as new unscoped work at the tail end of an unrelated run. A future scope=5.2 or scope=5.4 /safe-loop invocation, or a human decision recorded in BLOCKED.md, is what picks those up next, not another 'all' run finding nothing else to do.",
@@ -375,13 +375,13 @@
     "8.4": {
       "status": "in_progress",
       "class": "native",
-      "attempts": 2,
+      "attempts": 3,
       "failureSignatures": [
         "checker: fail -- stale docs (shared/fs header, BLOCKED.md) still said manage-models used expo-file-system directly",
         "checker: fail -- insert-failure cleanup deleted the downloaded file even when the UNIQUE clash meant an existing (possibly active) model row still used it"
       ],
-      "checkpoint": "dc205dc",
-      "notes": "Implemented against mocked natives only -- shared/llm gained initMultimodalSupport/isMultimodalEnabled/getMultimodalSupport/releaseMultimodalSupport (same context as initLlm, not separate like embeddings) + ChatMessage.imageUrl support in runCompletion. Blocked on TWO decisions: the same missing image-picker dependency as 6.8, and a separate vision-model+mmproj-pair choice structurally like 7.1s. Full breakdown in BLOCKED.md. docs/DEVELOPMENT_PLAN.md box stays unchecked per native-class convention. | DECISION 2026-10-09 (user): picker = expo-image-picker; one recommended small vision base+mmproj pair added to recommended models; wire picker into chat; device check still required. | BEAT 76 (dc205dc): model layer -- mmproj_path (v24), manage-models on shared/fs (relative paths, legacy re-map, idempotent, decoded names), vision pair in RECOMMENDED_MODELS. Next: LlmProvider initMultimodal when active model has mmprojPath (expose vision support), then chat image attach + persistence. Minor: removeUnreferenced's delete could mask the original insert error if it throws."
+      "checkpoint": "e585b73",
+      "notes": "Implemented against mocked natives only -- shared/llm gained initMultimodalSupport/isMultimodalEnabled/getMultimodalSupport/releaseMultimodalSupport (same context as initLlm, not separate like embeddings) + ChatMessage.imageUrl support in runCompletion. Blocked on TWO decisions: the same missing image-picker dependency as 6.8, and a separate vision-model+mmproj-pair choice structurally like 7.1s. Full breakdown in BLOCKED.md. docs/DEVELOPMENT_PLAN.md box stays unchecked per native-class convention. | DECISION 2026-10-09 (user): picker = expo-image-picker; one recommended small vision base+mmproj pair added to recommended models; wire picker into chat; device check still required. | BEAT 76 (dc205dc): model layer -- mmproj_path (v24), manage-models on shared/fs (relative paths, legacy re-map, idempotent, decoded names), vision pair in RECOMMENDED_MODELS. Next: LlmProvider initMultimodal when active model has mmprojPath (expose vision support), then chat image attach + persistence. Minor: removeUnreferenced's delete could mask the original insert error if it throws. | BEAT 77 (e585b73): projector loaded via loadModelContext; LlmProvider exposes vision. Next: chat image attach (show button only when status==='ready' && vision; persist image with the message + export/backup round-trip; ephemeral chat too?)."
     },
     "8.5": {
       "status": "done",
@@ -442,8 +442,8 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-10T16:00:00Z",
-    "head": "dc205dc",
-    "note": "87 suites, 1136 tests after 8.4 model layer"
+    "at": "2026-10-10T16:30:00Z",
+    "head": "e585b73",
+    "note": "88 suites, 1142 tests after 8.4 projector loading"
   }
 }
