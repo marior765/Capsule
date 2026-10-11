@@ -130,6 +130,7 @@ Flagged, not fixed (2026-09-15 — see journal beat 62).
 - **Open non-image attachments (new 6.9):** **`expo-sharing`** — user installs it: `npx expo install expo-sharing`; wrapped in `shared/`, audited for network use.
 - **Reminders (new 8.11):** add "Pick date & time…" using `@expo/ui`'s date-time picker (already installed), keep the quick choices; tapping a notification opens its capsule.
 - **Small follow-ups (new 8.12):** block the chat double-send; show "notifications are off" as a notice, not an error; move the voice-model download onto `shared/fs` (relative paths, idempotent, egress-marked).
+- **Dependency audit (beat 83, after install):** `fflate` is pure JS with no network APIs. `expo-sharing` DOES contain network code (iOS `ResolveUrlContentDetails.swift` → `URLSession`; Android `ResolvingShareIntentDataParser.kt` → `HttpURLConnection`), but it only runs from `getResolvedSharedPayloadsAsync`, i.e. resolving a URL someone shared INTO the app — and the share-into-app extension is off unless `ios.enabled`/`android.enabled` is set in the plugin config (both default `false`; app.json passes no options). Capsule's `shared/` wrapper will expose only sharing a local file OUT (`shareAsync`), never the incoming-share API.
 - Not changed: 8.1 cloud AI and Phase 9 stay deferred; the iOS `tmp/*-Inbox` copies stay a known limit (no native helper); types-only declaration files stay outside the dependency gate.
 
 ## Resolved (2026-10-09) — user decisions on open blockers
