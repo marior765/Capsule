@@ -45,6 +45,11 @@ const COMMANDS: Command[] = [
   { id: "settings", label: "Settings", path: "/settings" },
   { id: "privacy", label: "Privacy settings", path: "/settings/privacy" },
   {
+    id: "import-export",
+    label: "Import & Export",
+    path: "/settings/import-export",
+  },
+  {
     id: "inference",
     label: "Inference settings",
     path: "/settings/inference",

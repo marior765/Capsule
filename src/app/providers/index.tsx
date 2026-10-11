@@ -33,3 +33,10 @@ export { useStt } from "./SttProvider";
 export { useEmbeddings } from "./EmbeddingProvider";
 export { useDb } from "./useDb";
 export { eraseEverything } from "./eraseEverything";
+export {
+  exportForSharing,
+  importFile,
+  type ExportKind,
+  type ImportKind,
+  type ImportOutcome,
+} from "./importExport";

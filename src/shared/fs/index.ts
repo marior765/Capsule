@@ -125,16 +125,29 @@ export async function readAppFileBytes(
 }
 
 /**
- * Writes a temporary file into the cache (e.g. an export bundle about to be
- * shared) and returns its `file://` uri. The OS may clear the cache; the
- * full wipe's cache cleanup doesn't need to know about it.
+ * Where exports wait for the share sheet (5.5). They're unencrypted copies
+ * of the user's data, so this folder is emptied before each export, at
+ * every launch, and by the full wipe.
+ */
+export const EXPORTS_CACHE_DIRECTORY = "Exports";
+
+/**
+ * Writes a temporary file into the cache — into `directory` if given — and
+ * returns its `file://` uri.
  */
 export function writeCacheFileBytes(
   fileName: string,
   bytes: Uint8Array,
+  directory?: string,
 ): string {
   assertSafeSegment(fileName, "file name");
-  const file = new File(Paths.cache, fileName);
+  let parent = Paths.cache;
+  if (directory !== undefined) {
+    assertSafeSegment(directory, "directory");
+    parent = new Directory(Paths.cache, directory);
+    parent.create({ intermediates: true, idempotent: true });
+  }
+  const file = new File(parent, fileName);
   file.write(bytes);
   return file.uri;
 }

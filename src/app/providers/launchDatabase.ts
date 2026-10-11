@@ -10,6 +10,10 @@ import {
   isPlainCopyStale,
   isVaultConfigured,
 } from "@/features/encrypt-vault";
+import {
+  deleteCacheDirectoryIfExists,
+  EXPORTS_CACHE_DIRECTORY,
+} from "@/shared/fs";
 import { migrations } from "./migrations";
 
 /**
@@ -26,6 +30,13 @@ import { migrations } from "./migrations";
 export type LaunchState = { kind: "ready" } | { kind: "locked" };
 
 export async function openAtLaunch(): Promise<LaunchState> {
+  // Exports left from an earlier session are unencrypted copies — gone
+  // before anything else, even before an unlock.
+  try {
+    deleteCacheDirectoryIfExists(EXPORTS_CACHE_DIRECTORY);
+  } catch {
+    // retried next launch
+  }
   if (await isVaultConfigured()) return { kind: "locked" };
   runMigrations(openDb(), migrations);
   removeStaleCopy("vault");

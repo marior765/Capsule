@@ -5,8 +5,9 @@ import {
   insertReminder,
   updateReminder,
   type Reminder,
+  getRemindersByCapsule,
 } from "@/entities/reminder";
-import { getCapsuleById } from "@/entities/capsule";
+import { getAllCapsules, getCapsuleById } from "@/entities/capsule";
 import { generateId } from "@/shared/lib";
 import {
   cancelLocalNotification,
@@ -166,4 +167,39 @@ export async function cancelReminder(
     await cancelLocalNotification(existing.notificationId);
   }
   deleteReminder(db, id);
+}
+
+/**
+ * Schedules a notification for every future reminder that has none — what
+ * a restored backup or an imported capsule brings in (notification ids
+ * belong to the device that scheduled them, so they never travel). Asks
+ * for permission only if there is something to schedule. Returns how many
+ * were scheduled; a reminder that can't be scheduled simply stays a record.
+ */
+export async function scheduleUnscheduledReminders(
+  db: SQLiteDatabase,
+): Promise<number> {
+  const now = Date.now();
+  const pending = getAllCapsules(db)
+    .flatMap((capsule) => getRemindersByCapsule(db, capsule.id))
+    .filter((r) => r.notificationId === null && r.remindAt > now);
+  if (pending.length === 0) return 0;
+  if (!(await ensureNotificationPermission())) return 0;
+  let scheduled = 0;
+  for (const reminder of pending) {
+    try {
+      const notificationId = await scheduleFor(db, reminder);
+      try {
+        updateReminder(db, reminder.id, { notificationId });
+      } catch {
+        // Without its id saved it could never be cancelled — take it back.
+        await cancelLocalNotification(notificationId);
+        continue;
+      }
+      scheduled += 1;
+    } catch {
+      // stays a record; the reminder list shows it as not scheduled
+    }
+  }
+  return scheduled;
 }

@@ -132,6 +132,7 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///document/chat-images");
     __missingUris.add("file:///cache/DocumentPicker");
     __missingUris.add("file:///cache/ImagePicker");
+    __missingUris.add("file:///cache/Exports");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
     expect(__deletedDirectoryUris).toEqual([]);
   });
@@ -163,4 +164,9 @@ describe("wipeAllData — order (4.7, checker)", () => {
     }
     expect(getString("someSetting")).toBe("value");
   });
+});
+
+it("deletes the exports cache folder (unencrypted export copies) too (5.5)", async () => {
+  await wipeAllData(openDb());
+  expect(__deletedDirectoryUris).toContain("file:///cache/Exports");
 });

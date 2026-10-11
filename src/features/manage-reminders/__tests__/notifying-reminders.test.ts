@@ -4,6 +4,7 @@ import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import {
   getReminderById,
   getRemindersByCapsule,
+  insertReminder,
   remindersMigration,
   remindersNotificationIdMigration,
 } from "@/entities/reminder";
@@ -18,7 +19,12 @@ import {
   __scheduled,
   scheduleNotificationAsync,
 } from "@/__mocks__/expo-notifications";
-import { addReminder, cancelReminder, moveReminder } from "../index";
+import {
+  addReminder,
+  cancelReminder,
+  moveReminder,
+  scheduleUnscheduledReminders,
+} from "../index";
 
 let db: SQLiteDatabase;
 const NOW = 1_000_000;
@@ -185,4 +191,68 @@ describe("failure ordering never leaves a reminder that silently won't fire", ()
     ).rejects.toThrow(/capsule/i);
     expect(__scheduled.size).toBe(0);
   });
+});
+
+// 5.5 part D: after a restore or import, reminders arrive as records only.
+describe("scheduleUnscheduledReminders", () => {
+  const record = (
+    id: string,
+    remindAt: number,
+    notificationId: string | null,
+  ) =>
+    insertReminder(db, {
+      id,
+      capsuleId: "c1",
+      remindAt,
+      message: null,
+      notificationId,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+  it("schedules every future reminder that has no notification, and saves its id", async () => {
+    record("r-future", NOW + 60_000, null);
+    record("r-past", NOW - 60_000, null);
+    record("r-already", NOW + 120_000, "os-existing");
+
+    await expect(scheduleUnscheduledReminders(db)).resolves.toBe(1);
+
+    expect(getReminderById(db, "r-future")!.notificationId).not.toBeNull();
+    expect(getReminderById(db, "r-past")!.notificationId).toBeNull();
+    expect(getReminderById(db, "r-already")!.notificationId).toBe(
+      "os-existing",
+    );
+    expect(__scheduled.size).toBe(1);
+  });
+
+  it("schedules nothing (and says 0) when notifications aren't allowed", async () => {
+    __permission.granted = false;
+    __permission.canAskAgain = false;
+    record("r-future", NOW + 60_000, null);
+    await expect(scheduleUnscheduledReminders(db)).resolves.toBe(0);
+    expect(getReminderById(db, "r-future")!.notificationId).toBeNull();
+  });
+
+  it("doesn't ask for permission when there is nothing to schedule", async () => {
+    __permission.granted = false;
+    await scheduleUnscheduledReminders(db);
+    expect(__permission.prompted).toBe(0);
+  });
+});
+
+it("cancels a notification it scheduled if saving its id fails (no uncancellable notification)", async () => {
+  insertReminder(db, {
+    id: "r1",
+    capsuleId: "c1",
+    remindAt: NOW + 60_000,
+    message: null,
+    notificationId: null,
+    createdAt: 1,
+    updatedAt: 1,
+  });
+  db.execSync(
+    "CREATE TRIGGER no_update BEFORE UPDATE ON reminders BEGIN SELECT RAISE(ABORT, 'nope'); END;",
+  );
+  await expect(scheduleUnscheduledReminders(db)).resolves.toBe(0);
+  expect(__scheduled.size).toBe(0);
 });

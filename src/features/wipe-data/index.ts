@@ -6,6 +6,7 @@ import { generateId } from "@/shared/lib";
 import {
   deleteAppDirectoryIfExists,
   deleteCacheDirectoryIfExists,
+  EXPORTS_CACHE_DIRECTORY,
 } from "@/shared/fs";
 import { PICKER_CACHE_DIRECTORIES } from "@/shared/picker";
 import { cancelAllLocalNotifications } from "@/shared/notifications";
@@ -54,6 +55,8 @@ export async function wipeAllData(db: SQLiteDatabase | null): Promise<void> {
   deleteAppDirectoryIfExists("chat-images");
   // Pickers' temporary copies of files the user picked (shared/picker).
   PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
+  // Exports waiting for (or left after) the share sheet — plaintext copies.
+  deleteCacheDirectoryIfExists(EXPORTS_CACHE_DIRECTORY);
 
   // `db` is null when erasing from the lock screen: nothing is open, and
   // opening a database just to log would create one.

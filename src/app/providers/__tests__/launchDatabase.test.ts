@@ -22,6 +22,10 @@ import {
   unlockVault,
 } from "@/features/encrypt-vault";
 import { deleteDatabaseSync } from "expo-sqlite";
+import {
+  __resetFsMock,
+  __deletedDirectoryUris,
+} from "@/__mocks__/expo-file-system";
 import { openAtLaunch, openUnlocked } from "../launchDatabase";
 
 const PASS = "correct horse battery staple";
@@ -158,4 +162,10 @@ describe("openUnlocked", () => {
     expect(openDatabaseFile()).toBeNull();
     expect(__storedDatabaseFiles().has(DATABASE_FILES.plain)).toBe(true);
   });
+});
+
+it("clears leftover exports at every launch, before any unlock (5.5)", async () => {
+  __resetFsMock();
+  await openAtLaunch();
+  expect(__deletedDirectoryUris).toContain("file:///cache/Exports");
 });

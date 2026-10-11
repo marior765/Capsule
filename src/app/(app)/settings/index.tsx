@@ -4,30 +4,46 @@ import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
 
 /**
- * Only routes that actually do something are listed. Screens still to be built
- * (privacy, storage, import/export, sync) get their link when they land —
+ * Only routes that actually do something are listed. Screens still to be
+ * built (appearance, storage, sync) get their link when they land —
  * linking to an empty screen is worse than not offering it.
  */
 const ENTRIES = [
   {
+    id: "inference",
     label: "Inference",
     hint: "Temperature, sampling, context length",
     href: "/settings/inference",
   },
   {
+    id: "models",
     label: "Models",
     hint: "Download, select, or delete on-device models",
     href: "/models",
   },
   {
+    id: "personas",
     label: "Personas",
     hint: "Reusable system prompts",
     href: "/personas",
   },
   {
+    id: "snippets",
     label: "Snippets",
     hint: "Reusable prompt text for chat",
     href: "/snippets",
+  },
+  {
+    id: "privacy",
+    label: "Privacy",
+    hint: "App lock, activity log, erase everything",
+    href: "/settings/privacy",
+  },
+  {
+    id: "importExport",
+    label: "Import & Export",
+    hint: "Backups, exports, and imports from other apps",
+    href: "/settings/import-export",
   },
 ] as const;
 
@@ -37,8 +53,8 @@ export default function SettingsScreen() {
       <Text style={styles.heading}>Settings</Text>
       {ENTRIES.map((entry) => (
         <Pressable
-          testID={`${testIDs.pressables.entry}_${entry.label}`}
-          key={entry.href}
+          testID={`${testIDs.pressables.entry}_${entry.id}`}
+          key={entry.id}
           style={styles.row}
           onPress={() => router.push(entry.href)}
           accessibilityRole="button"
