@@ -3,6 +3,7 @@ import {
   isEnrolledAsync,
   authenticateAsync,
 } from "expo-local-authentication";
+import { getString, setString } from "@/shared/storage";
 
 /**
  * "features/app-lock — biometric / passphrase gate on launch & resume"
@@ -145,4 +146,54 @@ export function createAppLock(
       return result;
     },
   };
+}
+
+/**
+ * How long Capsule may stay in the background before it locks again (4.6;
+ * user decision 2026-10-11: a Privacy setting, default 1 minute). Stored in
+ * plain settings — it's a preference, not a secret.
+ */
+export type LockAfter = "immediately" | "1min" | "5min";
+
+export const LOCK_AFTER_OPTIONS: readonly {
+  value: LockAfter;
+  label: string;
+}[] = [
+  { value: "immediately", label: "Immediately" },
+  { value: "1min", label: "After 1 minute" },
+  { value: "5min", label: "After 5 minutes" },
+];
+
+const LOCK_AFTER_KEY = "appLock.lockAfter";
+const DEFAULT_LOCK_AFTER: LockAfter = "1min";
+const LOCK_AFTER_MS: Record<LockAfter, number> = {
+  immediately: 0,
+  "1min": 60_000,
+  "5min": 300_000,
+};
+
+export function getLockAfter(): LockAfter {
+  const stored = getString(LOCK_AFTER_KEY);
+  return LOCK_AFTER_OPTIONS.some((o) => o.value === stored)
+    ? (stored as LockAfter)
+    : DEFAULT_LOCK_AFTER;
+}
+
+export function setLockAfter(value: LockAfter): void {
+  setString(LOCK_AFTER_KEY, value);
+}
+
+/**
+ * Whether returning to the app at `now` should show the lock screen, given
+ * when it went to the background (`leftAt`, null if it never did). A clock
+ * that went backwards re-locks — the time away can't be trusted.
+ */
+export function shouldRelock(
+  leftAt: number | null,
+  now: number,
+  lockAfter: LockAfter,
+): boolean {
+  if (leftAt === null) return false;
+  const away = now - leftAt;
+  return away < 0 || away >= LOCK_AFTER_MS[lockAfter];
 }

@@ -7,23 +7,26 @@ import { migrations } from "./migrations";
 import { LlmProvider } from "./LlmProvider";
 import { SttProvider } from "./SttProvider";
 import { EmbeddingProvider } from "./EmbeddingProvider";
+import { AppLockGate } from "./AppLockGate";
 
 export function Providers({ children }: PropsWithChildren) {
-  // Run migrations synchronously on first render, before any child (including
-  // LlmProvider, which reads the active model) mounts.
+  // Reminders (8.8) also show while the app is open. Local only.
   useState(() => {
-    runMigrations(openDb(), migrations);
-    // Reminders (8.8) also show while the app is open. Local only.
     configureNotificationDisplay();
     return null;
   });
 
+  // AppLockGate opens (and migrates) the database — the plain one straight
+  // away, or the encrypted one after unlock — before any child, including
+  // LlmProvider (which reads the active model), mounts.
   return (
-    <LlmProvider>
-      <SttProvider>
-        <EmbeddingProvider>{children}</EmbeddingProvider>
-      </SttProvider>
-    </LlmProvider>
+    <AppLockGate>
+      <LlmProvider>
+        <SttProvider>
+          <EmbeddingProvider>{children}</EmbeddingProvider>
+        </SttProvider>
+      </LlmProvider>
+    </AppLockGate>
   );
 }
 

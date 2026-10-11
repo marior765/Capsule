@@ -99,11 +99,11 @@ describe("every route under src/app (8.10)", () => {
     expect(problems).toEqual([]);
   });
 
-  it("exposes the testIDs object as a static property of the route component", () => {
+  it("exposes the testIDs object as a static property of the component it names", () => {
     const problems = routeFiles(APP_ROOT).flatMap((path) => {
       const source = readFileSync(path, "utf8");
       if (!source.includes("createComponentTestIDs(")) return [];
-      const name = /export default function (\w+)/.exec(source)?.[1];
+      const name = /createComponentTestIDs\(\s*"(\w+)"/.exec(source)?.[1];
       return name !== undefined && source.includes(`${name}.testIDs = testIDs;`)
         ? []
         : [relative(APP_ROOT, path)];

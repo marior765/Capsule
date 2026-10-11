@@ -10,6 +10,7 @@ import {
 import type { SQLiteDatabase } from "expo-sqlite";
 import { insertAuditEntry } from "@/entities/audit";
 import { generateId } from "@/shared/lib";
+import { getBoolean, remove, setBoolean } from "@/shared/storage";
 import {
   randomHex,
   deriveKeyHex,
@@ -42,12 +43,10 @@ import {
  * is the responsibility of whatever wires this module to the app, once it
  * has an open `db` handle (see BLOCKED.md).
  *
- * `resetVault` is different: as things stand *today*, `Providers` (see
- * src/app/providers/index.tsx) calls `openDb()` unconditionally and
- * unkeyed at app start, before any vault gate exists — so a writable,
- * audit-capable db handle is always available by the time `resetVault`
- * could run. It uses that handle to log the wipe. **This does not make the
- * entry durable**: `resetVault` immediately calls `deleteDb()` afterward,
+ * `resetVault` logs the wipe only when a database is already open (from
+ * the lock screen, with the passphrase forgotten, none is — and opening
+ * the plain file just to log would create one). **The entry isn't
+ * durable either way**: `resetVault` immediately calls `deleteDb()` afterward,
  * which deletes the entire database file — including the audit table the
  * entry was just written into. The write still has value (it survives a
  * crash or failure between the insert and the delete, and it is the
@@ -65,6 +64,13 @@ const BIOMETRIC_KEY = "encryptVault.biometricMasterKey";
 /** Plain marker that the biometric copy exists — checking it must not trigger a prompt. */
 const BIOMETRIC_FLAG = "encryptVault.biometricUnlock";
 const BIOMETRIC_PROMPT = "Unlock Capsule";
+/**
+ * Set only while the plain file, if it still exists, holds nothing newer
+ * than the encrypted one — i.e. it's a closed copy that turning the lock on
+ * (or a failed turn-off) couldn't delete. Launch cleanup deletes the plain
+ * file only when this is set; otherwise it may hold data and is kept.
+ */
+const STALE_PLAIN_KEY = "appLock.plainCopyIsStale";
 const MASTER_KEY_LENGTH_BYTES = 32;
 const SALT_LENGTH_BYTES = 16;
 
@@ -164,12 +170,29 @@ function assertSameShape(copy: SQLiteDatabase, expected: Shape): void {
   }
 }
 
-function tryDeleteDatabaseFile(file: "plain" | "vault"): void {
+/** Best effort while undoing; returns whether the file is gone. */
+function tryDeleteDatabaseFile(file: "plain" | "vault"): boolean {
   try {
     deleteDatabaseFile(file);
+    return true;
   } catch {
-    // best effort while undoing; the original error is what matters
+    return false; // the original error is what matters
   }
+}
+
+function markPlainCopyStale(stale: boolean): void {
+  if (stale) setBoolean(STALE_PLAIN_KEY, true);
+  else remove(STALE_PLAIN_KEY);
+}
+
+/** Whether a leftover plain file is a stale copy, safe to delete once the encrypted one is open. */
+export function isPlainCopyStale(): boolean {
+  return getBoolean(STALE_PLAIN_KEY) === true;
+}
+
+/** Call after the stale plain copy was deleted. */
+export function forgetStalePlainCopy(): void {
+  markPlainCopyStale(false);
 }
 
 /**
@@ -203,6 +226,8 @@ export async function turnOnAppLock(
     throw error;
   }
   closeDb();
+  // Closed right after the copy: nothing in it is newer than the vault.
+  markPlainCopyStale(true);
 
   let keySaved = false;
   try {
@@ -230,25 +255,28 @@ export async function turnOnAppLock(
     if (keysForgotten) {
       tryDeleteDatabaseFile("vault");
       openDb();
+      markPlainCopyStale(false);
     } else {
       // The saved key opens the vault at next launch, so this session
-      // must write there too. Plain is the fallback if even that fails.
+      // must write there too. Plain is the fallback if even that fails —
+      // and then plain is the live copy, not a stale one.
       try {
         openDb({ key: masterKeyHex });
       } catch {
         closeDb();
         openDb();
+        markPlainCopyStale(false);
       }
     }
     throw error;
   }
 
+  let leftover = false;
   try {
     deleteDatabaseFile("plain");
+    markPlainCopyStale(false);
   } catch {
-    throw new LeftoverCopyError(
-      "App lock is on, but the unencrypted copy couldn't be removed yet.",
-    );
+    leftover = true; // stays marked stale: removed at the next unlock
   }
   if (options.biometrics) {
     try {
@@ -256,6 +284,11 @@ export async function turnOnAppLock(
     } catch {
       // No biometrics enrolled (or refused): the passphrase still unlocks.
     }
+  }
+  if (leftover) {
+    throw new LeftoverCopyError(
+      "App lock is on, but the unencrypted copy couldn't be removed yet. It will be removed the next time you unlock Capsule.",
+    );
   }
 }
 
@@ -294,15 +327,18 @@ export async function turnOffAppLock(passphrase: string): Promise<void> {
     await forgetKeys();
   } catch (error) {
     closeDb();
-    tryDeleteDatabaseFile("plain");
+    // The plain file is only a copy of the vault being kept — if it can't
+    // be deleted now, launch cleanup may delete it later.
+    if (!tryDeleteDatabaseFile("plain")) markPlainCopyStale(true);
     openDb({ key: masterKeyHex });
     throw error;
   }
+  markPlainCopyStale(false);
   try {
     deleteDatabaseFile("vault");
   } catch {
     throw new LeftoverCopyError(
-      "App lock is off, but the encrypted copy couldn't be removed yet.",
+      "App lock is off, but the encrypted copy couldn't be removed yet. It will be removed the next time Capsule starts.",
     );
   }
 }
@@ -391,12 +427,22 @@ export async function unlockVault(passphrase: string): Promise<string> {
  * above for why this entry does not actually survive the wipe it records.
  */
 export async function resetVault(): Promise<void> {
-  insertAuditEntry(openDb(), {
-    id: generateId(),
-    action: "wipe",
-    detail: "encrypt-vault reset (wipe-and-restart)",
-    createdAt: Date.now(),
-  });
+  // Only when a database is already open: from the lock screen (passphrase
+  // forgotten) nothing is, and opening the plain file just to log would
+  // create one. The entry is erased with everything else either way.
+  if (openDatabaseFile() !== null) {
+    try {
+      insertAuditEntry(openDb(), {
+        id: generateId(),
+        action: "wipe",
+        detail: "encrypt-vault reset (wipe-and-restart)",
+        createdAt: Date.now(),
+      });
+    } catch {
+      // never block an erase on logging it
+    }
+  }
   await forgetKeys();
+  markPlainCopyStale(false);
   deleteDb();
 }

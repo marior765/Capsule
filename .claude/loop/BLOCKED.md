@@ -119,6 +119,33 @@ Flagged, not fixed (2026-09-15 — see journal beat 62).
 
 ---
 
+### 4.6 — app lock: device checks and known follow-ups (beat 84)
+**Device check (simulator or phone, after `npx expo prebuild --clean`):**
+(a) Privacy → turn app lock on (passphrase twice, Face ID switch on); the app
+restarts to "Capsule is locked"; unlock with the passphrase, then with Face ID
+— all data is there. (b) Background the app for more than 1 minute, return:
+the lock screen covers it; under 1 minute it doesn't; "Immediately" and
+"5 minutes" behave likewise. (c) Wrong passphrase → "That passphrase didn't
+work." (d) Privacy → turn it off with the passphrase → restart, data intact,
+no lock. (e) "Forgot your passphrase? Erase everything" → two confirmations →
+fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
+`capsule.db` / `capsule-vault.db` remains after each change, and that
+`capsule-vault.db` is not readable as plain SQLite.
+
+**Known follow-ups, deliberately not done in 4.6:**
+- If the OS invalidates the biometric copy of the key (a new face or
+  fingerprint enrolled), biometric unlock keeps failing until the lock is
+  turned off and on again; the passphrase always works. A "set up Face ID
+  again" control would fix it.
+- On Android, saving the biometric copy while turning the lock on shows a
+  fingerprint prompt (iOS doesn't); cancelling it silently turns the lock on
+  without biometrics.
+- iOS keeps Keychain items across an uninstall: a reinstalled app may open to
+  "Capsule is locked" with no data behind it — "Erase everything" recovers.
+  Worth handling with 4.7's erase-everything (e.g. detect "key but no file").
+- The re-lock screen is an overlay: a native modal added later would sit
+  above it; the app-switcher snapshot still shows content.
+
 ## Resolved (2026-10-11) — user decisions, round 2 (so testing is all that's left)
 
 - **App lock at launch (new 4.6):** build the real gate — lock screen, database opened with its key only after unlock, re-lock on return. Lock timing is a Privacy setting: Immediately / 1 min / 5 min, **default 1 minute**.

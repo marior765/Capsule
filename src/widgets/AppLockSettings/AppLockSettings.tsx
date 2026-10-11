@@ -1,16 +1,30 @@
-import { useEffect, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Pressable, Switch, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import type { SQLiteDatabase } from "expo-sqlite";
 import { createComponentTestIDs } from "@/shared/testing";
-import { setUpVault, isVaultConfigured } from "@/features/encrypt-vault";
-import { isBiometricAvailable } from "@/features/app-lock";
-import { insertAuditEntry } from "@/entities/audit";
-import { generateId } from "@/shared/lib";
+import {
+  hasBiometricUnlock,
+  isVaultConfigured,
+  LeftoverCopyError,
+  turnOffAppLock,
+  turnOnAppLock,
+} from "@/features/encrypt-vault";
+import {
+  getLockAfter,
+  isBiometricAvailable,
+  LOCK_AFTER_OPTIONS,
+  setLockAfter,
+  type LockAfter,
+} from "@/features/app-lock";
 import { validatePassphraseSetup } from "./validatePassphraseSetup";
 
 type AppLockSettingsProps = {
-  db: SQLiteDatabase;
+  /**
+   * Called after the lock was turned on or off. The database has moved to
+   * another file, so the caller restarts the app — no screen may keep using
+   * the old connection.
+   */
+  onChanged: () => void;
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -19,36 +33,25 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 /**
- * The "app-lock" half of 4.4's privacy screen — lets the user configure a
- * passphrase. Deliberately does NOT use `features/app-lock`'s
- * `createAppLock`: that's a lock/unlock *gate* state machine for guarding
- * app access over time (launch, resume) — this is a one-shot setup form,
- * a different concern. It calls `encrypt-vault`'s `setUpVault` directly.
- *
- * No "disable" control exists yet, deliberately: the only way to remove a
- * configured vault today is `resetVault()`, which deletes the *entire*
- * database, not just the lock — using it as a casual "turn off the lock"
- * button would silently destroy the user's conversations/capsules/models
- * for an action they'd reasonably expect to be non-destructive. A real
- * "remove the lock but keep my data" flow doesn't exist yet — flagged in
- * .claude/loop/BLOCKED.md rather than faked here.
- *
- * Important honesty note, surfaced in the UI copy itself, not just docs:
- * setting up a passphrase here does not yet make anything encrypted at
- * rest. `shared/db`'s `openDb({key})` only takes effect on the *first*
- * open of the process-wide connection, and `Providers` already opens it
- * unconditionally and unkeyed before this screen can ever render (see
- * `features/encrypt-vault`'s own module doc comment). That gap closes only
- * once a launch-time unlock gate exists — separate, larger integration
- * work, not part of this screen.
+ * App lock on the Privacy screen (4.6). Turning it on encrypts everything
+ * on this device under a passphrase (optionally also unlockable with
+ * biometrics); turning it off decrypts it again without losing anything.
+ * While it's on, the user picks how long Capsule may be away before it
+ * locks again (default 1 minute).
  */
-export function AppLockSettings({ db }: AppLockSettingsProps) {
+export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricOn, setBiometricOn] = useState(false);
+  const [useBiometrics, setUseBiometrics] = useState(true);
   const [passphrase, setPassphrase] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [lockAfter, setLockAfterState] = useState<LockAfter>(getLockAfter);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A ref, not state: a fast double tap must not start two lock changes
+  // before the busy re-render lands.
+  const inFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,68 +61,171 @@ export function AppLockSettings({ db }: AppLockSettingsProps) {
     void isBiometricAvailable().then((value) => {
       if (!cancelled) setBiometricAvailable(value);
     });
+    void hasBiometricUnlock().then((value) => {
+      if (!cancelled) setBiometricOn(value);
+    });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const handleEnable = async () => {
+  // A leftover copy means the change itself happened — say so, then restart.
+  const finish = (e: unknown, fallback: string) => {
+    if (e instanceof LeftoverCopyError) {
+      // Not dismissable: the restart must happen either way.
+      Alert.alert("Done", e.message, [{ text: "OK", onPress: onChanged }], {
+        cancelable: false,
+      });
+      return;
+    }
+    setError(e instanceof Error ? e.message : fallback);
+  };
+
+  const handleTurnOn = async () => {
     const validationError = validatePassphraseSetup(passphrase, confirmation);
     if (validationError) {
       setError(ERROR_MESSAGES[validationError]);
       return;
     }
-
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
-      await setUpVault(passphrase);
-      // setUpVault/unlockVault can't log themselves — they run before the
-      // caller has derived a key, with no db handle of their own (see
-      // encrypt-vault's module doc comment). "decrypt" is the closest fit
-      // in AuditAction's four-category closed union (CLAUDE.md names
-      // export/decrypt/wipe/model_download exactly, no fifth "setup"
-      // category) — flagged as an interpretation, not an exact semantic
-      // match, in .claude/loop/BLOCKED.md.
-      insertAuditEntry(db, {
-        id: generateId(),
-        action: "decrypt",
-        detail: "App lock passphrase configured",
-        createdAt: Date.now(),
+      await turnOnAppLock(passphrase, {
+        biometrics: biometricAvailable && useBiometrics,
       });
-      setConfigured(true);
-      setPassphrase("");
-      setConfirmation("");
+      onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not set up app lock");
+      finish(e, "Couldn't turn on app lock.");
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
+  };
+
+  const turnOff = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await turnOffAppLock(passphrase);
+      onChanged();
+    } catch (e) {
+      if (e instanceof Error && e.name === "VaultUnlockError") {
+        setError("That passphrase didn't work.");
+      } else {
+        finish(e, "Couldn't turn off app lock.");
+      }
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
+
+  const handleTurnOff = () => {
+    if (!passphrase) {
+      setError("Enter your passphrase to turn app lock off.");
+      return;
+    }
+    Alert.alert(
+      "Turn off app lock?",
+      "Your data stays on this device but will no longer be encrypted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Turn off",
+          style: "destructive",
+          onPress: () => void turnOff(),
+        },
+      ],
+    );
+  };
+
+  const handleLockAfter = (value: LockAfter) => {
+    setLockAfter(value);
+    setLockAfterState(value);
   };
 
   if (configured === null) {
     return null;
   }
 
+  const errorText = error !== null && (
+    <Text
+      testID={testIDs.texts.error}
+      style={styles.error}
+      accessibilityLiveRegion="polite"
+    >
+      {error}
+    </Text>
+  );
+
   if (configured) {
     return (
       <View testID={testIDs.containers.root} style={styles.root}>
-        <Text testID={testIDs.texts.status} style={styles.statusEnabled}>
-          App lock is configured.
+        <Text testID={testIDs.texts.status} style={styles.status}>
+          App lock is on. Everything on this device is encrypted.
         </Text>
-        {biometricAvailable && (
-          <Text style={styles.meta}>Biometric unlock is available.</Text>
-        )}
+        <Text style={styles.meta}>
+          {biometricOn
+            ? "Unlock with your passphrase or Face ID / fingerprint."
+            : "Unlock with your passphrase."}
+        </Text>
+
+        <Text style={styles.label}>Lock again when Capsule has been away</Text>
+        {LOCK_AFTER_OPTIONS.map((option) => (
+          <Pressable
+            key={option.value}
+            testID={`${testIDs.pressables.lockAfter}_${option.value}`}
+            style={styles.option}
+            onPress={() => handleLockAfter(option.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: lockAfter === option.value }}
+          >
+            <Text style={styles.optionLabel}>
+              {lockAfter === option.value ? "● " : "○ "}
+              {option.label}
+            </Text>
+          </Pressable>
+        ))}
+
+        <Text style={styles.label}>Turn off app lock</Text>
+        <TextInput
+          testID={testIDs.inputs.currentPassphrase}
+          style={styles.input}
+          placeholder="Current passphrase"
+          secureTextEntry
+          value={passphrase}
+          onChangeText={setPassphrase}
+          editable={!busy}
+          accessibilityLabel="Current passphrase"
+        />
+        {errorText}
+        <Pressable
+          testID={testIDs.buttons.turnOff}
+          style={styles.secondary}
+          onPress={handleTurnOff}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy, busy }}
+        >
+          <Text style={styles.secondaryLabel}>
+            {busy ? "Turning off…" : "Turn off app lock"}
+          </Text>
+        </Pressable>
       </View>
     );
   }
 
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
-      <Text style={styles.statusDisabled}>App lock is not set up.</Text>
+      <Text style={styles.status}>App lock is off.</Text>
       <Text style={styles.meta}>
-        Setting a passphrase here does not yet encrypt anything on its own —
-        that requires a launch-lock screen this app does not have yet.
+        Turning it on encrypts everything on this device with your passphrase.
+        If you forget the passphrase, the only way back in is to erase
+        everything.
       </Text>
       <TextInput
         testID={testIDs.inputs.passphrase}
@@ -141,25 +247,31 @@ export function AppLockSettings({ db }: AppLockSettingsProps) {
         editable={!busy}
         accessibilityLabel="Confirm passphrase"
       />
-      {error !== null && (
-        <Text
-          testID={testIDs.texts.error}
-          style={styles.error}
-          accessibilityLiveRegion="polite"
-        >
-          {error}
-        </Text>
+      {biometricAvailable && (
+        <View style={styles.switchRow}>
+          <Text style={styles.optionLabel}>
+            Also unlock with Face ID / fingerprint
+          </Text>
+          <Switch
+            testID={testIDs.inputs.biometrics}
+            value={useBiometrics}
+            onValueChange={setUseBiometrics}
+            disabled={busy}
+            accessibilityLabel="Also unlock with Face ID or fingerprint"
+          />
+        </View>
       )}
+      {errorText}
       <Pressable
-        testID={testIDs.buttons.enable}
+        testID={testIDs.buttons.turnOn}
         style={styles.button}
-        onPress={handleEnable}
+        onPress={handleTurnOn}
         disabled={busy}
         accessibilityRole="button"
         accessibilityState={{ disabled: busy, busy }}
       >
         <Text style={styles.buttonLabel}>
-          {busy ? "Setting up…" : "Enable app lock"}
+          {busy ? "Encrypting…" : "Turn on app lock"}
         </Text>
       </Pressable>
     </View>
@@ -170,12 +282,7 @@ const styles = StyleSheet.create((theme) => ({
   root: {
     padding: theme.spacing.three,
   },
-  statusEnabled: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.sans,
-    fontSize: 15,
-  },
-  statusDisabled: {
+  status: {
     color: theme.colors.text,
     fontFamily: theme.fonts.sans,
     fontSize: 15,
@@ -185,6 +292,29 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
     fontSize: 12,
+    marginBottom: theme.spacing.two,
+  },
+  label: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.three,
+    marginBottom: theme.spacing.one,
+  },
+  option: {
+    paddingVertical: theme.spacing.two,
+  },
+  optionLabel: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+    flexShrink: 1,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.two,
     marginBottom: theme.spacing.two,
   },
   input: {
@@ -211,13 +341,29 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.background,
     fontFamily: theme.fonts.rounded,
   },
+  secondary: {
+    alignItems: "center",
+    paddingVertical: theme.spacing.three,
+    borderRadius: theme.spacing.two,
+    backgroundColor: theme.colors.backgroundSelected,
+  },
+  secondaryLabel: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.rounded,
+  },
 }));
 
 const testIDs = createComponentTestIDs("AppLockSettings", {
   containers: ["root"] as const,
   texts: ["status", "error"] as const,
-  inputs: ["passphrase", "confirmation"] as const,
-  buttons: ["enable"] as const,
+  inputs: [
+    "passphrase",
+    "confirmation",
+    "currentPassphrase",
+    "biometrics",
+  ] as const,
+  buttons: ["turnOn", "turnOff"] as const,
+  pressables: ["lockAfter"] as const,
 });
 
 AppLockSettings.testIDs = testIDs;

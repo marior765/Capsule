@@ -33,16 +33,11 @@ export type OpenDbOptions = {
    * encrypt anything. features/encrypt-vault owns deriving/unwrapping this
    * key; shared/db only ever forwards it.
    *
-   * **Landmine for whoever wires vault-gating in:** `openDb()` is already
-   * called unconditionally and unkeyed by `Providers`, `LlmProvider`, and
-   * `SttProvider` today. Because the connection is a singleton, the first
-   * `openDb()` call — keyed or not — wins for the lifetime of the process.
-   * A future unlock screen calling `openDb({ key })` *after* `Providers`
-   * has already opened it unkeyed will silently no-op: no error, no
-   * encryption, `options.key` just gets ignored. Making 4.1 actually take
-   * effect requires gating `Providers`' own `openDb()` call behind the
-   * vault unlock, not just calling `openDb({ key })` from a screen mounted
-   * inside it. Tracked in .claude/loop/BLOCKED.md.
+   * The connection is a singleton, so the first `openDb` call decides which
+   * file is open for the process. `app/providers/AppLockGate` makes sure that
+   * first call is the right one: with app lock on, nothing mounts until the
+   * vault is unlocked and opened with its key. A keyed call while the plain
+   * file is open throws rather than silently returning plain (4.6).
    */
   key?: string;
 };
@@ -88,9 +83,7 @@ export function openDb(options?: OpenDbOptions): SQLiteDatabase {
       // once `instance` exists, the connection is already keyed (or was
       // never meant to be), and a later caller passing a *different* key
       // here cannot re-key an open connection — that would require its own
-      // explicit rekey flow, not implicit behavior in openDb. See the
-      // `key` option's own doc comment for the sharper, live landmine this
-      // singleton behavior creates.
+      // explicit rekey flow, not implicit behavior in openDb.
       instance.execSync(`PRAGMA key = "x'${options.key}'";`);
     }
     instance.execSync(

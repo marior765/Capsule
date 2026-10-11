@@ -1,6 +1,7 @@
 // Tests for 4.6 (app lock at launch: turning the lock on and off, biometric
 // unlock) — written before implementation (TDD). "hard" depth: crypto +
 // moving the whole database between files.
+import { clearAllSettings } from "@/shared/storage";
 import {
   __resetSecureStoreMock,
   setItemAsync,
@@ -30,6 +31,8 @@ import {
   unlockVaultWithBiometrics,
   VaultUnlockError,
   LeftoverCopyError,
+  resetVault,
+  isPlainCopyStale,
 } from "../index";
 
 const PASS = "correct horse battery staple";
@@ -47,6 +50,7 @@ const notes = () =>
   );
 
 beforeEach(() => {
+  clearAllSettings();
   __resetSecureStoreMock();
   __resetSqliteMock();
   _resetDbForTesting();
@@ -353,4 +357,78 @@ describe("leftover copies are reported distinctly", () => {
     expect(await isVaultConfigured()).toBe(true);
     expect(openDatabaseFile()).toBe("vault");
   });
+});
+
+describe("resetVault from the lock screen (4.6)", () => {
+  it("erases everything even when no database is open (locked, passphrase forgotten)", async () => {
+    await turnOnAppLock(PASS, { biometrics: true });
+    closeDb(); // app restarted, sitting on the lock screen
+    _resetDbForTesting();
+
+    await expect(resetVault()).resolves.toBeUndefined();
+
+    expect(await isVaultConfigured()).toBe(false);
+    expect(await hasBiometricUnlock()).toBe(false);
+    expect(__storedDatabaseFiles().has(DATABASE_FILES.vault)).toBe(false);
+    expect(__storedDatabaseFiles().has(DATABASE_FILES.plain)).toBe(false);
+  });
+});
+
+describe("the stale-plain-copy marker (4.6, checker part 2)", () => {
+  it("is cleared after a clean turn-on (nothing left to remove)", async () => {
+    await turnOnAppLock(PASS, { biometrics: false });
+    expect(isPlainCopyStale()).toBe(false);
+  });
+
+  it("is set when turn-on succeeded but couldn't delete the plain copy", async () => {
+    const original = (deleteDatabaseSync as jest.Mock).getMockImplementation()!;
+    (deleteDatabaseSync as jest.Mock).mockImplementation((name: string) => {
+      if (name === DATABASE_FILES.plain) throw new Error("Unable to delete");
+      return original(name);
+    });
+    try {
+      await turnOnAppLock(PASS, { biometrics: false }).catch(() => undefined);
+    } finally {
+      (deleteDatabaseSync as jest.Mock).mockImplementation(original);
+    }
+    expect(isPlainCopyStale()).toBe(true);
+  });
+
+  it("is cleared when a failed turn-on falls back to the plain file", async () => {
+    setItemAsync.mockRejectedValueOnce(new Error("keychain unavailable"));
+    await turnOnAppLock(PASS, { biometrics: false }).catch(() => undefined);
+    expect(openDatabaseFile()).toBe("plain");
+    expect(isPlainCopyStale()).toBe(false);
+  });
+
+  it("is cleared by resetVault", async () => {
+    const original = (deleteDatabaseSync as jest.Mock).getMockImplementation()!;
+    (deleteDatabaseSync as jest.Mock).mockImplementation((name: string) => {
+      if (name === DATABASE_FILES.plain) throw new Error("Unable to delete");
+      return original(name);
+    });
+    try {
+      await turnOnAppLock(PASS, { biometrics: false }).catch(() => undefined);
+    } finally {
+      (deleteDatabaseSync as jest.Mock).mockImplementation(original);
+    }
+    await resetVault();
+    expect(isPlainCopyStale()).toBe(false);
+  });
+});
+
+it("still sets up biometric unlock when only the leftover-copy cleanup failed", async () => {
+  const original = (deleteDatabaseSync as jest.Mock).getMockImplementation()!;
+  (deleteDatabaseSync as jest.Mock).mockImplementation((name: string) => {
+    if (name === DATABASE_FILES.plain) throw new Error("Unable to delete");
+    return original(name);
+  });
+  try {
+    await expect(turnOnAppLock(PASS, { biometrics: true })).rejects.toThrow(
+      LeftoverCopyError,
+    );
+  } finally {
+    (deleteDatabaseSync as jest.Mock).mockImplementation(original);
+  }
+  expect(await hasBiometricUnlock()).toBe(true);
 });

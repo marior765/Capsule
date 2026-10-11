@@ -1,6 +1,7 @@
+import { reloadAppAsync } from "expo";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { remigrateDb, useDb, useEmbeddings } from "@/app/providers";
 import { getAllAuditEntries, type AuditEntry } from "@/entities/audit";
@@ -41,10 +42,11 @@ export default function PrivacyScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <ScrollView style={styles.root}>
       <PrivacyBanner />
       <Text style={styles.heading}>App lock</Text>
-      <AppLockSettings db={db} />
+      {/* The database moved to another file: restart so nothing keeps the old connection. */}
+      <AppLockSettings onChanged={() => void reloadAppAsync()} />
       <Text style={styles.heading}>Danger zone</Text>
       <WipeDataSettings db={db} onWiped={handleWiped} />
       <Text style={styles.heading}>Activity log</Text>
@@ -53,7 +55,7 @@ export default function PrivacyScreen() {
         performed. Nothing here can be edited or deleted.
       </Text>
       <EgressLog entries={entries} />
-    </View>
+    </ScrollView>
   );
 }
 
