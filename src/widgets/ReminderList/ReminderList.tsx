@@ -24,6 +24,8 @@ type ReminderListProps = {
   /** True while a reminder is being set or cancelled — every button is disabled. */
   busy: boolean;
   error: string | null;
+  /** Something worth knowing that isn't a failure (e.g. notifications are off). */
+  notice: string | null;
 };
 
 /**
@@ -41,6 +43,7 @@ export function ReminderList({
   onAddAt,
   busy,
   error,
+  notice,
 }: ReminderListProps) {
   // When the picker was opened (its starting point), or null when closed.
   const [pickingFrom, setPickingFrom] = useState<number | null>(null);
@@ -77,6 +80,16 @@ export function ReminderList({
           </View>
         );
       })}
+
+      {notice !== null && (
+        <Text
+          testID={testIDs.texts.notice}
+          style={styles.notice}
+          accessibilityLiveRegion="polite"
+        >
+          {notice}
+        </Text>
+      )}
 
       {error !== null && (
         <Text
@@ -154,6 +167,12 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
     paddingHorizontal: theme.spacing.one,
   },
+  notice: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.one,
+  },
   error: {
     color: theme.colors.danger,
     fontFamily: theme.fonts.sans,
@@ -181,7 +200,7 @@ const styles = StyleSheet.create((theme) => ({
 
 const testIDs = createComponentTestIDs("ReminderList", {
   containers: ["root"] as const,
-  texts: ["empty", "error"] as const,
+  texts: ["empty", "error", "notice"] as const,
   buttons: ["preset", "cancel", "pickDateTime"] as const,
 });
 

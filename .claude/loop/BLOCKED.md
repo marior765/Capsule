@@ -175,6 +175,10 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
   the phone set to a US timezone** (the day must not shift). Set one a minute
   or two out, leave the app, tap the notification → the capsule opens (with
   app lock on: after unlocking). The Android time dialog is 24-hour.
+- 8.12 small leftovers: the chat input can't be typed into while a reply is
+  being generated (the whole send is locked, by design); ephemeral chat has
+  no error message if a reply fails (pre-existing); a model download still
+  running during "Erase everything" can re-record itself afterwards.
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 
@@ -790,6 +794,7 @@ whenever step selection reaches it.
 ## Follow-up (informational — low-risk, not blocking)
 
 ### `shared/fs` extraction is now triggered, not yet done
+**Done (8.12, 2026-10-11):** `features/manage-stt-model` now uses `shared/fs` (relative path, idempotent download, egress-marked); no feature calls expo-file-system directly.
 `docs/ARCHITECTURE.md` names its own condition for extracting a `shared/fs`
 wrapper: "when a second slice needs the filesystem... extract a `shared/fs`
 wrapper that owns all `expo-file-system` interaction — same principle as

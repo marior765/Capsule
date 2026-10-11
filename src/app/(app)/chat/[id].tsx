@@ -278,8 +278,14 @@ export default function ChatScreen() {
     setStreaming(acc.text);
   };
 
+  // One send at a time (8.12): a second tap during the capsule search or
+  // while a reply streams must not start another completion on the same
+  // model. A ref, so it holds before the "sending" re-render lands.
+  const sendInFlight = useRef(false);
+
   const handleSend = async (text: string) => {
-    if (!ctx || !id) return;
+    if (!ctx || !id || sendInFlight.current) return;
+    sendInFlight.current = true;
     const target = editing;
     setEditing(null);
     setError(null);
@@ -355,6 +361,7 @@ export default function ChatScreen() {
     } finally {
       setStreaming("");
       setSending(false);
+      sendInFlight.current = false;
       refresh();
     }
   };
@@ -571,7 +578,8 @@ export default function ChatScreen() {
                 key={`${editing?.id ?? "new"}-${draftInsertKey}`}
                 initialText={editing?.content ?? draftInsertText ?? ""}
                 sendLabel={editing ? "Resend" : "Send"}
-                onSend={handleSend}
+                onSend={(text) => void handleSend(text)}
+                disabled={sending}
               />
             </View>
           </View>

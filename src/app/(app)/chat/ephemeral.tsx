@@ -105,9 +105,15 @@ export default function EphemeralChatScreen() {
     }
   };
 
+  // One send at a time (8.12) — see the persisted chat screen.
+  const [sending, setSending] = useState(false);
+  const sendInFlight = useRef(false);
+
   const handleSend = useCallback(
     async (text: string) => {
-      if (!ctx) return;
+      if (!ctx || sendInFlight.current) return;
+      sendInFlight.current = true;
+      setSending(true);
 
       let acc = "";
       try {
@@ -123,6 +129,8 @@ export default function EphemeralChatScreen() {
         setMessages((prev) => [...prev, userMessage, assistantMessage]);
       } finally {
         setStreaming("");
+        setSending(false);
+        sendInFlight.current = false;
       }
     },
     [ctx, messages, sessionId],
@@ -179,7 +187,8 @@ export default function EphemeralChatScreen() {
               <ChatInput
                 key={draftInsertKey}
                 initialText={draftInsertText ?? ""}
-                onSend={handleSend}
+                onSend={(text) => void handleSend(text)}
+                disabled={sending}
               />
             </View>
           </View>

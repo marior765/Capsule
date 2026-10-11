@@ -1,8 +1,16 @@
-import { Directory, File, Paths } from "expo-file-system";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { beginEgress } from "@/shared/egress";
+import {
+  appFileExists,
+  downloadFileInto,
+  resolveAppPath,
+  safeDecode,
+} from "@/shared/fs";
 import { insertAuditEntry } from "@/entities/audit";
 import { generateId } from "@/shared/lib";
 import { getString, setString } from "@/shared/storage";
+
+const STT_MODELS_DIRECTORY = "stt-models";
 
 /** Where the downloaded model's local path is persisted between launches. */
 export const STT_MODEL_PATH_KEY = "sttModelPath";
@@ -19,18 +27,49 @@ export const DEFAULT_STT_MODEL = {
   url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
 };
 
-/** Reads the downloaded model's local path without triggering a download. */
-export function getSttModelPath(): string | undefined {
-  return getString(STT_MODEL_PATH_KEY);
+/**
+ * The stored path, app-relative (`stt-models/<file>`). Paths stored by
+ * older versions are absolute `file://` URIs, which iOS invalidates when it
+ * moves the app's container; their `stt-models/<file>` tail is kept.
+ */
+function storedPath(): string | undefined {
+  const value = getString(STT_MODEL_PATH_KEY);
+  if (value === undefined) return undefined;
+  let relative = value;
+  if (value.includes("://")) {
+    const at = value.lastIndexOf(`/${STT_MODELS_DIRECTORY}/`);
+    if (at === -1) return undefined;
+    relative = value
+      .slice(at + 1)
+      .split("/")
+      .map(safeDecode)
+      .join("/");
+  }
+  try {
+    return appFileExists(relative) ? relative : undefined;
+  } catch {
+    return undefined; // not a safe relative path — never resolve it
+  }
 }
 
 /**
- * Downloads the default STT model on first use and returns its local path.
- * A no-op past the first call — the stored path is returned directly once
- * it exists, matching `features/manage-models`' download-once shape for the
- * LLM side. This is the one allowed network action for voice input; see
- * CLAUDE.md's hard rule on privacy-sensitive actions writing to the audit
- * entity ("model download" is one of the four named).
+ * The downloaded model's current `file://` URI, without triggering a
+ * download — undefined if it isn't downloaded or its file is gone.
+ */
+export function getSttModelPath(): string | undefined {
+  const path = storedPath();
+  return path === undefined ? undefined : resolveAppPath(path);
+}
+
+let inFlight: Promise<string> | null = null;
+
+/**
+ * Downloads the default STT model on first use and returns its current
+ * `file://` URI; afterwards the stored model is returned directly (a model
+ * whose file has gone is downloaded again). Concurrent calls share one
+ * download. This is the one allowed network action for voice input: it is
+ * user-triggered, shown as network activity (`shared/egress`) while it
+ * runs, and recorded in the audit log ("model download").
  */
 export async function ensureSttModelDownloaded(
   db: SQLiteDatabase,
@@ -41,22 +80,29 @@ export async function ensureSttModelDownloaded(
     onProgress?.(1);
     return existing;
   }
-
-  const dir = new Directory(Paths.document, "stt-models");
-  if (!dir.exists) {
-    dir.create();
-  }
-
-  const file = await File.downloadFileAsync(DEFAULT_STT_MODEL.url, dir);
-
-  setString(STT_MODEL_PATH_KEY, file.uri);
-  insertAuditEntry(db, {
-    id: generateId(),
-    action: "model_download",
-    detail: DEFAULT_STT_MODEL.name,
-    createdAt: Date.now(),
+  inFlight ??= download(db).finally(() => {
+    inFlight = null;
   });
-
+  const uri = await inFlight;
   onProgress?.(1);
-  return file.uri;
+  return uri;
+}
+
+async function download(db: SQLiteDatabase): Promise<string> {
+  const endEgress = beginEgress();
+  try {
+    const { relativePath } = await downloadFileInto(DEFAULT_STT_MODEL.url, [
+      STT_MODELS_DIRECTORY,
+    ]);
+    setString(STT_MODEL_PATH_KEY, relativePath);
+    insertAuditEntry(db, {
+      id: generateId(),
+      action: "model_download",
+      detail: DEFAULT_STT_MODEL.name,
+      createdAt: Date.now(),
+    });
+    return resolveAppPath(relativePath);
+  } finally {
+    endEgress();
+  }
 }

@@ -70,6 +70,8 @@ export default function CapsuleDetailScreen() {
   const [now, setNow] = useState(() => Date.now());
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
+  // Informational (e.g. "saved, but notifications are off") — not an error.
+  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
   const [attachmentsByFieldId, setAttachmentsByFieldId] = useState<
     Record<string, AttachmentEntry[]>
   >({});
@@ -247,9 +249,10 @@ export default function CapsuleDetailScreen() {
     if (reminderInFlight.current) return;
     reminderInFlight.current = true;
     setReminderError(null);
+    setReminderNotice(null);
     setReminderBusy(true);
     try {
-      setReminderError(await change());
+      setReminderNotice(await change());
     } catch (e) {
       setReminderError(e instanceof Error ? e.message : fallback);
     } finally {
@@ -268,7 +271,7 @@ export default function CapsuleDetailScreen() {
   const handleAddReminder = (presetKey: ReminderPresetKey) =>
     runReminderChange(async () => {
       const at = resolvePreset(presetKey, Date.now());
-      if (at === null) return "That time has already passed.";
+      if (at === null) throw new Error("That time has already passed.");
       const { scheduled } = await addReminder(db, {
         capsuleId: id,
         remindAt: at,
@@ -464,6 +467,7 @@ export default function CapsuleDetailScreen() {
           onAddAt={(at) => void handleAddReminderAt(at)}
           busy={reminderBusy}
           error={reminderError}
+          notice={reminderNotice}
         />
       </View>
 

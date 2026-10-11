@@ -5,10 +5,8 @@ import { Directory, File, Paths } from "expo-file-system";
  * per docs/ARCHITECTURE.md's own extraction rule ("when a second slice
  * needs the filesystem ... same principle as `shared/llm` owning
  * llama.rn"). Introduced for 6.8's attachments; also used by model,
- * embedding-model, and attachment storage and the full wipe. Only
- * `features/manage-stt-model` still calls `expo-file-system` directly;
- * moving it here is a tracked follow-up (see `.claude/loop/BLOCKED.md`,
- * "`shared/fs` extraction").
+ * embedding-model, voice-model (8.12) and attachment storage, exports
+ * and the full wipe — no feature calls `expo-file-system` directly.
  *
  * Files are addressed by a path RELATIVE to the app's document directory
  * (e.g. `attachments/<capsuleId>/<name>`), never by an absolute `file://`
