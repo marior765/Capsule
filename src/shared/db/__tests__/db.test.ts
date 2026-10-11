@@ -1,12 +1,25 @@
 // Tests for step 0.2 — written before implementation (TDD)
 // The "openDb with an encryption key" and "deleteDb" blocks below are for
 // step 4.1 (encrypt-vault) — also TDD, written before that behavior existed.
-import { openDb, runMigrations, deleteDb, _resetDbForTesting } from "../index";
+import {
+  openDb,
+  runMigrations,
+  deleteDb,
+  _resetDbForTesting,
+  closeDb,
+  copyDatabaseTo,
+  deleteDatabaseFile,
+  DATABASE_FILES,
+  openDatabaseFile,
+} from "../index";
+import { openDatabaseSync, deleteDatabaseSync } from "expo-sqlite";
+import { __resetSqliteMock } from "@/__mocks__/expo-sqlite";
 
 type SpiedDb = { execSync: jest.Mock };
 
 beforeEach(() => {
   _resetDbForTesting();
+  __resetSqliteMock();
 });
 
 describe("shared/db — openDb", () => {
@@ -148,5 +161,153 @@ describe("shared/db — deleteDb", () => {
     deleteDb();
     const db2 = openDb();
     expect(db2).not.toBe(db1);
+  });
+});
+
+// Tests for 4.6 (app lock at launch) — written before implementation (TDD).
+// The encrypted and plain databases are two separate files; turning the lock
+// on or off copies into the other file (SQLCipher's sqlcipher_export), so a
+// crash at any point leaves at least one complete copy.
+
+const execCalls = (db: unknown): string[] =>
+  (db as SpiedDb).execSync.mock.calls.map((call) => call[0] as string);
+
+describe("shared/db — which file opens (4.6)", () => {
+  beforeEach(() => {
+    (openDatabaseSync as jest.Mock).mockClear();
+  });
+
+  it("opens the plain file without a key", () => {
+    openDb();
+    expect(openDatabaseSync).toHaveBeenCalledWith(DATABASE_FILES.plain);
+  });
+
+  it("opens the separate vault file with a key", () => {
+    openDb({ key: "aabbccdd" });
+    expect(openDatabaseSync).toHaveBeenCalledWith(DATABASE_FILES.vault);
+    expect(DATABASE_FILES.vault).not.toBe(DATABASE_FILES.plain);
+  });
+});
+
+describe("shared/db — copyDatabaseTo (4.6)", () => {
+  it("exports the open database into the vault file, encrypted with the key", () => {
+    const db = openDb();
+    copyDatabaseTo("vault", "aabbccdd");
+    const calls = execCalls(db);
+    const attach = calls.find((sql) => sql.startsWith("ATTACH DATABASE"));
+    expect(attach).toContain(`${DATABASE_FILES.vault}'`);
+    expect(attach).toContain(`KEY "x'aabbccdd'"`);
+    const exportAt = calls.findIndex((sql) => sql.includes("sqlcipher_export"));
+    const detachAt = calls.findIndex((sql) =>
+      sql.startsWith("DETACH DATABASE"),
+    );
+    expect(calls.indexOf(attach!)).toBeLessThan(exportAt);
+    expect(exportAt).toBeLessThan(detachAt);
+  });
+
+  it("exports into the plain file with an empty key (decrypts)", () => {
+    const db = openDb({ key: "aabbccdd" });
+    copyDatabaseTo("plain", null);
+    const attach = execCalls(db).find((sql) =>
+      sql.startsWith("ATTACH DATABASE"),
+    );
+    expect(attach).toContain(`${DATABASE_FILES.plain}'`);
+    expect(attach).toContain("KEY ''");
+  });
+
+  it("deletes any stale copy of the target file before exporting into it", () => {
+    (deleteDatabaseSync as jest.Mock).mockClear();
+    openDb();
+    copyDatabaseTo("vault", "aabbccdd");
+    expect(deleteDatabaseSync).toHaveBeenCalledWith(DATABASE_FILES.vault);
+  });
+
+  it("refuses to copy onto the file that is currently open", () => {
+    openDb();
+    expect(() => copyDatabaseTo("plain", null)).toThrow();
+  });
+
+  it("refuses a non-hex key", () => {
+    openDb();
+    expect(() => copyDatabaseTo("vault", "x'; --")).toThrow();
+  });
+
+  it("throws when no database is open", () => {
+    expect(() => copyDatabaseTo("vault", "aabbccdd")).toThrow();
+  });
+});
+
+describe("shared/db — closeDb / deleteDatabaseFile / deleteDb (4.6)", () => {
+  it("closeDb closes without deleting, and the next openDb opens a new connection", () => {
+    (deleteDatabaseSync as jest.Mock).mockClear();
+    const db1 = openDb();
+    closeDb();
+    expect(deleteDatabaseSync).not.toHaveBeenCalled();
+    expect(openDb()).not.toBe(db1);
+  });
+
+  it("deleteDatabaseFile refuses to delete the file that is open", () => {
+    openDb();
+    expect(() => deleteDatabaseFile("plain")).toThrow();
+    expect(() => deleteDatabaseFile("vault")).not.toThrow();
+  });
+
+  it("deleteDatabaseFile ignores a file that doesn't exist", () => {
+    (deleteDatabaseSync as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("Database not found");
+    });
+    expect(() => deleteDatabaseFile("vault")).not.toThrow();
+  });
+
+  it("deleteDb removes both files (erase everything)", () => {
+    (deleteDatabaseSync as jest.Mock).mockClear();
+    openDb();
+    deleteDb();
+    expect(deleteDatabaseSync).toHaveBeenCalledWith(DATABASE_FILES.plain);
+    expect(deleteDatabaseSync).toHaveBeenCalledWith(DATABASE_FILES.vault);
+  });
+});
+
+describe("shared/db — deleting files honestly (4.6, checker round 1)", () => {
+  it("deleteDatabaseFile rethrows anything other than 'not found'", () => {
+    (deleteDatabaseSync as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("Unable to delete the database file for 'capsule.db'");
+    });
+    expect(() => deleteDatabaseFile("plain")).toThrow("Unable to delete");
+  });
+
+  it("deleteDb fails loudly when a file can't be removed (a wipe must not report success)", () => {
+    openDb();
+    (deleteDatabaseSync as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("Unable to delete the database file for 'capsule.db'");
+    });
+    expect(() => deleteDb()).toThrow();
+  });
+
+  it("also removes SQLite's journal/WAL sidecar files", () => {
+    (deleteDatabaseSync as jest.Mock).mockClear();
+    deleteDatabaseFile("vault");
+    const names = (deleteDatabaseSync as jest.Mock).mock.calls.map((c) => c[0]);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        DATABASE_FILES.vault,
+        `${DATABASE_FILES.vault}-journal`,
+        `${DATABASE_FILES.vault}-wal`,
+        `${DATABASE_FILES.vault}-shm`,
+      ]),
+    );
+  });
+
+  it("openDatabaseFile says which file is open", () => {
+    expect(openDatabaseFile()).toBeNull();
+    openDb({ key: "aabbccdd" });
+    expect(openDatabaseFile()).toBe("vault");
+  });
+});
+
+describe("shared/db — a keyed open never returns the plain file (4.6, checker round 2)", () => {
+  it("throws when asked for the vault while the plain file is open", () => {
+    openDb();
+    expect(() => openDb({ key: "aabbccdd" })).toThrow();
   });
 });

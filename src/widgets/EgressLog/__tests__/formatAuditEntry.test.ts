@@ -7,6 +7,7 @@ describe("formatAuditAction", () => {
     ["decrypt", "Vault unlocked"],
     ["wipe", "Data wiped"],
     ["model_download", "Model downloaded"],
+    ["vault_setup", "App lock changed"],
   ] as const)("formats %s as a human-readable label", (action, expected) => {
     expect(formatAuditAction(action)).toBe(expected);
   });

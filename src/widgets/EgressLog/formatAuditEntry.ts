@@ -13,6 +13,8 @@ export function formatAuditAction(action: AuditAction): string {
       return "Data wiped";
     case "model_download":
       return "Model downloaded";
+    case "vault_setup":
+      return "App lock changed";
   }
 }
 

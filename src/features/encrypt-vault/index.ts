@@ -1,5 +1,13 @@
 import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
-import { deleteDb, openDb } from "@/shared/db";
+import {
+  closeDb,
+  copyDatabaseTo,
+  deleteDatabaseFile,
+  deleteDb,
+  openDatabaseFile,
+  openDb,
+} from "@/shared/db";
+import type { SQLiteDatabase } from "expo-sqlite";
 import { insertAuditEntry } from "@/entities/audit";
 import { generateId } from "@/shared/lib";
 import {
@@ -19,11 +27,10 @@ import {
  * in expo-secure-store, which is itself backed by Keychain/Keystore.
  * Neither the stored blob nor the passphrase alone unlocks the vault.
  *
- * This module does not open or touch the sqlite database directly except
- * to delete it on `resetVault` — callers are responsible for passing the
- * returned master key into `shared/db`'s `openDb({ key })` themselves. That
- * wiring (an unlock screen gating the app's db/llm/stt providers) is a
- * separate, later integration step, not part of this module's own scope.
+ * `turnOnAppLock` / `turnOffAppLock` (4.6) move the whole database between
+ * `shared/db`'s plain and encrypted files; `setUpVault` / `unlockVault`
+ * only manage the key. Opening the encrypted database at launch with the
+ * unlocked key is the app layer's job (the lock gate), not this module's.
  *
  * Audit logging: CLAUDE.md requires privacy-sensitive actions (export,
  * decrypt, wipe, model download) to write to entities/audit.
@@ -53,12 +60,29 @@ import {
  */
 
 const VAULT_STORAGE_KEY = "encryptVault.wrappedMasterKey";
+/** A second copy of the master key that the OS releases only after Face ID / Touch ID / fingerprint. */
+const BIOMETRIC_KEY = "encryptVault.biometricMasterKey";
+/** Plain marker that the biometric copy exists — checking it must not trigger a prompt. */
+const BIOMETRIC_FLAG = "encryptVault.biometricUnlock";
+const BIOMETRIC_PROMPT = "Unlock Capsule";
 const MASTER_KEY_LENGTH_BYTES = 32;
 const SALT_LENGTH_BYTES = 16;
 
 type VaultRecord = EncryptedPayload & {
   saltHex: string;
 };
+
+/**
+ * The change itself succeeded (lock on, or lock off) but the old copy of the
+ * database couldn't be removed. Thrown so it is never mistaken for success
+ * — a plaintext copy left behind matters — nor for a failed change.
+ */
+export class LeftoverCopyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LeftoverCopyError";
+  }
+}
 
 export class VaultUnlockError extends Error {
   constructor(message = "Incorrect passphrase or corrupted vault") {
@@ -80,6 +104,13 @@ export async function isVaultConfigured(): Promise<boolean> {
  * callers must `resetVault()` first, an explicit, separate action.
  */
 export async function setUpVault(passphrase: string): Promise<string> {
+  await assertCanSetUp(passphrase);
+  const masterKeyHex = randomHex(MASTER_KEY_LENGTH_BYTES);
+  await storeWrappedKey(passphrase, masterKeyHex);
+  return masterKeyHex;
+}
+
+async function assertCanSetUp(passphrase: string): Promise<void> {
   if (!passphrase.trim()) {
     throw new Error("Passphrase must not be empty");
   }
@@ -88,15 +119,236 @@ export async function setUpVault(passphrase: string): Promise<string> {
       "Vault is already set up — call resetVault() first to replace it",
     );
   }
+}
 
-  const masterKeyHex = randomHex(MASTER_KEY_LENGTH_BYTES);
+async function storeWrappedKey(
+  passphrase: string,
+  masterKeyHex: string,
+): Promise<void> {
   const saltHex = randomHex(SALT_LENGTH_BYTES);
   const wrappingKeyHex = deriveKeyHex(passphrase, saltHex);
   const wrapped = encryptHex(masterKeyHex, wrappingKeyHex);
-
   const record: VaultRecord = { saltHex, ...wrapped };
   await setItemAsync(VAULT_STORAGE_KEY, JSON.stringify(record));
+}
 
+// The wrapped key goes last: if this stops partway, the vault still opens
+// with the passphrase rather than leaving a biometric flag with no vault.
+async function forgetKeys(): Promise<void> {
+  for (const key of [BIOMETRIC_FLAG, BIOMETRIC_KEY, VAULT_STORAGE_KEY]) {
+    await deleteItemAsync(key);
+  }
+}
+
+type Shape = { tables: number; version: number | null };
+
+/** A cheap fingerprint of a database: table count and newest migration. */
+function shapeOf(db: SQLiteDatabase): Shape {
+  const tables = db.getFirstSync(
+    "SELECT count(*) AS n FROM sqlite_master WHERE type = 'table';",
+  ) as { n: number };
+  const version = db.getFirstSync(
+    "SELECT max(version) AS v FROM _migrations;",
+  ) as { v: number | null };
+  return { tables: tables.n, version: version.v };
+}
+
+/** The copy must open with its key and look like the original. */
+function assertSameShape(copy: SQLiteDatabase, expected: Shape): void {
+  const actual = shapeOf(copy);
+  if (
+    actual.tables !== expected.tables ||
+    actual.version !== expected.version
+  ) {
+    throw new Error("The copied database is incomplete");
+  }
+}
+
+function tryDeleteDatabaseFile(file: "plain" | "vault"): void {
+  try {
+    deleteDatabaseFile(file);
+  } catch {
+    // best effort while undoing; the original error is what matters
+  }
+}
+
+/**
+ * Turns app lock on (4.6). The plain database is copied into the encrypted
+ * file under a new random master key and closed straight away (so no write
+ * can land in it after the copy); the key is saved wrapped by the
+ * passphrase; the encrypted copy is opened and checked against the
+ * original; then the plain file is deleted, and only after that is a
+ * biometric copy of the key stored (the OS prompt can take a while — the
+ * plaintext must not wait on it).
+ *
+ * Any failure before the plain file is deleted undoes the change: the plain
+ * database is reopened as it was and the encrypted copy removed. One
+ * exception: if the saved key can't be forgotten, the encrypted copy is
+ * kept too — it is the file that key opens — and both files stay.
+ */
+export async function turnOnAppLock(
+  passphrase: string,
+  options: { biometrics: boolean },
+): Promise<void> {
+  await assertCanSetUp(passphrase);
+  if (openDatabaseFile() === "vault") {
+    throw new Error("The encrypted database is already open");
+  }
+  const expected = shapeOf(openDb());
+  const masterKeyHex = randomHex(MASTER_KEY_LENGTH_BYTES);
+  try {
+    copyDatabaseTo("vault", masterKeyHex);
+  } catch (error) {
+    tryDeleteDatabaseFile("vault");
+    throw error;
+  }
+  closeDb();
+
+  let keySaved = false;
+  try {
+    await storeWrappedKey(passphrase, masterKeyHex);
+    keySaved = true;
+    const vault = openDb({ key: masterKeyHex });
+    assertSameShape(vault, expected);
+    insertAuditEntry(vault, {
+      id: generateId(),
+      action: "vault_setup",
+      detail: "App lock turned on",
+      createdAt: Date.now(),
+    });
+  } catch (error) {
+    closeDb();
+    let keysForgotten = !keySaved;
+    if (keySaved) {
+      try {
+        await forgetKeys();
+        keysForgotten = true;
+      } catch {
+        // the key stays — so must the file it opens
+      }
+    }
+    if (keysForgotten) {
+      tryDeleteDatabaseFile("vault");
+      openDb();
+    } else {
+      // The saved key opens the vault at next launch, so this session
+      // must write there too. Plain is the fallback if even that fails.
+      try {
+        openDb({ key: masterKeyHex });
+      } catch {
+        closeDb();
+        openDb();
+      }
+    }
+    throw error;
+  }
+
+  try {
+    deleteDatabaseFile("plain");
+  } catch {
+    throw new LeftoverCopyError(
+      "App lock is on, but the unencrypted copy couldn't be removed yet.",
+    );
+  }
+  if (options.biometrics) {
+    try {
+      await storeBiometricKey(masterKeyHex);
+    } catch {
+      // No biometrics enrolled (or refused): the passphrase still unlocks.
+    }
+  }
+}
+
+/**
+ * Turns app lock off without losing data (4.6): checks the passphrase,
+ * copies the open encrypted database into the plain file, opens it and
+ * checks it against the original, then forgets the keys and deletes the
+ * encrypted file. Refuses unless the encrypted database is the open one. A
+ * wrong passphrase, or any failure before the keys are forgotten, leaves
+ * the lock on and the encrypted database open, unchanged.
+ */
+export async function turnOffAppLock(passphrase: string): Promise<void> {
+  const masterKeyHex = await unlockVault(passphrase);
+  if (openDatabaseFile() === null) openDb({ key: masterKeyHex });
+  if (openDatabaseFile() !== "vault") {
+    throw new Error("App lock can only be turned off while it's unlocked");
+  }
+  const expected = shapeOf(openDb());
+  try {
+    copyDatabaseTo("plain", null);
+  } catch (error) {
+    tryDeleteDatabaseFile("plain");
+    throw error;
+  }
+  closeDb();
+
+  try {
+    const plain = openDb();
+    assertSameShape(plain, expected);
+    insertAuditEntry(plain, {
+      id: generateId(),
+      action: "vault_setup",
+      detail: "App lock turned off",
+      createdAt: Date.now(),
+    });
+    await forgetKeys();
+  } catch (error) {
+    closeDb();
+    tryDeleteDatabaseFile("plain");
+    openDb({ key: masterKeyHex });
+    throw error;
+  }
+  try {
+    deleteDatabaseFile("vault");
+  } catch {
+    throw new LeftoverCopyError(
+      "App lock is off, but the encrypted copy couldn't be removed yet.",
+    );
+  }
+}
+
+async function storeBiometricKey(masterKeyHex: string): Promise<void> {
+  await setItemAsync(BIOMETRIC_KEY, masterKeyHex, {
+    requireAuthentication: true,
+    authenticationPrompt: BIOMETRIC_PROMPT,
+  });
+  await setItemAsync(BIOMETRIC_FLAG, "1");
+}
+
+/** Whether the vault can be unlocked with biometrics. Never prompts. */
+export async function hasBiometricUnlock(): Promise<boolean> {
+  return (await getItemAsync(BIOMETRIC_FLAG)) === "1";
+}
+
+/**
+ * Releases the master key through the OS biometric prompt (the key's
+ * biometric-protected copy). Throws `VaultUnlockError` if biometric unlock
+ * isn't set up, the prompt is cancelled or fails, or the OS invalidated the
+ * copy (e.g. a new face/fingerprint was enrolled) — the passphrase still
+ * works in every case.
+ */
+export async function unlockVaultWithBiometrics(): Promise<string> {
+  let enabled: boolean;
+  try {
+    enabled = await hasBiometricUnlock();
+  } catch {
+    enabled = false;
+  }
+  if (!enabled) {
+    throw new VaultUnlockError("Biometric unlock isn't set up");
+  }
+  let masterKeyHex: string | null;
+  try {
+    masterKeyHex = await getItemAsync(BIOMETRIC_KEY, {
+      requireAuthentication: true,
+      authenticationPrompt: BIOMETRIC_PROMPT,
+    });
+  } catch {
+    throw new VaultUnlockError("Biometric unlock failed or was cancelled");
+  }
+  if (masterKeyHex === null) {
+    throw new VaultUnlockError("Biometric unlock is no longer valid");
+  }
   return masterKeyHex;
 }
 
@@ -145,6 +397,6 @@ export async function resetVault(): Promise<void> {
     detail: "encrypt-vault reset (wipe-and-restart)",
     createdAt: Date.now(),
   });
-  await deleteItemAsync(VAULT_STORAGE_KEY);
+  await forgetKeys();
   deleteDb();
 }
