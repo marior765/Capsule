@@ -26,7 +26,7 @@ const confirmRestore = (): Promise<boolean> =>
   new Promise((resolve) => {
     Alert.alert(
       "Replace everything?",
-      "Restoring a backup replaces every conversation and capsule on this device with the ones in the backup. This can't be undone.",
+      "Restoring a backup replaces the conversations, capsules, personas and snippets on this device with the ones in the backup. This can't be undone.",
       [
         { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
         { text: "Restore", style: "destructive", onPress: () => resolve(true) },
@@ -150,7 +150,7 @@ export default function ImportExportScreen() {
       <ActionRow
         id="backup"
         label="Back up everything"
-        hint="One zip file with all conversations, capsules, attachments and chat images."
+        hint="One zip file with all conversations, capsules, attachments, chat images, personas and snippets."
         disabled={busy}
         onPress={() => void handleExport("backup", "Save backup")}
       />

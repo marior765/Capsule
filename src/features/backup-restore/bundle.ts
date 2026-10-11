@@ -74,6 +74,18 @@ import {
   type Attachment,
 } from "@/entities/attachment";
 import { insertAuditEntry } from "@/entities/audit";
+import {
+  deletePersona,
+  getAllPersonas,
+  insertPersona,
+  type Persona,
+} from "@/entities/persona";
+import {
+  deleteSnippet,
+  getAllSnippets,
+  insertSnippet,
+  type Snippet,
+} from "@/entities/snippet";
 import { inTransaction } from "@/shared/db";
 import { cancelLocalNotification } from "@/shared/notifications";
 import {
@@ -101,8 +113,9 @@ import {
 /**
  * The full backup as a zip bundle (5.5): everything a person would lose
  * with their phone — conversations (with branches, grounding sources and
- * chat images) and capsules (types, fields, values, tags, links, history,
- * reminders and attachments) — with ids unchanged, so restoring puts things
+ * chat images), capsules (types, fields, values, tags, links, history,
+ * reminders and attachments), and personas and snippets (5.6) — with ids
+ * unchanged, so restoring puts things
  * back exactly as they were. Embeddings are left out (rebuilt from the
  * capsules on the next start); OS notification ids too (they belong to the
  * device that made them), so restored reminders are records until
@@ -145,6 +158,12 @@ type BackupCapsule = {
 
 type FullBackup = {
   conversations: BackupConversation[];
+  /**
+   * 5.6 — optional so a backup made before personas and snippets were
+   * included still restores; then the current ones are left as they are.
+   */
+  personas?: Persona[];
+  snippets?: Snippet[];
   capsules: {
     types: { type: CapsuleType; fields: CapsuleField[] }[];
     tags: Tag[];
@@ -224,9 +243,13 @@ export async function createBackupBundle(
     });
   }
 
+  const personas = getAllPersonas(db);
+  const snippets = getAllSnippets(db);
   const json = textToBytes(
     serializePortable<FullBackup>(KIND, {
       conversations,
+      personas,
+      snippets,
       capsules: {
         types: getAllCapsuleTypes(db).map((type) => ({
           type,
@@ -243,7 +266,7 @@ export async function createBackupBundle(
   insertAuditEntry(db, {
     id: generateId(),
     action: "export",
-    detail: `Full backup (${conversations.length} conversation${conversations.length === 1 ? "" : "s"}, ${capsules.length} capsule${capsules.length === 1 ? "" : "s"})`,
+    detail: `Full backup (${conversations.length} conversation${conversations.length === 1 ? "" : "s"}, ${capsules.length} capsule${capsules.length === 1 ? "" : "s"}, ${personas.length} persona${personas.length === 1 ? "" : "s"}, ${snippets.length} snippet${snippets.length === 1 ? "" : "s"})`,
     createdAt: Date.now(),
   });
   return bundle;
@@ -270,6 +293,13 @@ function readBundle(bytes: Uint8Array): {
     textFromBytes(entries[JSON_ENTRY]),
     KIND,
   );
+  for (const list of [backup.personas, backup.snippets]) {
+    if (list !== undefined && !Array.isArray(list)) {
+      throw new PortableFormatError(
+        "This backup's personas or snippets are damaged.",
+      );
+    }
+  }
   const unsafe = [
     ...backup.conversations.map((c) => c.conversation.id),
     ...backup.conversations.flatMap((c) => c.images.map((i) => i.messageId)),
@@ -402,6 +432,14 @@ export async function restoreBackupBundle(
         deleteCapsuleType(db, type.id);
       }
       for (const tag of getAllTags(db)) deleteTag(db, tag.id);
+      if (backup.personas !== undefined) {
+        for (const p of getAllPersonas(db)) deletePersona(db, p.id);
+        for (const p of backup.personas) insertPersona(db, p);
+      }
+      if (backup.snippets !== undefined) {
+        for (const sn of getAllSnippets(db)) deleteSnippet(db, sn.id);
+        for (const sn of backup.snippets) insertSnippet(db, sn);
+      }
 
       for (const {
         conversation,
@@ -469,7 +507,10 @@ export async function restoreBackupBundle(
       insertAuditEntry(db, {
         id: generateId(),
         action: "wipe",
-        detail: "Full backup restored — replaced conversations and capsules",
+        detail:
+          backup.personas !== undefined || backup.snippets !== undefined
+            ? "Full backup restored — replaced conversations, capsules, personas and snippets"
+            : "Full backup restored — replaced conversations and capsules",
         createdAt: Date.now(),
       });
     });

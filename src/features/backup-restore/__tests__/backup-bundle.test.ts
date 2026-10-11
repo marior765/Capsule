@@ -30,6 +30,8 @@ import {
   insertAttachment,
 } from "@/entities/attachment";
 import { getAllAuditEntries } from "@/entities/audit";
+import { getAllPersonas, insertPersona } from "@/entities/persona";
+import { getAllSnippets, insertSnippet } from "@/entities/snippet";
 import { readAppFileBytes, writeAppFileBytes } from "@/shared/fs";
 import { textFromBytes, textToBytes, unzipFiles, zipFiles } from "@/shared/zip";
 import { PortableFormatError } from "@/shared/format";
@@ -380,4 +382,83 @@ describe("restoreBackupBundle — checker round 1", () => {
 
     expect(getImageByMessage(db, "m-elsewhere")).toBeNull();
   });
+});
+
+// 5.6: personas and snippets travel with the full backup.
+describe("personas and snippets in the full backup (5.6)", () => {
+  const persona = (id: string, name: string) =>
+    insertPersona(db, {
+      id,
+      name,
+      systemPrompt: "Be brief.",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+  const snippet = (id: string, title: string) =>
+    insertSnippet(db, {
+      id,
+      title,
+      content: "Summarize this.",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+  it("restores personas and snippets under their original ids", async () => {
+    persona("p1", "Reviewer");
+    snippet("s1", "TL;DR");
+    const bundle = await createBackupBundle(db);
+    freshDevice();
+
+    await restoreBackupBundle(db, bundle);
+
+    expect(getAllPersonas(db).map((p) => [p.id, p.name])).toEqual([
+      ["p1", "Reviewer"],
+    ]);
+    expect(getAllSnippets(db).map((s) => [s.id, s.title])).toEqual([
+      ["s1", "TL;DR"],
+    ]);
+  });
+
+  it("replaces them like everything else: ones not in the backup are gone", async () => {
+    persona("p1", "Reviewer");
+    const bundle = await createBackupBundle(db);
+    persona("p-stray", "Added later");
+    snippet("s-stray", "Added later");
+
+    await restoreBackupBundle(db, bundle);
+
+    expect(getAllPersonas(db).map((p) => p.id)).toEqual(["p1"]);
+    expect(getAllSnippets(db)).toEqual([]);
+  });
+
+  it("restoring an older backup (made before personas/snippets were included) leaves the current ones alone", async () => {
+    const entries = unzipFiles(await createBackupBundle(db));
+    const json = JSON.parse(textFromBytes(entries["backup.json"])) as {
+      data: { personas?: unknown; snippets?: unknown };
+    };
+    delete json.data.personas;
+    delete json.data.snippets;
+    entries["backup.json"] = textToBytes(JSON.stringify(json));
+    persona("p-mine", "Mine");
+    snippet("s-mine", "Mine");
+
+    await restoreBackupBundle(db, zipFiles(entries));
+
+    expect(getAllPersonas(db).map((p) => p.id)).toEqual(["p-mine"]);
+    expect(getAllSnippets(db).map((s) => s.id)).toEqual(["s-mine"]);
+  });
+});
+
+it("refuses a backup whose personas or snippets aren't lists, before changing anything (5.6)", async () => {
+  seed();
+  const entries = unzipFiles(await createBackupBundle(db));
+  const json = JSON.parse(textFromBytes(entries["backup.json"])) as {
+    data: { personas?: unknown };
+  };
+  json.data.personas = { not: "a list" };
+  entries["backup.json"] = textToBytes(JSON.stringify(json));
+  await expect(restoreBackupBundle(db, zipFiles(entries))).rejects.toThrow(
+    PortableFormatError,
+  );
+  expect(getAllCapsules(db)).toHaveLength(2);
 });
