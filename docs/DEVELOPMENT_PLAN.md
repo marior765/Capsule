@@ -137,8 +137,8 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.5 Search, filter, sort
 - [x] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature
-- [ ] 6.8 Relation + attachment field types — relation done (RelationPicker, wired into capsule detail); attachment done in code (file/photo pickers via shared/picker, files copied into app storage, AttachmentList on the capsule screen, deleted with the capsule and on wipe) — needs a device check before ticking (see BLOCKED.md); non-image files can't be opened yet (expo-sharing decision)
-- [ ] 6.9 Open non-image attachments via the system share sheet (`expo-sharing`, wrapped in `shared/`) (decided 2026-10-11)
+- [ ] 6.8 Relation + attachment field types — relation done (RelationPicker, wired into capsule detail); attachment done in code (file/photo pickers via shared/picker, files copied into app storage, AttachmentList on the capsule screen, deleted with the capsule and on wipe) — needs a device check before ticking (see BLOCKED.md); opening files is 6.9
+- [ ] 6.9 Open non-image attachments via the system share sheet — done in code: on a capsule, tap an attachment's name or thumbnail to open it in another app (Open in…, Save to Files); logged in the activity log. Needs a device check before ticking (see BLOCKED.md) (decided 2026-10-11)
 - [x] 6.9 `entities/link` with graceful missing-target handling
 - [x] 6.10 Field validation
 

@@ -166,6 +166,10 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
   the share sheet; save to Files; "Restore from a backup…" → pick it →
   confirm → app restarts with everything back (incl. a capsule photo and a
   chat image). Also import a CSV and a Markdown note.
+- 6.9 device check: on a capsule with an attachment field, add a PDF, then
+  tap its name → the share sheet opens; "Open in Files"/a PDF viewer shows
+  it. Privacy → activity log shows 'Opened attachment "…" in another app'.
+  (The receiving app sees the stored name with an id prefix.)
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 

@@ -4805,4 +4805,18 @@ ticked. Cursor → 6.9 (open non-image attachments via the share sheet).
 
 ---
 
+## Beat 90 — 6.9: open attachments in another app
+
+Tap an attachment on a capsule → the system share sheet (Open in…, Save
+to Files) — how PDFs are viewed, since there's no in-app viewer. Checker
+failed round 1: the activity log was written before checking the share
+sheet was available, so it could claim a file left Capsule when it hadn't
+— and my comment said the opposite. Fixed with an availability check
+before logging (tested), plus a double-tap guard. Passed round 2.
+
+Gate: tsc clean, jest 1346/1346, eslint clean. Checkpoint `7e4309b`. 6.9
+done in code (native, box unchecked). Cursor → 8.11.
+
+---
+
 <!-- Append new beats above this line. -->

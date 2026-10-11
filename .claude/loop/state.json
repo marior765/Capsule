@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 89,
+    "beat": 90,
     "status": "running",
     "completedAt": "2026-10-11T20:40:59",
     "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
@@ -10,8 +10,8 @@
     "resumeNote": "Reopened after round-2 decisions (BLOCKED.md 'Resolved (2026-10-11)'): new steps 4.6, 4.7, 5.5, 5.6, 6.9, 8.11, 8.12. 5.5 needs fflate and 6.9 needs expo-sharing installed by the user."
   },
   "cursor": {
-    "step": "6.9",
-    "phase": 6
+    "step": "8.11",
+    "phase": 8
   },
   "steps": {
     "1.2": {
@@ -288,11 +288,14 @@
       "notes": "Both halves done -- entity+feature layer (3a5a662, beat 35, incl. delete-capsule cascade addendum) + TagPicker widget wired into capsules/[id].tsx (037cf6e, beat 36). tagCapsule get-or-create by trimmed name, untagCapsule, deleteTag cascade."
     },
     "6.9": {
-      "status": "pending",
+      "status": "done",
       "class": "native",
-      "attempts": 0,
-      "failureSignatures": [],
-      "notes": ""
+      "attempts": 2,
+      "failureSignatures": [
+        "checker: fail -- audit entry written before checking the share sheet is available (log could claim a file left the app when it didn't)"
+      ],
+      "notes": "shareAttachment (exists \u2192 file present \u2192 canShare \u2192 audit \u2192 share). Native: box unchecked, device check in BLOCKED.md.",
+      "checkpoint": "7e4309b"
     },
     "6.8": {
       "status": "done",
@@ -498,8 +501,8 @@
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1341/1341)",
+    "jest": "pass (1346/1346)",
     "eslint": "pass",
-    "at": "2026-10-11T23:09:16"
+    "at": "2026-10-11T23:15:28"
   }
 }
