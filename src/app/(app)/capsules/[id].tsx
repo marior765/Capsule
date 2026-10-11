@@ -554,3 +554,5 @@ const testIDs = createComponentTestIDs("CapsuleDetailScreen", {
   texts: ["notFound"] as const,
   pressables: ["child"] as const,
 });
+
+CapsuleDetailScreen.testIDs = testIDs;

@@ -61,3 +61,5 @@ const testIDs = createComponentTestIDs("HomeScreen", {
   containers: ["root"] as const,
   pressables: ["openSearch"] as const,
 });
+
+HomeScreen.testIDs = testIDs;

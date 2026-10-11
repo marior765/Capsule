@@ -9,6 +9,7 @@ import {
   updateInferenceSettings,
 } from "@/features/configure-inference";
 import type { InferenceSettings } from "@/shared/config";
+import { createComponentTestIDs } from "@/shared/testing";
 
 type Field = {
   key: keyof InferenceSettings;
@@ -104,6 +105,7 @@ export default function InferenceScreen() {
         <View key={field.key} style={styles.field}>
           <Text style={styles.label}>{field.label}</Text>
           <TextInput
+            testID={`${testIDs.inputs.field}_${field.key}`}
             style={styles.input}
             value={drafts[field.key] ?? String(settings[field.key])}
             onChangeText={(text) =>
@@ -127,6 +129,7 @@ export default function InferenceScreen() {
       )}
 
       <Pressable
+        testID={testIDs.buttons.reset}
         style={styles.reset}
         onPress={handleReset}
         accessibilityRole="button"
@@ -192,3 +195,10 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.rounded,
   },
 }));
+
+const testIDs = createComponentTestIDs("InferenceScreen", {
+  inputs: ["field"] as const,
+  buttons: ["reset"] as const,
+});
+
+InferenceScreen.testIDs = testIDs;

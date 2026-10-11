@@ -147,3 +147,5 @@ const testIDs = createComponentTestIDs("EditCapsuleScreen", {
   buttons: ["save"] as const,
   texts: ["notFound"] as const,
 });
+
+EditCapsuleScreen.testIDs = testIDs;

@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { Pressable, ScrollView, Text } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
+import { createComponentTestIDs } from "@/shared/testing";
 
 /**
  * Only routes that actually do something are listed. Screens still to be built
@@ -36,6 +37,7 @@ export default function SettingsScreen() {
       <Text style={styles.heading}>Settings</Text>
       {ENTRIES.map((entry) => (
         <Pressable
+          testID={`${testIDs.pressables.entry}_${entry.label}`}
           key={entry.href}
           style={styles.row}
           onPress={() => router.push(entry.href)}
@@ -79,3 +81,9 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
   },
 }));
+
+const testIDs = createComponentTestIDs("SettingsScreen", {
+  pressables: ["entry"] as const,
+});
+
+SettingsScreen.testIDs = testIDs;

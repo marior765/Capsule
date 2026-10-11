@@ -306,3 +306,5 @@ const testIDs = createComponentTestIDs("CapsuleListScreen", {
   ] as const,
   texts: ["boardHint"] as const,
 });
+
+CapsuleListScreen.testIDs = testIDs;

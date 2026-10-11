@@ -138,6 +138,7 @@ export default function EphemeralChatScreen() {
       <ChatThread messages={messages} streamingText={streaming} />
       {voiceError && (
         <Pressable
+          testID={testIDs.buttons.dismissVoiceError}
           onPress={() => setVoiceError(null)}
           accessibilityRole="button"
           accessibilityLabel={`${voiceError}. Dismiss`}
@@ -187,6 +188,7 @@ export default function EphemeralChatScreen() {
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
         <Pressable
+          testID={testIDs.buttons.manageModels}
           onPress={() => router.push("/models")}
           accessibilityRole="button"
           accessibilityLabel={`${STATUS_MESSAGE[status]}. Manage models`}
@@ -250,5 +252,7 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("EphemeralChatScreen", {
-  buttons: ["snippets"] as const,
+  buttons: ["snippets", "dismissVoiceError", "manageModels"] as const,
 });
+
+EphemeralChatScreen.testIDs = testIDs;

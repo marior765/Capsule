@@ -439,6 +439,7 @@ export default function ChatScreen() {
       />
       {editing && (
         <Pressable
+          testID={testIDs.buttons.cancelEdit}
           onPress={() => setEditing(null)}
           accessibilityRole="button"
           accessibilityLabel="Cancel editing"
@@ -450,6 +451,7 @@ export default function ChatScreen() {
       )}
       {error && (
         <Pressable
+          testID={testIDs.buttons.dismissError}
           onPress={() => setError(null)}
           accessibilityRole="button"
           accessibilityLabel={`${error}. Dismiss`}
@@ -461,6 +463,7 @@ export default function ChatScreen() {
       )}
       {voiceError && (
         <Pressable
+          testID={testIDs.buttons.dismissVoiceError}
           onPress={() => setVoiceError(null)}
           accessibilityRole="button"
           accessibilityLabel={`${voiceError}. Dismiss`}
@@ -577,6 +580,7 @@ export default function ChatScreen() {
         <Text style={styles.status}>{STATUS_MESSAGE.loading}</Text>
       ) : (
         <Pressable
+          testID={testIDs.buttons.manageModels}
           onPress={() => router.push("/models")}
           accessibilityRole="button"
           accessibilityLabel={`${STATUS_MESSAGE[status]}. Manage models`}
@@ -677,7 +681,19 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("ChatScreen", {
-  buttons: ["snippets", "export", "capsules", "image", "removeImage"] as const,
+  buttons: [
+    "snippets",
+    "export",
+    "capsules",
+    "image",
+    "removeImage",
+    "cancelEdit",
+    "dismissError",
+    "dismissVoiceError",
+    "manageModels",
+  ] as const,
   texts: ["capsuleNotice"] as const,
   containers: ["pendingImage"] as const,
 });
+
+ChatScreen.testIDs = testIDs;

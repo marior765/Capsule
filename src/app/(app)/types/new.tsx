@@ -109,3 +109,5 @@ const testIDs = createComponentTestIDs("NewTypeScreen", {
   containers: ["root"] as const,
   buttons: ["create"] as const,
 });
+
+NewTypeScreen.testIDs = testIDs;

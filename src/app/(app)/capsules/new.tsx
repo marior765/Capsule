@@ -176,3 +176,5 @@ const testIDs = createComponentTestIDs("NewCapsuleScreen", {
   pressables: ["createType", "typeOption"] as const,
   buttons: ["create"] as const,
 });
+
+NewCapsuleScreen.testIDs = testIDs;

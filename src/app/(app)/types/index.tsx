@@ -138,3 +138,5 @@ const testIDs = createComponentTestIDs("TypesListScreen", {
   pressables: ["row"] as const,
   texts: ["empty"] as const,
 });
+
+TypesListScreen.testIDs = testIDs;

@@ -11,6 +11,7 @@ import {
   type Persona,
 } from "@/entities/persona";
 import { generateId } from "@/shared/lib";
+import { createComponentTestIDs } from "@/shared/testing";
 
 export default function PersonasScreen() {
   const db = useDb();
@@ -78,6 +79,7 @@ export default function PersonasScreen() {
       </Text>
 
       <TextInput
+        testID={testIDs.inputs.name}
         style={styles.input}
         value={name}
         onChangeText={setName}
@@ -85,6 +87,7 @@ export default function PersonasScreen() {
         accessibilityLabel="Persona name"
       />
       <TextInput
+        testID={testIDs.inputs.systemPrompt}
         style={[styles.input, styles.multiline]}
         value={systemPrompt}
         onChangeText={setSystemPrompt}
@@ -95,6 +98,7 @@ export default function PersonasScreen() {
 
       <View style={styles.formActions}>
         <Pressable
+          testID={testIDs.buttons.save}
           style={styles.primary}
           onPress={handleSave}
           accessibilityRole="button"
@@ -105,6 +109,7 @@ export default function PersonasScreen() {
         </Pressable>
         {editingId && (
           <Pressable
+            testID={testIDs.buttons.cancel}
             style={styles.secondary}
             onPress={resetForm}
             accessibilityRole="button"
@@ -121,6 +126,7 @@ export default function PersonasScreen() {
       {personas.map((persona) => (
         <View key={persona.id} style={styles.row}>
           <Pressable
+            testID={`${testIDs.pressables.persona}_${persona.id}`}
             style={styles.rowMain}
             onPress={() => handleEdit(persona)}
             accessibilityRole="button"
@@ -132,6 +138,7 @@ export default function PersonasScreen() {
             </Text>
           </Pressable>
           <Pressable
+            testID={`${testIDs.buttons.delete}_${persona.id}`}
             onPress={() => handleDelete(persona)}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${persona.name}`}
@@ -217,3 +224,11 @@ const styles = StyleSheet.create((theme) => ({
     paddingLeft: theme.spacing.three,
   },
 }));
+
+const testIDs = createComponentTestIDs("PersonasScreen", {
+  inputs: ["name", "systemPrompt"] as const,
+  buttons: ["save", "cancel", "delete"] as const,
+  pressables: ["persona"] as const,
+});
+
+PersonasScreen.testIDs = testIDs;

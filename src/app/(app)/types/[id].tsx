@@ -181,3 +181,5 @@ const testIDs = createComponentTestIDs("TypeDetailScreen", {
   buttons: ["saveMeta", "delete"] as const,
   texts: ["notFound"] as const,
 });
+
+TypeDetailScreen.testIDs = testIDs;

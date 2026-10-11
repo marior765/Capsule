@@ -38,12 +38,15 @@ export type ParameterSize = (typeof PARAMETER_SIZES)[number];
  */
 export const RECOMMENDED_MODELS = [
   {
+    /** Stable key for testIDs and lookups — never shown; `name` is display copy. */
+    id: "llama-3-2-1b",
     name: "Llama 3.2 1B Instruct (Q4_K_M)",
     url: "https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
     parameters: "1B",
     quantization: "Q4_K_M",
   },
   {
+    id: "llama-3-2-3b",
     name: "Llama 3.2 3B Instruct (Q4_K_M)",
     url: "https://huggingface.co/unsloth/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
     parameters: "3B",
@@ -55,6 +58,7 @@ export const RECOMMENDED_MODELS = [
     // fits alongside everything else on a phone. URLs picked from public
     // knowledge of the ggml-org GGUF repos, not fetched here — verified on
     // device (see .claude/loop/BLOCKED.md, 8.4).
+    id: "smolvlm-500m",
     name: "SmolVLM 500M Instruct — vision (Q8_0)",
     url: "https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf",
     mmprojUrl:
@@ -63,6 +67,7 @@ export const RECOMMENDED_MODELS = [
     quantization: "Q8_0",
   },
 ] as const satisfies readonly {
+  id: string;
   name: string;
   url: string;
   parameters: ParameterSize;

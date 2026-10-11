@@ -236,3 +236,5 @@ const testIDs = createComponentTestIDs("SnippetsScreen", {
   pressables: ["edit", "delete"] as const,
   texts: ["empty"] as const,
 });
+
+SnippetsScreen.testIDs = testIDs;

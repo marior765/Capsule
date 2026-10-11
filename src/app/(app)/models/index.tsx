@@ -23,6 +23,7 @@ import {
   EmbeddingModelCard,
   type EmbeddingModelState,
 } from "@/widgets/EmbeddingModelCard";
+import { createComponentTestIDs } from "@/shared/testing";
 
 type ModelSpec = (typeof RECOMMENDED_MODELS)[number];
 
@@ -134,6 +135,7 @@ export default function ModelsScreen() {
         return (
           <View key={model.id} style={styles.row}>
             <Pressable
+              testID={`${testIDs.pressables.model}_${model.id}`}
               style={styles.rowMain}
               onPress={() => handleSelect(model)}
               accessibilityRole="radio"
@@ -147,6 +149,7 @@ export default function ModelsScreen() {
               </Text>
             </Pressable>
             <Pressable
+              testID={`${testIDs.buttons.delete}_${model.id}`}
               onPress={() => handleDelete(model)}
               accessibilityRole="button"
               accessibilityLabel={`Delete model ${model.name}`}
@@ -178,6 +181,7 @@ export default function ModelsScreen() {
       )}
       {available.map((spec) => (
         <Pressable
+          testID={`${testIDs.buttons.download}_${spec.id}`}
           key={spec.url}
           style={styles.row}
           disabled={downloadingUrl !== null}
@@ -253,3 +257,10 @@ const styles = StyleSheet.create((theme) => ({
     paddingLeft: theme.spacing.three,
   },
 }));
+
+const testIDs = createComponentTestIDs("ModelsScreen", {
+  pressables: ["model"] as const,
+  buttons: ["delete", "download"] as const,
+});
+
+ModelsScreen.testIDs = testIDs;

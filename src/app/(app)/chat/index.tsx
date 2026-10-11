@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import type { Conversation } from "@/entities/conversation";
 import { listConversations } from "@/features/manage-conversations";
+import { createComponentTestIDs } from "@/shared/testing";
 
 export default function ChatListScreen() {
   const db = useDb();
@@ -20,6 +21,7 @@ export default function ChatListScreen() {
     <View style={styles.root}>
       <View style={styles.actions}>
         <Pressable
+          testID={testIDs.buttons.newChat}
           style={styles.actionButton}
           onPress={() => router.push("/chat/new")}
           accessibilityRole="button"
@@ -27,6 +29,7 @@ export default function ChatListScreen() {
           <Text style={styles.newLabel}>New chat</Text>
         </Pressable>
         <Pressable
+          testID={testIDs.buttons.ephemeral}
           style={styles.actionButton}
           onPress={() => router.push("/chat/ephemeral")}
           accessibilityRole="button"
@@ -34,6 +37,7 @@ export default function ChatListScreen() {
           <Text style={styles.newLabel}>Ephemeral</Text>
         </Pressable>
         <Pressable
+          testID={testIDs.buttons.models}
           style={styles.actionButton}
           onPress={() => router.push("/models")}
           accessibilityRole="button"
@@ -46,6 +50,7 @@ export default function ChatListScreen() {
         keyExtractor={(c) => c.id}
         renderItem={({ item }) => (
           <Pressable
+            testID={`${testIDs.pressables.conversation}_${item.id}`}
             style={styles.row}
             onPress={() => router.push(`/chat/${item.id}`)}
             accessibilityRole="button"
@@ -93,3 +98,10 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
   },
 }));
+
+const testIDs = createComponentTestIDs("ChatListScreen", {
+  buttons: ["newChat", "ephemeral", "models"] as const,
+  pressables: ["conversation"] as const,
+});
+
+ChatListScreen.testIDs = testIDs;

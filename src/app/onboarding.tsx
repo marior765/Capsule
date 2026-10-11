@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native-unistyles";
 import { useDb, useLlm } from "@/app/providers";
 import { RECOMMENDED_MODELS } from "@/shared/config";
 import { downloadModel, selectModel } from "@/features/manage-models";
+import { createComponentTestIDs } from "@/shared/testing";
 
 type ModelSpec = (typeof RECOMMENDED_MODELS)[number];
 
@@ -35,6 +36,7 @@ export default function OnboardingScreen() {
 
       {RECOMMENDED_MODELS.map((spec) => (
         <Pressable
+          testID={`${testIDs.buttons.download}_${spec.id}`}
           key={spec.url}
           style={styles.card}
           disabled={downloadingUrl !== null}
@@ -49,7 +51,10 @@ export default function OnboardingScreen() {
         </Pressable>
       ))}
 
-      <Pressable onPress={() => router.replace("/")}>
+      <Pressable
+        testID={testIDs.buttons.skip}
+        onPress={() => router.replace("/")}
+      >
         <Text style={styles.skip}>Skip for now</Text>
       </Pressable>
     </ScrollView>
@@ -95,3 +100,9 @@ const styles = StyleSheet.create((theme) => ({
     marginTop: theme.spacing.three,
   },
 }));
+
+const testIDs = createComponentTestIDs("OnboardingScreen", {
+  buttons: ["download", "skip"] as const,
+});
+
+OnboardingScreen.testIDs = testIDs;
