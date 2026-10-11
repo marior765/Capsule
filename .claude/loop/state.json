@@ -2,16 +2,16 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 91,
-    "status": "running",
-    "completedAt": "2026-10-11T20:40:59",
-    "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
+    "beat": 92,
+    "status": "complete",
+    "completedAt": "2026-10-11T23:34:28",
+    "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
     "resumedAt": "2026-10-11",
     "resumeNote": "Reopened after round-2 decisions (BLOCKED.md 'Resolved (2026-10-11)'): new steps 4.6, 4.7, 5.5, 5.6, 6.9, 8.11, 8.12. 5.5 needs fflate and 6.9 needs expo-sharing installed by the user."
   },
   "cursor": {
-    "step": "8.12",
-    "phase": 8
+    "step": null,
+    "phase": null
   },
   "steps": {
     "1.2": {
@@ -494,18 +494,19 @@
       "checkpoint": "7bec203"
     },
     "8.12": {
-      "status": "pending",
+      "status": "done",
       "class": "logic",
-      "attempts": 0,
+      "attempts": 1,
       "failureSignatures": [],
-      "notes": ""
+      "notes": "Double-send ref guard + disabled input in both chats; reminder notice; stt-model on shared/fs. Checker pass.",
+      "checkpoint": "44f752a"
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1360/1360)",
+    "jest": "pass (1365/1365, 105 suites)",
     "eslint": "pass",
-    "at": "2026-10-11T23:26:26"
+    "at": "2026-10-11T23:34:28"
   }
 }

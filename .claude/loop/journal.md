@@ -4838,4 +4838,19 @@ done in code (native, box unchecked). Cursor → 8.12.
 
 ---
 
+## Beat 92 — 8.12 follow-ups — run complete
+
+Chat (saved and ephemeral) can no longer start a second reply on the same
+model with a double tap; "notifications are off" is a neutral notice; the
+voice-model download finally joins shared/fs (relative path, safe
+re-downloads, network-activity indicator, one download for concurrent
+calls) — no feature touches expo-file-system directly any more. Checker
+passed first time.
+
+Gate: tsc clean, jest 1365/1365 (105 suites), eslint clean. Checkpoint
+`44f752a`. **Run complete** — every step from the round-2 decisions is done;
+what's left is device checks (BLOCKED.md) and the deferred 8.1 / Phase 9.
+
+---
+
 <!-- Append new beats above this line. -->
