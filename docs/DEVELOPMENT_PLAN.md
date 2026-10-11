@@ -119,7 +119,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 4.4 Settings → privacy screen
 - [ ] 4.5 `features/wipe-data` — secure full wipe (models, chats, capsules, settings)
 - [ ] 4.6 App lock at launch — done in code: with the lock on, Capsule opens to a lock screen (passphrase, or Face ID / fingerprint) and nothing touches your data until you unlock; everything on the device is encrypted in a separate file; it locks again after you've been away (Privacy setting: immediately / 1 min / 5 min, default 1 min); "Turn off app lock" decrypts without losing data; lock changes are logged as "App lock changed". Needs a simulator/device check before ticking (see BLOCKED.md)
-- [ ] 4.7 One "erase everything" — wipe and vault reset share one full cleanup: files, chat images, reminders, settings, vault key, database (decided 2026-10-11)
+- [x] 4.7 One "erase everything" — Privacy → Wipe all data and the lock screen's "Forgot your passphrase?" run the same cleanup: reminders, every file folder (attachments, chat images, models, picker copies), both database files, settings, then the app-lock keys last (a failed erase leaves the lock on and can be retried); the app restarts afterwards (decided 2026-10-11)
 
 ### Phase 5 — Portability ← key differentiator
 - [x] 5.1 `shared/format` — versioned portable format spec + serializers

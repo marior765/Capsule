@@ -4714,4 +4714,22 @@ Gate: tsc clean, jest 1270/1270 (98 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 85 — 4.7: one erase-everything
+
+The two "erase" paths are now one: the app layer's `eraseEverything`
+runs wipe-data's full cleanup (reminders, every file folder, both database
+files, settings) and then forgets the app-lock keys — last, so a failed
+erase leaves the lock on and can simply be retried. Privacy → Wipe and the
+lock screen's "Forgot your passphrase?" both use it and restart the app.
+
+Checker passed; its notes applied before commit: delete the database files
+before clearing settings (else a failed delete loses app lock's stale-copy
+marker and a plaintext copy could linger forever), restart after a partial
+failure, and a "no database created" test that can actually fail.
+
+Gate: tsc clean, jest 1273/1273 (99 suites), eslint clean. Checkpoint
+`46dcf1e`. 4.7 ticked. Cursor → 5.5 (files in exports, zip via fflate).
+
+---
+
 <!-- Append new beats above this line. -->

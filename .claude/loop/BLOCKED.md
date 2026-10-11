@@ -147,6 +147,11 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
   file during the key save, then forgetting the keys fails) can leave a few
   background writes in a plain copy marked stale; they'd be dropped at the
   next unlock. Tiny window, recorded rather than engineered around.
+- 4.7 erase: a model download still running when you erase (chat model,
+  speech model, or the embedding model — whose cancel only stops Capsule
+  from recording it) can finish afterwards and leave an orphan model file
+  in its folder. Public model files, not user data; deleting the model in
+  Models (or erasing again) removes it.
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 

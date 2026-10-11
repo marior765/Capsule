@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 84,
+    "beat": 85,
     "status": "running",
     "completedAt": "2026-10-11T20:40:59",
     "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
@@ -10,8 +10,8 @@
     "resumeNote": "Reopened after round-2 decisions (BLOCKED.md 'Resolved (2026-10-11)'): new steps 4.6, 4.7, 5.5, 5.6, 6.9, 8.11, 8.12. 5.5 needs fflate and 6.9 needs expo-sharing installed by the user."
   },
   "cursor": {
-    "step": "4.7",
-    "phase": 4
+    "step": "5.5",
+    "phase": 5
   },
   "steps": {
     "1.2": {
@@ -453,11 +453,12 @@
       "checkpoint": "bd25c76"
     },
     "4.7": {
-      "status": "pending",
+      "status": "done",
       "class": "logic",
-      "attempts": 0,
+      "attempts": 1,
       "failureSignatures": [],
-      "notes": ""
+      "notes": "eraseEverything in app/providers composes wipeAllData + forgetVaultKeys (keys last). Checker pass; applied: delete db files before clearing settings (marker survives failed delete), privacy failure path restarts, stronger null-db test, stale comments.",
+      "checkpoint": "46dcf1e"
     },
     "5.5": {
       "status": "pending",
@@ -491,8 +492,8 @@
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1270/1270, 98 suites)",
+    "jest": "pass (1273/1273, 99 suites)",
     "eslint": "pass",
-    "at": "2026-10-11T21:26:41"
+    "at": "2026-10-11T21:35:59"
   }
 }
