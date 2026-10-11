@@ -2626,4 +2626,23 @@ tries to use one.
 
 ---
 
+## 2026-10-11 — The test that agreed with the bug
+
+A reminder picker on Android: pick a day, then a time, combine them. The
+AI wrote the combining function and a test; both passed. The independent
+reviewer read the native Kotlin behind the picker and found the date
+dialog returns the chosen day as midnight UTC — so in New York, reading it
+as local time lands on the previous day. The test had constructed its
+"picked day" with local time, which is what the author *assumed* the
+picker returns, not what it does. Code and test shared one wrong belief,
+so they agreed perfectly.
+
+**Article angle:** a unit test only checks code against the author's model
+of the world. When the input comes from a platform API, feed the test the
+value the platform actually produces (here, `Date.UTC(...)`), and run it
+in more than one timezone. Better still, have a reviewer who reads the
+platform source rather than the author's code.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

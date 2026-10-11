@@ -4819,4 +4819,23 @@ done in code (native, box unchecked). Cursor → 8.11.
 
 ---
 
+## Beat 91 — 8.11: any date & time for a reminder; tap opens the capsule
+
+"Pick date & time…" uses @expo/ui's picker: one inline sheet on iOS, two
+dialogs (date, then time) on Android, where the combined mode silently
+falls back to date-only. Reminder notifications carry their capsule id,
+and tapping one opens the capsule — mounted inside the tabs, so never past
+the lock screen.
+
+Checker failed round 1 on a timezone bug that unit tests had hidden:
+Android's date dialog returns the day as UTC midnight, which read in local
+time is the previous day anywhere west of UTC (the Americas). The test had
+built its "picked day" in local time — not what the picker returns. Fixed
+with UTC getters and a test fed the real shape, run under three TZs.
+
+Gate: tsc clean, jest 1360/1360, eslint clean. Checkpoint `7bec203`. 8.11
+done in code (native, box unchecked). Cursor → 8.12.
+
+---
+
 <!-- Append new beats above this line. -->

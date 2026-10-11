@@ -170,6 +170,11 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
   tap its name → the share sheet opens; "Open in Files"/a PDF viewer shows
   it. Privacy → activity log shows 'Opened attachment "…" in another app'.
   (The receiving app sees the stored name with an id prefix.)
+- 8.11 device check: on a capsule, Reminders → "Pick date & time…" → choose
+  tomorrow 18:00 → the list shows "Tomorrow, 18:00". **On Android, also with
+  the phone set to a US timezone** (the day must not shift). Set one a minute
+  or two out, leave the app, tap the notification → the capsule opens (with
+  app lock on: after unlocking). The Android time dialog is 24-hour.
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 
