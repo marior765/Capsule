@@ -4732,4 +4732,23 @@ Gate: tsc clean, jest 1273/1273 (99 suites), eslint clean. Checkpoint
 
 ---
 
+## Beat 86 — 5.5 parts A+B: zip bundles, capsules with their files
+
+Found while starting: the Import & Export screen is an empty stub (none of
+5.2–5.4's export/import/backup logic is reachable in the app), and the full
+backup still covers conversations only. 5.5 is split: A) zip + byte
+helpers, B) capsule bundles with attachments, C) full backup bundle,
+D) the screen.
+
+A passed review first time (plus hardening from its notes). B failed once:
+a hostile bundle could make one file entry back thousands of attachments
+and fill the disk, and the all-or-nothing test never wrote a file before
+failing. Fixed (each entry usable once, export capped to what import can
+open, cleanup of whole new folders, type-safe entry lookup); passed round 2.
+
+Gate: tsc clean, jest 1305/1305, eslint clean. Checkpoint `63f5bdc`.
+5.5 in_progress — C (full backup) next.
+
+---
+
 <!-- Append new beats above this line. -->

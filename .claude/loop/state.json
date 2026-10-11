@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 85,
+    "beat": 86,
     "status": "running",
     "completedAt": "2026-10-11T20:40:59",
     "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
@@ -461,11 +461,14 @@
       "checkpoint": "46dcf1e"
     },
     "5.5": {
-      "status": "pending",
+      "status": "in_progress",
       "class": "logic",
-      "attempts": 0,
-      "failureSignatures": [],
-      "notes": ""
+      "attempts": 1,
+      "checkpoint": "63f5bdc",
+      "failureSignatures": [
+        "checker 5.5b: fail -- one bundle file entry could back unlimited attachments (disk fill); all-or-nothing test never wrote a file before failing"
+      ],
+      "notes": "Parts A (shared/zip, fs bytes, inTransaction) + B (capsule bundles with attachments) committed 63f5bdc. FOUND: Import & Export screen (src/app/(app)/settings/import-export.tsx) is an empty stub -- none of 5.2-5.4 is reachable in the app; and backup-restore covers conversations only (capsules missing). REMAINING: C) full backup as a zip: conversations + chat images + capsules + attachments, id-preserving restore; D) Import & Export screen (export/share via expo-sharing behind shared/share, pick via shared/picker, all importers). Known minor: attachment field check is bundle-wide, not per type."
     },
     "5.6": {
       "status": "pending",
@@ -492,8 +495,8 @@
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1273/1273, 99 suites)",
+    "jest": "pass (1305/1305)",
     "eslint": "pass",
-    "at": "2026-10-11T21:35:59"
+    "at": "2026-10-11T22:37:25"
   }
 }
