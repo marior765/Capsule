@@ -4792,4 +4792,17 @@ ticked. Cursor → 5.6 (personas and snippets in the full backup).
 
 ---
 
+## Beat 89 — 5.6: personas and snippets in the full backup
+
+Small, clean step: the full backup now carries personas and snippets and a
+restore replaces them in the same transaction. A backup made before this
+change has no such lists, so restoring it leaves the current ones alone
+rather than wiping them — "absent" and "empty" mean different things.
+Checker passed; its wording and shape-check notes applied before commit.
+
+Gate: tsc clean, jest 1341/1341, eslint clean. Checkpoint `10f5716`. 5.6
+ticked. Cursor → 6.9 (open non-image attachments via the share sheet).
+
+---
+
 <!-- Append new beats above this line. -->

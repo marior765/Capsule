@@ -127,7 +127,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 5.3 `features/backup-restore` — conversations scope done; capsules N/A (Phase 6 unbuilt), settings not yet covered
 - [x] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown) — ChatGPT + Claude export into conversations (both unverified against real export files, see BLOCKED.md; parent cycles broken on import), CSV / JSON / Markdown into capsules (rows → new type + capsules, notes → "Note" capsules)
 - [x] 5.5 Files in exports — Settings → Import & Export: "Back up everything" makes one zip with every conversation (incl. chat images) and capsule (incl. attachments), restore replaces everything safely (staged, all-or-nothing); capsules export/import as a zip with their files; plus conversations JSON and imports from ChatGPT, Claude, CSV, JSON records and Markdown. Via fflate; files leave only through the system share sheet (decided 2026-10-11)
-- [ ] 5.6 Personas and snippets in full backup/restore (decided 2026-10-11)
+- [x] 5.6 Personas and snippets in full backup/restore — included in "Back up everything" and replaced on restore; an older backup without them leaves yours untouched (decided 2026-10-11)
 
 ### Phase 6 — Capsule data core
 - [x] 6.1 `entities/capsule`, `entities/field`, `entities/capsule-type` — models + CRUD
