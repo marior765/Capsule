@@ -4668,4 +4668,29 @@ done in code awaiting a device check (BLOCKED.md) or deferred.
 
 ---
 
+## Beat 83 — new packages audited; 4.6 part 1: the encrypted database
+
+The user installed fflate and expo-sharing. Audit: fflate has no network
+APIs; expo-sharing has network code only for resolving links shared INTO
+the app, a share extension that is off by default — Capsule only shares out.
+
+4.6 part 1 builds the storage half of app lock: a separate encrypted file,
+and turning the lock on/off by copying the whole database into the other
+file (sqlcipher_export), checking the copy, then removing the old one.
+The sqlite test mock now emulates named files and key checks, so tests
+follow real data between files rather than asserting call shapes.
+
+The checker failed it twice, both times on data-loss paths: rollbacks that
+could delete the live database or a vault whose key stayed saved, silent
+delete failures, and then a race my own fix introduced — closing plain
+before an awaited key save let a re-render reopen plain, and the keyed open
+silently returned it. Fixed by making a keyed open refuse to return plain.
+Passed round 3.
+
+Gate: tsc clean, jest 1244/1244 (95 suites), eslint clean. Checkpoint
+`3860cba`. 4.6 in_progress — part 2 (lock screen, launch gate, re-lock
+timing, settings on/off) next.
+
+---
+
 <!-- Append new beats above this line. -->

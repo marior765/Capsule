@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 82,
+    "beat": 83,
     "status": "running",
     "completedAt": "2026-10-11T20:40:59",
     "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
@@ -441,11 +441,15 @@
       "notes": "Static guard test scans src/app; routes retrofitted; RECOMMENDED_MODELS got stable slug ids for row testIDs. Checker pass x2. Known guard limits (comment apostrophes, nested-prop testIDs, trailing spreads) accepted."
     },
     "4.6": {
-      "status": "pending",
+      "status": "in_progress",
       "class": "native",
-      "attempts": 0,
-      "failureSignatures": [],
-      "notes": ""
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- turnOn rollback could delete the vault while its key stayed saved; turnOff rollback could delete the live plain db when plain was open; deleteDatabaseFile swallowed every error (wipe/turn-on could report success with data on disk)",
+        "checker round 2: fail -- closing plain before the awaited key save let a concurrent openDb() reopen plain; openDb({key}) then silently returned plain (lock 'on' into the wrong file)"
+      ],
+      "notes": "PART 1 (data/crypto layer): two db files (capsule.db plain / capsule-vault.db SQLCipher), copyDatabaseTo via sqlcipher_export, turnOnAppLock/turnOffAppLock with rollback + shape check, biometric-protected key copy, vault_setup audit action, file-aware sqlite mock. PART 2 MUST: (a) launch gate -- if isVaultConfigured(): lock screen, unlock (passphrase or biometrics) -> openDb({key}) -> migrations -> app; (b) boot cleanup deletes the OTHER file only after the chosen file opened AND looks sane; if the vault can't be opened but a plain file exists, don't delete it (recovery path); (c) wipeAllData must also forget the vault keys (else lock-on wipe leaves isVaultConfigured true -> plain reopened -> turnOff refuses) -- folds into 4.7; (d) after turn on/off, reload the JS app (expo reloadAppAsync) so no screen keeps a closed db handle; (e) AppState re-lock with lock-timing setting (default 1 min) as an overlay; (f) AppLockSettings: turnOnAppLock (biometrics toggle) + Turn off; drop 'decrypt' setup audit + stale copy; (g) after a passphrase unlock with the biometric flag on, re-store the biometric copy if reading it failed (OS invalidates it on new enrollment); (h) openDb key doc 'landmine' comment updated once the gate exists. | PART 1 COMMITTED after checker pass (round 3). Part-2 extra notes: (i) turnOn rollback narrow race -- forgetKeys fails AND a concurrent openDb() during it -> session continues on plain while key stays; gate's boot cleanup must not delete plain unless the vault opened and matches; (ii) on LeftoverCopyError from turnOn, biometrics weren't stored -- UI should offer biometrics again / retry cleanup.",
+      "checkpoint": "3860cba"
     },
     "4.7": {
       "status": "pending",
