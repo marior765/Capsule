@@ -4650,4 +4650,22 @@ BLOCKED.md). Cursor → 8.10 (testID retrofit for every route).
 
 ---
 
+## Beat 82 — 8.10: testIDs on every route — run complete
+
+Instead of hand-auditing 30 route files, the step started with a test: a
+static scan of src/app that fails if any Pressable/TextInput (and
+Animated/Link/Button variants) lacks a testID from the file's own
+`testIDs` object. It went red with 24 gaps in 8 routes, then red again on
+a second rule (11 routes not exposing `Screen.testIDs`). Both fixed;
+recommended models got stable slug ids so row testIDs don't depend on
+display names with spaces and em dashes. Checker passed twice; the guard's
+known blind spots (an apostrophe in a comment inside a tag, a testID on a
+nested JSX prop, a trailing `{...rest}`) are accepted — none occur today.
+
+Gate: tsc clean, jest 1203/1203 (94 suites), eslint clean. Checkpoint
+`e91f869`. **Run complete** — every remaining unchecked step is either
+done in code awaiting a device check (BLOCKED.md) or deferred.
+
+---
+
 <!-- Append new beats above this line. -->

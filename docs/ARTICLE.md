@@ -2554,4 +2554,29 @@ shows up.
 
 ---
 
+## 2026-10-11 — Turning a style rule into a failing test
+
+CLAUDE.md has said since the start that every interactive element needs a
+testID from a `createComponentTestIDs` object. Widgets mostly complied,
+because each was built under that rule; routes drifted, because nothing
+checked them. When the user asked for a retrofit, the tempting move was
+to open thirty files and eyeball them. Instead the loop's TDD rule forced a
+test first — and the cheapest honest test was a static scan: read every
+`.tsx` under `src/app`, find each interactive opening tag, and fail unless
+its testID references the file's own `testIDs` object.
+
+It went red with an exact punch list (24 elements, file and line), turned
+green as they were fixed, and now stays in the suite. A second rule
+(routes must expose `Screen.testIDs`) went in the same way and failed on
+11 routes the first pass hadn't considered.
+
+**Article angle:** a convention an AI agent is merely *told* about
+decays; a convention encoded as a failing test is enforced on every future
+change, by humans and agents alike. The independent reviewer also showed
+the trade-off honestly — a regex-and-brace-counting scan has blind spots
+(an apostrophe in a comment, a testID nested in another prop) — but a
+guard with known, written-down limits beats a rule nobody checks.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
