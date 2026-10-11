@@ -4773,4 +4773,23 @@ Gate: tsc clean, jest 1315/1315, eslint clean. Checkpoint `2e2c1ae`.
 
 ---
 
+## Beat 88 — 5.5 part D: the Import & Export screen
+
+The screen that was an empty stub now does everything 5.2–5.5 built:
+back up / restore, capsules zip, conversations JSON, and imports from
+ChatGPT, Claude, CSV, JSON and Markdown — through the system picker and
+share sheet only. It also surfaced that Privacy (app lock, erase) had no
+link in Settings; both are now listed.
+
+Checker failed round 1 on two privacy leaks — a cancelled restore left the
+picked backup in the cache, and exports lingered there as plaintext past a
+wipe and app lock. Fixed (confirm inside the import's cleanup; one Exports
+folder cleared before each export, at launch before unlock, after sharing
+on iOS, and by the wipe). Passed round 2.
+
+Gate: tsc clean, jest 1337/1337, eslint clean. Checkpoint `4e8db23`. 5.5
+ticked. Cursor → 5.6 (personas and snippets in the full backup).
+
+---
+
 <!-- Append new beats above this line. -->

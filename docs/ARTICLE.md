@@ -2603,4 +2603,27 @@ inferences from the current state of the disk.
 
 ---
 
+## 2026-10-11 — Tested, ticked, and unreachable
+
+Steps 5.2–5.4 — conversation and capsule export/import, backup/restore,
+and importers for ChatGPT, Claude, CSV, JSON and Markdown — had been
+ticked for weeks, each with a solid test suite. When the user asked for
+files in exports, the AI went looking for the screen to add a button to,
+and found `import-export.tsx` was a five-line empty `<View />`. None of
+it had ever been reachable from the app. The same pass found that the
+Privacy screen (app lock, erase everything) had no link in Settings
+either — only the command palette reached it.
+
+The autonomous loop's Definition of Done was "tests prove behaviour";
+nothing asked "can a person get to this?". Logic-first development with
+pure, tested cores is right for an app like this — but a ticked box for a
+user-facing feature needs one more check: a path from the home screen.
+
+**Article angle:** an AI agent will faithfully satisfy the definition of
+"done" you give it. If reachability isn't in it, you can accumulate
+well-tested features nobody can open — and you won't notice until someone
+tries to use one.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

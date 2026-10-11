@@ -157,6 +157,15 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
   orphaned before the restore (e.g. a tag link or search embedding whose
   capsule is gone) survive it, and could re-attach to a restored capsule
   with the same id. Rare; fixable with table-wide deletes in the entities.
+- 5.5 Import & Export, small edge cases: for the text importers any failure
+  (even a disk error) reads "This doesn't look like a … file"; a capsule-
+  search job already running when a backup is restored could write a stale
+  search row (the restart re-indexes); if the app restart after a restore
+  fails, the user stays on the old screens until they restart manually.
+- 5.5 device check: Settings → Import & Export → "Back up everything" opens
+  the share sheet; save to Files; "Restore from a backup…" → pick it →
+  confirm → app restarts with everything back (incl. a capsule photo and a
+  chat image). Also import a CSV and a Markdown note.
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 
