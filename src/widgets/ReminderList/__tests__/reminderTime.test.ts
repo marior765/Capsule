@@ -3,6 +3,9 @@ import {
   formatReminderTime,
   reminderPresets,
   resolvePreset,
+  defaultPickerDate,
+  combinePickedDayAndTime,
+  localDayAsUtcMidnight,
 } from "../reminderTime";
 
 // Local-time construction keeps these independent of the machine's timezone.
@@ -81,5 +84,36 @@ describe("resolvePreset", () => {
 
   it("returns null for a preset whose time has passed since it was shown", () => {
     expect(resolvePreset("evening", at(2026, 10, 10, 18, 30))).toBeNull();
+  });
+});
+
+// 8.11: the full date & time picker.
+describe("defaultPickerDate", () => {
+  it("starts on the next full hour", () => {
+    expect(defaultPickerDate(at(2026, 10, 10, 14, 25)).getTime()).toBe(
+      at(2026, 10, 10, 15),
+    );
+  });
+
+  it("rolls into the next day at night", () => {
+    expect(defaultPickerDate(at(2026, 10, 31, 23, 40)).getTime()).toBe(
+      at(2026, 11, 1, 0),
+    );
+  });
+});
+
+describe("combinePickedDayAndTime (Android: the date dialog returns the day as UTC midnight)", () => {
+  it("takes the picked calendar day as-is, whatever the device's timezone", () => {
+    // What Android's date dialog returns for 24 Dec: midnight UTC.
+    const day = new Date(Date.UTC(2026, 11, 24));
+    const time = new Date(2020, 0, 1, 18, 45, 30); // local 18:45 from the time dialog
+    expect(combinePickedDayAndTime(day, time)).toBe(at(2026, 12, 24, 18, 45));
+  });
+});
+
+describe("localDayAsUtcMidnight (what Android's date dialog expects to start on)", () => {
+  it("is the local calendar day at midnight UTC", () => {
+    const local = new Date(2026, 9, 10, 23, 30); // late evening, local
+    expect(localDayAsUtcMidnight(local).getTime()).toBe(Date.UTC(2026, 9, 10));
   });
 });

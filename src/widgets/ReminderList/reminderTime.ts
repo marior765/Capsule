@@ -78,3 +78,32 @@ export function formatReminderTime(at: number, now: number): string {
         : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
   return `${day}, ${time}${at <= now ? " (passed)" : ""}`;
 }
+
+/** Where the date & time picker starts (8.11): the next full hour. */
+export function defaultPickerDate(now: number): Date {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1);
+}
+
+/**
+ * One moment from Android's two dialogs (8.11). The date dialog returns the
+ * chosen calendar day as midnight UTC — so the day is read with the UTC
+ * getters (local getters would give the previous day anywhere behind UTC);
+ * the time dialog returns a local time, read with the local getters.
+ */
+export function combinePickedDayAndTime(day: Date, time: Date): number {
+  return new Date(
+    day.getUTCFullYear(),
+    day.getUTCMonth(),
+    day.getUTCDate(),
+    time.getHours(),
+    time.getMinutes(),
+  ).getTime();
+}
+
+/** A local calendar day in the form Android's date dialog uses: its midnight UTC. */
+export function localDayAsUtcMidnight(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+}

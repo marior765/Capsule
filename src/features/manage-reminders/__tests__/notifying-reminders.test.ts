@@ -18,12 +18,14 @@ import {
   __resetNotificationsMock,
   __scheduled,
   scheduleNotificationAsync,
+  __scheduledData,
 } from "@/__mocks__/expo-notifications";
 import {
   addReminder,
   cancelReminder,
   moveReminder,
   scheduleUnscheduledReminders,
+  capsuleIdFromNotification,
 } from "../index";
 
 let db: SQLiteDatabase;
@@ -255,4 +257,27 @@ it("cancels a notification it scheduled if saving its id fails (no uncancellable
   );
   await expect(scheduleUnscheduledReminders(db)).resolves.toBe(0);
   expect(__scheduled.size).toBe(0);
+});
+
+// 8.11: tapping a reminder opens its capsule.
+describe("reminder notifications know their capsule (8.11)", () => {
+  it("carries the capsule id in the notification's data", async () => {
+    const { reminder } = await addReminder(db, {
+      capsuleId: "c1",
+      remindAt: NOW + 60_000,
+    });
+    expect(__scheduledData.get(reminder.notificationId!)).toEqual({
+      capsuleId: "c1",
+    });
+  });
+
+  it.each([
+    [{ capsuleId: "c1" }, "c1"],
+    [{ capsuleId: "" }, null],
+    [{ capsuleId: 42 }, null],
+    [{ capsuleId: "../x" }, null],
+    [{}, null],
+  ])("capsuleIdFromNotification(%j) → %j", (data, expected) => {
+    expect(capsuleIdFromNotification(data)).toBe(expected);
+  });
 });

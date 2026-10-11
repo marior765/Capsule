@@ -278,6 +278,19 @@ export default function CapsuleDetailScreen() {
         : "Saved, but notifications are off for Capsule — allow them in Settings to be reminded.";
     }, "Couldn't set the reminder.");
 
+  // A time chosen in the date & time picker (8.11); addReminder refuses one
+  // in the past with a plain message.
+  const handleAddReminderAt = (at: number) =>
+    runReminderChange(async () => {
+      const { scheduled } = await addReminder(db, {
+        capsuleId: id,
+        remindAt: at,
+      });
+      return scheduled
+        ? null
+        : "Saved, but notifications are off for Capsule — allow them in Settings to be reminded.";
+    }, "Couldn't set the reminder.");
+
   const handleCancelReminder = (reminderId: string) =>
     runReminderChange(async () => {
       await cancelReminder(db, reminderId);
@@ -448,6 +461,7 @@ export default function CapsuleDetailScreen() {
           now={now}
           onAdd={handleAddReminder}
           onCancel={handleCancelReminder}
+          onAddAt={(at) => void handleAddReminderAt(at)}
           busy={reminderBusy}
           error={reminderError}
         />

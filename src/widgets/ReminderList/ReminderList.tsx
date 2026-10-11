@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import type { Reminder } from "@/entities/reminder";
@@ -7,6 +8,7 @@ import {
   type ReminderPreset,
   type ReminderPresetKey,
 } from "./reminderTime";
+import { ReminderDateTimePicker } from "./ReminderDateTimePicker";
 
 type ReminderListProps = {
   reminders: Reminder[];
@@ -17,6 +19,8 @@ type ReminderListProps = {
   /** Called with the tapped preset's key; the caller resolves its time at tap time (`resolvePreset`). */
   onAdd: (presetKey: ReminderPresetKey) => void;
   onCancel: (reminderId: string) => void;
+  /** A time chosen with "Pick date & time…" (8.11). */
+  onAddAt: (at: number) => void;
   /** True while a reminder is being set or cancelled — every button is disabled. */
   busy: boolean;
   error: string | null;
@@ -34,9 +38,12 @@ export function ReminderList({
   now,
   onAdd,
   onCancel,
+  onAddAt,
   busy,
   error,
 }: ReminderListProps) {
+  // When the picker was opened (its starting point), or null when closed.
+  const [pickingFrom, setPickingFrom] = useState<number | null>(null);
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
       {reminders.length === 0 && (
@@ -96,7 +103,25 @@ export function ReminderList({
             <Text style={styles.actionLabel}>{preset.label}</Text>
           </Pressable>
         ))}
+        <Pressable
+          testID={testIDs.buttons.pickDateTime}
+          style={styles.action}
+          onPress={() => setPickingFrom(Date.now())}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel="Remind me at a date and time you choose"
+          accessibilityState={{ disabled: busy, busy }}
+        >
+          <Text style={styles.actionLabel}>Pick date & time…</Text>
+        </Pressable>
       </View>
+      {pickingFrom !== null && (
+        <ReminderDateTimePicker
+          now={pickingFrom}
+          onPick={onAddAt}
+          onClose={() => setPickingFrom(null)}
+        />
+      )}
     </View>
   );
 }
@@ -157,7 +182,7 @@ const styles = StyleSheet.create((theme) => ({
 const testIDs = createComponentTestIDs("ReminderList", {
   containers: ["root"] as const,
   texts: ["empty", "error"] as const,
-  buttons: ["preset", "cancel"] as const,
+  buttons: ["preset", "cancel", "pickDateTime"] as const,
 });
 
 ReminderList.testIDs = testIDs;

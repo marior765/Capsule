@@ -1,5 +1,8 @@
 import {
+  addNotificationResponseReceivedListener,
   cancelAllScheduledNotificationsAsync,
+  clearLastNotificationResponse,
+  getLastNotificationResponse,
   cancelScheduledNotificationAsync,
   getPermissionsAsync,
   requestPermissionsAsync,
@@ -36,9 +39,15 @@ export async function scheduleLocalNotification(params: {
   at: number;
   title: string;
   body: string;
+  /** Small app data carried with it, e.g. which capsule to open on tap. */
+  data?: Record<string, string>;
 }): Promise<string> {
   return scheduleNotificationAsync({
-    content: { title: params.title, body: params.body },
+    content: {
+      title: params.title,
+      body: params.body,
+      ...(params.data ? { data: params.data } : {}),
+    },
     trigger: { type: SchedulableTriggerInputTypes.DATE, date: params.at },
   });
 }
@@ -67,4 +76,31 @@ export function configureNotificationDisplay(): void {
       shouldSetBadge: false,
     }),
   });
+}
+
+/**
+ * Calls `handler` with a notification's data when the user taps it (8.11) —
+ * while the app is running, and also once for the tap that launched the
+ * app (that one is then cleared, so it isn't handled twice). Mount this
+ * only where acting on it is allowed (after unlock). Returns unsubscribe.
+ */
+export function onNotificationTapped(
+  handler: (data: Record<string, unknown>) => void,
+): () => void {
+  // Native code keeps every tap as the "last response" — clear it once
+  // handled, live or at launch, so a later subscriber never replays it.
+  const handle = (data: Record<string, unknown> | undefined) => {
+    clearLastNotificationResponse();
+    handler(data ?? {});
+  };
+  const subscription = addNotificationResponseReceivedListener((response) =>
+    handle(response.notification.request.content.data),
+  );
+  try {
+    const launch = getLastNotificationResponse();
+    if (launch !== null) handle(launch.notification.request.content.data);
+  } catch {
+    // no launch tap to handle
+  }
+  return () => subscription.remove();
 }

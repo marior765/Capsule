@@ -90,6 +90,7 @@ async function scheduleFor(
     at: reminder.remindAt,
     title: NOTIFICATION_TITLE,
     body: notificationBody(db, reminder),
+    data: { capsuleId: reminder.capsuleId },
   });
 }
 
@@ -202,4 +203,18 @@ export async function scheduleUnscheduledReminders(
     }
   }
   return scheduled;
+}
+
+/**
+ * The capsule a tapped reminder notification belongs to (8.11), or null if
+ * the data isn't a plausible capsule id — the app only ever navigates to a
+ * capsule route built from a plain id.
+ */
+export function capsuleIdFromNotification(
+  data: Record<string, unknown>,
+): string | null {
+  const id = data.capsuleId;
+  return typeof id === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(id)
+    ? id
+    : null;
 }
