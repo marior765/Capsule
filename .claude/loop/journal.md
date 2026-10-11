@@ -4751,4 +4751,26 @@ Gate: tsc clean, jest 1305/1305, eslint clean. Checkpoint `63f5bdc`.
 
 ---
 
+## Beat 87 — 5.5 part C: the full backup as a zip
+
+A full backup now carries everything a person would lose with their
+phone — conversations (branches, sources, chat images) and capsules
+(schema, values, tags, links, history, reminders, attachments) — with ids
+unchanged. Restore is staged: validate everything, write new files under
+fresh names, swap all rows in one transaction, and only then delete old
+files.
+
+Checker failed round 1: restore deleted reminders without cancelling
+their scheduled OS notifications (ghost notifications for capsules that no
+longer exist). Fixed, plus unique restored file names and image ownership.
+Round 2 passed — and caught that I'd told it a test assertion was added
+when my patch had silently not applied (its anchor didn't match after
+prettier). Added and verified before commit. Lesson re-learned: check the
+file, not the patch script's silence.
+
+Gate: tsc clean, jest 1315/1315, eslint clean. Checkpoint `2e2c1ae`.
+5.5 in_progress — part D (the Import & Export screen) next.
+
+---
+
 <!-- Append new beats above this line. -->

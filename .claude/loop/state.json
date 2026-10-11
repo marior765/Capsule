@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 86,
+    "beat": 87,
     "status": "running",
     "completedAt": "2026-10-11T20:40:59",
     "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
@@ -463,12 +463,13 @@
     "5.5": {
       "status": "in_progress",
       "class": "logic",
-      "attempts": 1,
-      "checkpoint": "63f5bdc",
+      "attempts": 2,
+      "checkpoint": "2e2c1ae",
       "failureSignatures": [
-        "checker 5.5b: fail -- one bundle file entry could back unlimited attachments (disk fill); all-or-nothing test never wrote a file before failing"
+        "checker 5.5b: fail -- one bundle file entry could back unlimited attachments (disk fill); all-or-nothing test never wrote a file before failing",
+        "checker 5.5c: fail -- restore deleted reminders without cancelling their OS notifications"
       ],
-      "notes": "Parts A (shared/zip, fs bytes, inTransaction) + B (capsule bundles with attachments) committed 63f5bdc. FOUND: Import & Export screen (src/app/(app)/settings/import-export.tsx) is an empty stub -- none of 5.2-5.4 is reachable in the app; and backup-restore covers conversations only (capsules missing). REMAINING: C) full backup as a zip: conversations + chat images + capsules + attachments, id-preserving restore; D) Import & Export screen (export/share via expo-sharing behind shared/share, pick via shared/picker, all importers). Known minor: attachment field check is bundle-wide, not per type."
+      "notes": "Parts A (shared/zip, fs bytes, inTransaction) + B (capsule bundles with attachments) committed 63f5bdc. FOUND: Import & Export screen (src/app/(app)/settings/import-export.tsx) is an empty stub -- none of 5.2-5.4 is reachable in the app; and backup-restore covers conversations only (capsules missing). REMAINING: C) full backup as a zip: conversations + chat images + capsules + attachments, id-preserving restore; D) Import & Export screen (export/share via expo-sharing behind shared/share, pick via shared/picker, all importers). Known minor: attachment field check is bundle-wide, not per type. | PART C (full backup bundle) fixes after checker: cancel replaced reminders' OS notifications; unique restore file names (full id + counter); images must belong to their conversation; old state gathered before writing. Part D must: after a restore, reset + backfill embeddings (EmbeddingProvider) and reschedule future reminders (manage-reminders), then reload. | PART C committed 2e2c1ae. Next: PART D (Import & Export screen)."
     },
     "5.6": {
       "status": "pending",
@@ -495,8 +496,8 @@
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1305/1305)",
+    "jest": "pass (1315/1315)",
     "eslint": "pass",
-    "at": "2026-10-11T22:37:25"
+    "at": "2026-10-11T22:51:09"
   }
 }
