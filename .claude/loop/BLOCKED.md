@@ -152,6 +152,11 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
   from recording it) can finish afterwards and leave an orphan model file
   in its folder. Public model files, not user data; deleting the model in
   Models (or erasing again) removes it.
+- 5.5 full restore clears rows capsule by capsule and conversation by
+  conversation (the entities have no "delete all"). Rows that were already
+  orphaned before the restore (e.g. a tag link or search embedding whose
+  capsule is gone) survive it, and could re-attach to a restored capsule
+  with the same id. Rare; fixable with table-wide deletes in the entities.
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 

@@ -28,7 +28,8 @@ export function isSafeSegment(segment: string): boolean {
     segment === "" ||
     segment === "." ||
     segment === ".." ||
-    /[/\\:]/.test(segment)
+    /[/\\:]/.test(segment) ||
+    /[\u0000-\u001f\u007f]/.test(segment)
   );
 }
 

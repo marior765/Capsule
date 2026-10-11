@@ -151,3 +151,9 @@ export function restoreBackup(db: SQLiteDatabase, json: string): void {
     createdAt: Date.now(),
   });
 }
+
+export {
+  createBackupBundle,
+  restoreBackupBundle,
+  BackupTooLargeError,
+} from "./bundle";
