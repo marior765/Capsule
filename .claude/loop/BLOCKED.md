@@ -143,6 +143,10 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
 - iOS keeps Keychain items across an uninstall: a reinstalled app may open to
   "Capsule is locked" with no data behind it — "Erase everything" recovers.
   Worth handling with 4.7's erase-everything (e.g. detect "key but no file").
+- A double failure while turning the lock on (something reopens the plain
+  file during the key save, then forgetting the keys fails) can leave a few
+  background writes in a plain copy marked stale; they'd be dropped at the
+  next unlock. Tiny window, recorded rather than engineered around.
 - The re-lock screen is an overlay: a native modal added later would sit
   above it; the app-switcher snapshot still shows content.
 

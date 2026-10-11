@@ -4693,4 +4693,25 @@ timing, settings on/off) next.
 
 ---
 
+## Beat 84 — 4.6 part 2: the lock screen and launch gate
+
+App lock now works end to end in code: with it on, the app's providers
+don't mount until the lock screen unlocks the encrypted file; it re-locks
+after the chosen time away (default 1 minute); Privacy settings turn it on
+(with an optional Face ID / fingerprint copy of the key) and off (keeping
+the data), restarting the app after each change.
+
+Checker failed round 1 on data loss again — the launch cleanup deleted the
+unencrypted file whenever the encrypted one *opened*, but a missing
+encrypted file opens as a new empty one, and a wipe with the lock on
+leaves real data in the plain file. Fix: an explicit "this plain file is a
+stale copy" marker, set only where that's provably true, plus a check that
+the encrypted file held data. Round 2 passed; its one cheap note (clear the
+marker when the vault turns out empty) applied before commit.
+
+Gate: tsc clean, jest 1270/1270 (98 suites), eslint clean. Checkpoint
+`bd25c76`. 4.6 done in code (native, box unchecked). Cursor → 4.7.
+
+---
+
 <!-- Append new beats above this line. -->

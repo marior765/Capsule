@@ -2579,4 +2579,28 @@ guard with known, written-down limits beats a rule nobody checks.
 
 ---
 
+## 2026-10-11 — "It opened" is not "it's the newer copy"
+
+Building app lock meant moving the user's whole database into an encrypted
+file and back. The design was careful — copy first, verify, then delete the
+old file — and the AI reviewer still failed it four times, every time on a
+data-loss path: a rollback that deleted the live database, a delete failure
+swallowed as success, a race where a screen re-render reopened the old file
+mid-switch, and finally a launch cleanup that deleted the unencrypted copy
+because the encrypted one *opened*. SQLite happily "opens" a file that
+doesn't exist — as a brand-new empty one.
+
+The fix wasn't more checks at cleanup time; it was recording intent at the
+moment it's provably true. A small "this plain file is a stale copy" marker
+is set only right after the copy is closed, and cleared on every path where
+the plain file might become the live one again. Cleanup trusts the marker,
+not the appearance of the files.
+
+**Article angle:** for destructive operations, an independent reviewer told
+to *refute* rather than approve is worth its cost many times over — and
+the recurring lesson is to delete based on recorded facts, never on
+inferences from the current state of the disk.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

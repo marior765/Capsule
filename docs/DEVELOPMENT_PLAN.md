@@ -118,7 +118,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 4.3 `entities/audit` + `PrivacyBanner` egress indicator + `EgressLog` viewer
 - [ ] 4.4 Settings → privacy screen
 - [ ] 4.5 `features/wipe-data` — secure full wipe (models, chats, capsules, settings)
-- [ ] 4.6 App lock at launch — lock screen (passphrase + biometrics), database opened with its key only after unlock, re-lock after leaving the app (Privacy setting: immediately / 1 min / 5 min, default 1 min), "Turn off app lock" that keeps your data, `vault_setup` audit entries (decided 2026-10-11)
+- [ ] 4.6 App lock at launch — done in code: with the lock on, Capsule opens to a lock screen (passphrase, or Face ID / fingerprint) and nothing touches your data until you unlock; everything on the device is encrypted in a separate file; it locks again after you've been away (Privacy setting: immediately / 1 min / 5 min, default 1 min); "Turn off app lock" decrypts without losing data; lock changes are logged as "App lock changed". Needs a simulator/device check before ticking (see BLOCKED.md)
 - [ ] 4.7 One "erase everything" — wipe and vault reset share one full cleanup: files, chat images, reminders, settings, vault key, database (decided 2026-10-11)
 
 ### Phase 5 — Portability ← key differentiator
