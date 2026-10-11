@@ -22,7 +22,7 @@ have). Add a row to the status table when you adopt a feature for real.
 | Loops (`/loop`) | ✅ Used | 2026-08-13 |
 | `update-config` skill | ✅ Used | 2026-06-09 |
 | Scheduled agents (`/schedule`) | ✅ Learned | 2026-06-09 |
-| Memory (persistent) | ✅ Learned | 2026-06-17 |
+| Memory (persistent) | ✅ Used | 2026-10-11 |
 | `/plan` custom skill | ✅ Used | 2026-06-17 |
 | Plan mode (`defaultMode: plan`) | ✅ Learned | 2026-06-17 |
 | Code review (`/code-review`) | ✅ Learned | 2026-06-17 |
@@ -254,8 +254,11 @@ have). Add a row to the status table when you adopt a feature for real.
 - **vs. CLAUDE.md:**
   - `CLAUDE.md` — project-scoped, static, developer-maintained
   - Memory — global, dynamic, Claude-maintained
-- **Here:** Learned the full model. First memory entries to be written: user
-  profile (React Native background, new to llama.rn) and feedback from this session.
+- **Here:** Learned the full model (2026-06-17). First real memory written
+  2026-10-11: a `feedback` entry — "batch every open decision and package install
+  into one round of questions up front, so the user's only job is testing on the
+  simulator" — saved after the user asked for exactly that at the end of a long
+  autonomous safe-loop run.
 
 ### `/plan` custom skill
 - **What:** Read-only planning command — explores the codebase, identifies files

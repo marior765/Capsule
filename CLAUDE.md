@@ -80,7 +80,6 @@ The list below are **one-shot triggers**. When a feature is used for the first t
 
 **Pending triggers (remove each line on first use):**
 - Scheduled agents — first `/schedule` used
-- Memory — first persistent memory written
 - `/simplify` — first time invoked
 - `/security-review` — first time invoked
 - `/verify` — first time invoked
