@@ -99,6 +99,50 @@ export async function copyFileInto(
   return [...directorySegments, fileName].join("/");
 }
 
+/**
+ * Writes `bytes` to `<documents>/<directorySegments...>/<fileName>` (5.5,
+ * restoring files from a bundle), creating the directory if needed, and
+ * returns the app-relative path. Every segment must be safe.
+ */
+export function writeAppFileBytes(
+  directorySegments: string[],
+  fileName: string,
+  bytes: Uint8Array,
+): string {
+  assertSafeSegment(fileName, "file name");
+  const directory = appDirectory(directorySegments);
+  directory.create({ intermediates: true, idempotent: true });
+  new File(directory, fileName).write(bytes);
+  return [...directorySegments, fileName].join("/");
+}
+
+/** Reads a file by app-relative path. Throws for an unsafe path or a missing file. */
+export async function readAppFileBytes(
+  relativePath: string,
+): Promise<Uint8Array> {
+  return new File(Paths.document, ...splitRelativePath(relativePath)).bytes();
+}
+
+/**
+ * Writes a temporary file into the cache (e.g. an export bundle about to be
+ * shared) and returns its `file://` uri. The OS may clear the cache; the
+ * full wipe's cache cleanup doesn't need to know about it.
+ */
+export function writeCacheFileBytes(
+  fileName: string,
+  bytes: Uint8Array,
+): string {
+  assertSafeSegment(fileName, "file name");
+  const file = new File(Paths.cache, fileName);
+  file.write(bytes);
+  return file.uri;
+}
+
+/** Reads a file by uri — e.g. a picker's temporary copy of a file the user chose. */
+export async function readFileUriBytes(uri: string): Promise<Uint8Array> {
+  return new File(uri).bytes();
+}
+
 /** Whether a file exists at an app-relative path. Throws for an unsafe path. */
 export function appFileExists(relativePath: string): boolean {
   return new File(Paths.document, ...splitRelativePath(relativePath)).exists;

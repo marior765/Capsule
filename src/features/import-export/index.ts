@@ -198,4 +198,6 @@ export {
   importCapsule,
   exportAllCapsules,
   importAllCapsules,
+  exportCapsulesBundle,
+  importCapsulesBundle,
 } from "./capsules";

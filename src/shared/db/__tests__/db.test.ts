@@ -11,6 +11,7 @@ import {
   deleteDatabaseFile,
   DATABASE_FILES,
   openDatabaseFile,
+  inTransaction,
 } from "../index";
 import { openDatabaseSync, deleteDatabaseSync } from "expo-sqlite";
 import { __resetSqliteMock } from "@/__mocks__/expo-sqlite";
@@ -309,5 +310,35 @@ describe("shared/db — a keyed open never returns the plain file (4.6, checker 
   it("throws when asked for the vault while the plain file is open", () => {
     openDb();
     expect(() => openDb({ key: "aabbccdd" })).toThrow();
+  });
+});
+
+// 5.5 (atomic bundle import) — written before implementation (TDD)
+describe("shared/db — inTransaction", () => {
+  it("commits everything when the work succeeds", () => {
+    const db = openDb();
+    db.execSync("CREATE TABLE t (x INTEGER);");
+    inTransaction(db, () => {
+      db.runSync("INSERT INTO t (x) VALUES (1);");
+      db.runSync("INSERT INTO t (x) VALUES (2);");
+    });
+    expect(db.getAllSync("SELECT x FROM t;")).toHaveLength(2);
+  });
+
+  it("rolls everything back and rethrows when the work fails", () => {
+    const db = openDb();
+    db.execSync("CREATE TABLE t (x INTEGER);");
+    expect(() =>
+      inTransaction(db, () => {
+        db.runSync("INSERT INTO t (x) VALUES (1);");
+        throw new Error("boom");
+      }),
+    ).toThrow("boom");
+    expect(db.getAllSync("SELECT x FROM t;")).toHaveLength(0);
+  });
+
+  it("returns the work's result", () => {
+    const db = openDb();
+    expect(inTransaction(db, () => 42)).toBe(42);
   });
 });

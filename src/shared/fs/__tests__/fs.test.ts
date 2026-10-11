@@ -18,6 +18,10 @@ import {
   deleteCacheDirectoryIfExists,
   deleteCacheFileIfExists,
   resolveAppPath,
+  readAppFileBytes,
+  readFileUriBytes,
+  writeAppFileBytes,
+  writeCacheFileBytes,
 } from "../index";
 
 beforeEach(() => __resetFsMock());
@@ -187,5 +191,32 @@ describe("downloadFileInto — encoded names", () => {
       "models",
     ]);
     expect(relativePath).toBe("models/a b.gguf");
+  });
+});
+
+// 5.5 (files in zip bundles) — written before implementation (TDD)
+describe("reading and writing raw bytes", () => {
+  it("writes bytes into an app folder and reads them back", async () => {
+    const path = writeAppFileBytes(
+      ["attachments", "cap-1"],
+      "a.bin",
+      new Uint8Array([1, 2, 3]),
+    );
+    expect(path).toBe("attachments/cap-1/a.bin");
+    expect(Array.from(await readAppFileBytes(path))).toEqual([1, 2, 3]);
+  });
+
+  it("refuses unsafe names and paths", () => {
+    expect(() =>
+      writeAppFileBytes(["attachments"], "../x", new Uint8Array()),
+    ).toThrow();
+    expect(() => writeAppFileBytes([".."], "x", new Uint8Array())).toThrow();
+    return expect(readAppFileBytes("../secret")).rejects.toThrow();
+  });
+
+  it("writes a temporary file to the cache and returns its uri; reads a picked file by uri", async () => {
+    const uri = writeCacheFileBytes("Capsule backup.zip", new Uint8Array([9]));
+    expect(uri.startsWith("file:///cache/")).toBe(true);
+    expect(Array.from(await readFileUriBytes(uri))).toEqual([9]);
   });
 });

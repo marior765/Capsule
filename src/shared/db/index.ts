@@ -197,3 +197,27 @@ export function runMigrations(
     );
   }
 }
+
+/**
+ * Runs `work` as one transaction: everything it writes is committed
+ * together, or — if it throws — rolled back together and the error
+ * rethrown. Uses a SAVEPOINT, so it also nests inside another transaction.
+ */
+export function inTransaction<T>(db: SQLiteDatabase, work: () => T): T {
+  db.execSync("SAVEPOINT capsule_tx;");
+  try {
+    const result = work();
+    db.execSync("RELEASE SAVEPOINT capsule_tx;");
+    return result;
+  } catch (error) {
+    // After some errors (disk full, I/O) SQLite has already rolled back and
+    // the savepoint is gone — never let that hide the original error.
+    try {
+      db.execSync("ROLLBACK TO SAVEPOINT capsule_tx;");
+      db.execSync("RELEASE SAVEPOINT capsule_tx;");
+    } catch {
+      // already rolled back
+    }
+    throw error;
+  }
+}

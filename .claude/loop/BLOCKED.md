@@ -1018,6 +1018,7 @@ for a small follow-up step: add personas + snippets to the conversation
 vault, or give them their own kinds. Your call whether that's worth a plan line.
 
 ### Attachments aren't part of the portable format (found during 6.8)
+**Resolved by 5.5 (2026-10-11):** the user chose a zip bundle (fflate). Capsule export/import as a bundle now carries attachments; the full backup with chat images follows in 5.5's next part.
 5.2's capsule export (`features/import-export/capsules.ts`) leaves attachments
 out. That was fine while attachments were metadata-only; now that they're
 real files, it's a gap against CLAUDE.md's "every persisted entity must
