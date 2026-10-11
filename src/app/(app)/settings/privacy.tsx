@@ -1,9 +1,9 @@
 import { reloadAppAsync } from "expo";
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { Alert, ScrollView, Text } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { remigrateDb, useDb, useEmbeddings } from "@/app/providers";
+import { eraseEverything, useDb } from "@/app/providers";
 import { getAllAuditEntries, type AuditEntry } from "@/entities/audit";
 import {
   cancelEmbeddingDownload,
@@ -16,7 +16,6 @@ import { WipeDataSettings } from "@/widgets/WipeDataSettings";
 
 export default function PrivacyScreen() {
   const db = useDb();
-  const embeddings = useEmbeddings();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
 
   useFocusEffect(
@@ -25,20 +24,31 @@ export default function PrivacyScreen() {
     }, [db]),
   );
 
-  // A fresh, wiped database has no tables until migrations re-run (they
-  // only run once, at Providers' own mount) — remigrateDb() restores that
-  // invariant before router.replace sends the user to a screen that will
-  // genuinely re-fetch fresh (now-empty) state, rather than one still
-  // showing pre-wipe data or hitting "no such table."
+  // After erasing, restart: every screen and provider starts over on a
+  // fresh, empty database. An embedding-model download still in flight
+  // must not put the model back after the wipe: cancel it first, and drop
+  // anything that already landed.
+  // If an erase stops partway, some data may already be gone and the
+  // database closed — say so, and restart rather than leave screens on a
+  // closed connection. Erasing again from here retries.
+  const erase = async () => {
+    try {
+      await eraseEverything();
+    } catch (e) {
+      Alert.alert(
+        "Erase didn't finish",
+        "Some data may already be deleted. Capsule will restart — you can erase again from Privacy.",
+        [{ text: "OK", onPress: () => void reloadAppAsync() }],
+        { cancelable: false },
+      );
+      throw e;
+    }
+  };
+
   const handleWiped = () => {
-    remigrateDb();
-    // An embedding-model download still in flight must not put the model
-    // back after the wipe: cancel it, forget anything that already landed,
-    // then drop the loaded context.
     cancelEmbeddingDownload();
     deleteEmbeddingModel();
-    embeddings.reload();
-    router.replace("/");
+    void reloadAppAsync();
   };
 
   return (
@@ -48,7 +58,7 @@ export default function PrivacyScreen() {
       {/* The database moved to another file: restart so nothing keeps the old connection. */}
       <AppLockSettings onChanged={() => void reloadAppAsync()} />
       <Text style={styles.heading}>Danger zone</Text>
-      <WipeDataSettings db={db} onWiped={handleWiped} />
+      <WipeDataSettings erase={erase} onWiped={handleWiped} />
       <Text style={styles.heading}>Activity log</Text>
       <Text style={styles.meta}>
         Every export, vault unlock, wipe, and model download this app has ever

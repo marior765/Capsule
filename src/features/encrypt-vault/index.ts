@@ -3,7 +3,6 @@ import {
   closeDb,
   copyDatabaseTo,
   deleteDatabaseFile,
-  deleteDb,
   openDatabaseFile,
   openDb,
 } from "@/shared/db";
@@ -43,19 +42,11 @@ import {
  * is the responsibility of whatever wires this module to the app, once it
  * has an open `db` handle (see BLOCKED.md).
  *
- * `resetVault` logs the wipe only when a database is already open (from
- * the lock screen, with the passphrase forgotten, none is — and opening
- * the plain file just to log would create one). **The entry isn't
- * durable either way**: `resetVault` immediately calls `deleteDb()` afterward,
- * which deletes the entire database file — including the audit table the
- * entry was just written into. The write still has value (it survives a
- * crash or failure between the insert and the delete, and it is the
- * accurate record if `deleteDb` is ever changed to not drop the audit
- * table), but a *successful* reset leaves no durable trace of itself
- * anywhere. Whether wipe-adjacent audit entries need a home outside the
- * store being wiped (e.g. shared/storage/MMKV) is a real open question that
- * also applies to 4.5's future full wipe-data feature — flagged to
- * BLOCKED.md rather than decided unilaterally here.
+ * Erasing everything (4.7) is the app layer's `eraseEverything`: it runs
+ * `features/wipe-data` and then this module's `forgetVaultKeys`. Its audit
+ * entry is erased along with the data it records — whether wipe audit
+ * entries need a home outside the store being wiped is an open question
+ * (see BLOCKED.md).
  */
 
 const VAULT_STORAGE_KEY = "encryptVault.wrappedMasterKey";
@@ -107,7 +98,7 @@ export async function isVaultConfigured(): Promise<boolean> {
  * a key derived from `passphrase`, and persists only the wrapped form.
  * Returns the raw master key, hex-encoded, ready to pass to
  * `openDb({ key })`. Refuses to run if a vault is already configured —
- * callers must `resetVault()` first, an explicit, separate action.
+ * the lock must be turned off (or everything erased) first.
  */
 export async function setUpVault(passphrase: string): Promise<string> {
   await assertCanSetUp(passphrase);
@@ -121,9 +112,7 @@ async function assertCanSetUp(passphrase: string): Promise<void> {
     throw new Error("Passphrase must not be empty");
   }
   if (await isVaultConfigured()) {
-    throw new Error(
-      "Vault is already set up — call resetVault() first to replace it",
-    );
+    throw new Error("App lock is already on");
   }
 }
 
@@ -417,32 +406,13 @@ export async function unlockVault(passphrase: string): Promise<string> {
 }
 
 /**
- * Wipe-and-restart recovery path: clears the wrapped master key and deletes
- * the (now permanently unreadable, whether from a lost passphrase or
- * corruption) database file, so `setUpVault` can create a fresh vault
- * afterward. This is scoped to the vault only — it does not touch models,
- * MMKV settings, or anything else 4.5's full wipe-data feature owns.
- *
- * Logs to entities/audit *before* deleting — see the module doc comment
- * above for why this entry does not actually survive the wipe it records.
+ * The vault's part of erasing everything (4.7): forgets the wrapped key,
+ * the biometric copy and the stale-copy marker. Touches no database file —
+ * the app layer's `eraseEverything` deletes those (with all other data)
+ * first, and calls this last, so a failed erase leaves the lock guarding
+ * whatever is left.
  */
-export async function resetVault(): Promise<void> {
-  // Only when a database is already open: from the lock screen (passphrase
-  // forgotten) nothing is, and opening the plain file just to log would
-  // create one. The entry is erased with everything else either way.
-  if (openDatabaseFile() !== null) {
-    try {
-      insertAuditEntry(openDb(), {
-        id: generateId(),
-        action: "wipe",
-        detail: "encrypt-vault reset (wipe-and-restart)",
-        createdAt: Date.now(),
-      });
-    } catch {
-      // never block an erase on logging it
-    }
-  }
+export async function forgetVaultKeys(): Promise<void> {
   await forgetKeys();
   markPlainCopyStale(false);
-  deleteDb();
 }

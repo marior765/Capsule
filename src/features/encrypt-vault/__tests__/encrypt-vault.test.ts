@@ -1,14 +1,13 @@
 // Tests for step 4.1 — written before implementation (TDD)
 // "hard" depth per CLAUDE.md's create-tests guidance for crypto.
 import { __resetSecureStoreMock } from "@/__mocks__/expo-secure-store";
-import * as dbModule from "@/shared/db";
 import { _resetDbForTesting, openDb, runMigrations } from "@/shared/db";
-import { getAllAuditEntries, auditMigration } from "@/entities/audit";
+import { auditMigration } from "@/entities/audit";
 import {
   isVaultConfigured,
   setUpVault,
   unlockVault,
-  resetVault,
+  forgetVaultKeys,
   VaultUnlockError,
 } from "../index";
 
@@ -16,7 +15,7 @@ beforeEach(() => {
   __resetSecureStoreMock();
   _resetDbForTesting();
   // Mirrors production reality: Providers always runs auditMigration before
-  // anything else touches the db (src/app/providers/index.tsx) — resetVault
+  // anything else touches the db (src/app/providers/index.tsx) — the vault
   // relies on that table already existing by the time it can plausibly run.
   runMigrations(openDb(), [auditMigration]);
 });
@@ -75,65 +74,20 @@ describe("unlockVault", () => {
   });
 });
 
-describe("resetVault", () => {
+// 4.7: erasing everything (data, files, both database files, with an audit
+// entry) is the app layer's eraseEverything, tested there and in wipe-data;
+// the vault's own part is only forgetting its keys.
+describe("forgetVaultKeys", () => {
   it("clears vault configuration — isVaultConfigured is false afterward", async () => {
     await setUpVault("correct horse battery staple");
-    await resetVault();
+    await forgetVaultKeys();
     await expect(isVaultConfigured()).resolves.toBe(false);
-  });
-
-  it("deletes the underlying database so a fresh, unencrypted-or-differently-keyed one can be opened", async () => {
-    const db1 = openDb();
-    await resetVault();
-    const db2 = openDb();
-    expect(db2).not.toBe(db1);
   });
 
   it("allows setting up a brand new vault afterward, with a different master key than before", async () => {
     const firstKey = await setUpVault("correct horse battery staple");
-    await resetVault();
+    await forgetVaultKeys();
     const secondKey = await setUpVault("a completely different passphrase");
     expect(secondKey).not.toBe(firstKey);
-  });
-});
-
-describe("resetVault — audit logging", () => {
-  // deleteDb() destroys the very database the audit entry was just written
-  // into (see the module doc comment on resetVault for why), so the entry
-  // can't be read back *after* resetVault returns — by then the connection
-  // is closed. Stubbing deleteDb for just this test lets the entry be
-  // observed while it still exists, which is the only way to prove the
-  // write actually happened rather than trusting resetVault's own claim.
-  it("writes a 'wipe' entry to the audit log before deleting the database", async () => {
-    const deleteDbSpy = jest
-      .spyOn(dbModule, "deleteDb")
-      .mockImplementation(() => {});
-
-    await setUpVault("correct horse battery staple");
-    await resetVault();
-
-    const entries = getAllAuditEntries(openDb());
-    expect(entries).toContainEqual(expect.objectContaining({ action: "wipe" }));
-    expect(deleteDbSpy).toHaveBeenCalled();
-
-    deleteDbSpy.mockRestore();
-  });
-
-  it("has written the audit entry by the time deleteDb is called (ordering, not just eventually)", async () => {
-    let entriesAtDeleteTime: unknown[] | null = null;
-    const deleteDbSpy = jest
-      .spyOn(dbModule, "deleteDb")
-      .mockImplementation(() => {
-        entriesAtDeleteTime = getAllAuditEntries(openDb());
-      });
-
-    await setUpVault("correct horse battery staple");
-    await resetVault();
-
-    expect(entriesAtDeleteTime).toContainEqual(
-      expect.objectContaining({ action: "wipe" }),
-    );
-
-    deleteDbSpy.mockRestore();
   });
 });

@@ -1,26 +1,22 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-
 export type ConfirmFn = () => Promise<boolean>;
-export type WipeFn = (db: SQLiteDatabase) => Promise<void>;
+export type EraseFn = () => Promise<void>;
 
 /**
- * Orchestrates "confirm, then wipe" — kept separate from the widget so it's
- * testable without a real `Alert.alert` dialog or a real `wipeAllData` call.
- * Both `confirm` (the actual confirmation mechanism — `Alert.alert` wrapped
- * in a promise, in production) and `wipe` (`features/wipe-data`'s
- * `wipeAllData`, already its own thoroughly-tested module) are injected, so
- * this function proves only what it's actually responsible for: never wipe
- * without confirmation, and never swallow a wipe failure.
+ * Orchestrates "confirm, then erase" — kept separate from the widget so it's
+ * testable without a real `Alert.alert` dialog. Both `confirm` (the actual
+ * confirmation mechanism — `Alert.alert` wrapped in a promise, in
+ * production) and `erase` (the app's one erase-everything, 4.7) are
+ * injected, so this proves only what it's responsible for: never erase
+ * without confirmation, and never swallow an erase failure.
  */
 export async function wipeWithConfirmation(
-  db: SQLiteDatabase,
   confirm: ConfirmFn,
-  wipe: WipeFn,
+  erase: EraseFn,
 ): Promise<boolean> {
   const confirmed = await confirm();
   if (!confirmed) {
     return false;
   }
-  await wipe(db);
+  await erase();
   return true;
 }

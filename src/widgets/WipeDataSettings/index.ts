@@ -2,5 +2,5 @@ export { WipeDataSettings } from "./WipeDataSettings";
 export {
   wipeWithConfirmation,
   type ConfirmFn,
-  type WipeFn,
+  type EraseFn,
 } from "./wipeWithConfirmation";

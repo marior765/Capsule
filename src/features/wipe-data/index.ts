@@ -29,25 +29,18 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
  * error — leaves the db and audit trail completely untouched, so the
  * caller can safely surface an error and let the user retry, rather than
  * having already destroyed data the wipe never actually finished). Then log
- * the audit entry while the db is still open and writable. Then clear MMKV
- * settings. `deleteDb()` runs last, since it invalidates the db handle —
- * same ordering discipline as encrypt-vault's `resetVault`, including the
- * same caveat: the audit entry does not survive the wipe it records, since
- * `deleteDb()` removes the audit table along with everything else. See
- * that module's doc comment for the fuller reasoning; the same open
- * question (does a wipe-adjacent audit entry need a home outside the store
- * being wiped?) applies here too.
+ * the audit entry while the db is still open and writable. Then
+ * `deleteDb()` (both database files), and clear MMKV settings last.
+ * Caveat: the audit entry does not survive the wipe it records, since
+ * `deleteDb()` removes the audit table along with everything else — whether
+ * a wipe audit entry needs a home outside the store being wiped is an open
+ * question.
  *
- * Deliberately does NOT touch the vault key in expo-secure-store —
- * `features/encrypt-vault` owns that exclusively via its own `resetVault`,
- * and this module can't import encrypt-vault directly (FSD forbids
- * same-layer cross-slice imports; verified via
- * `grep -rn "from ['\"]@/features/" src/features` — empty repo-wide).
- * Whether these two "wipe everything" paths should someday be unified
- * behind one entry point is a real open question, not decided here — see
- * .claude/loop/BLOCKED.md.
+ * Doesn't touch the app-lock keys — `features/encrypt-vault` owns those,
+ * and features can't import each other. The app layer's `eraseEverything`
+ * (4.7) runs this and then `forgetVaultKeys`, so there is one erase path.
  */
-export async function wipeAllData(db: SQLiteDatabase): Promise<void> {
+export async function wipeAllData(db: SQLiteDatabase | null): Promise<void> {
   // Scheduled reminder notifications first (8.8): a failure here leaves
   // everything else untouched, and after a wipe no reminder may still fire.
   await cancelAllLocalNotifications();
@@ -62,13 +55,20 @@ export async function wipeAllData(db: SQLiteDatabase): Promise<void> {
   // Pickers' temporary copies of files the user picked (shared/picker).
   PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
 
-  insertAuditEntry(db, {
-    id: generateId(),
-    action: "wipe",
-    detail: "Full data wipe (models, chats, capsules, attachments, settings)",
-    createdAt: Date.now(),
-  });
+  // `db` is null when erasing from the lock screen: nothing is open, and
+  // opening a database just to log would create one.
+  if (db !== null) {
+    insertAuditEntry(db, {
+      id: generateId(),
+      action: "wipe",
+      detail: "Full data wipe (models, chats, capsules, attachments, settings)",
+      createdAt: Date.now(),
+    });
+  }
 
-  clearAllSettings();
+  // Database files before settings: if deleting them fails, settings — and
+  // with them app lock's "stale plain copy" marker — must still be there,
+  // or a leftover unencrypted copy could never be cleaned up.
   deleteDb();
+  clearAllSettings();
 }

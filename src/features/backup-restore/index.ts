@@ -55,8 +55,7 @@ import { generateId } from "@/shared/lib";
  * assembling a portable snapshot is the export-shaped direction).
  * `restoreBackup` writes "wipe" — it destroys existing conversations and
  * messages before replacing them, the same class of action
- * `features/wipe-data`/`features/encrypt-vault`'s `resetVault` already log
- * that way. Both entries are written only after the corresponding action
+ * `features/wipe-data`'s full wipe already logs that way. Both entries are written only after the corresponding action
  * actually succeeds, never on a failure — mirrors 5.2's own discipline.
  *
  * Scope notes on what's deliberately excluded, not overlooked:

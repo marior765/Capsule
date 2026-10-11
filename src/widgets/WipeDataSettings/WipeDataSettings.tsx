@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import type { SQLiteDatabase } from "expo-sqlite";
 import { createComponentTestIDs } from "@/shared/testing";
-import { wipeAllData } from "@/features/wipe-data";
 import { wipeWithConfirmation } from "./wipeWithConfirmation";
 
 type WipeDataSettingsProps = {
-  db: SQLiteDatabase;
+  /** The app's one erase-everything (4.7) — injected, since it lives in `app/`. */
+  erase: () => Promise<void>;
   /**
-   * Called once the wipe actually ran. Deliberately a caller-supplied
-   * callback rather than this widget reaching for `app/providers`'
-   * `remigrateDb` or `expo-router`'s `router` itself — `widgets/` sits
+   * Called once the wipe actually ran (the route restarts the app).
+   * Deliberately a caller-supplied callback rather than this widget
+   * reaching into `app/` itself — `widgets/` sits
    * below `app/` in FSD's layering (docs/ARCHITECTURE.md), so a widget
    * importing from `app/` is a forbidden upward import (lint-enforced at
    * error severity via eslint-plugin-boundaries). The route composing this
@@ -35,7 +34,7 @@ type WipeDataSettingsProps = {
  * real, broader concern flagged in .claude/loop/BLOCKED.md, not solved
  * ad hoc here.
  */
-export function WipeDataSettings({ db, onWiped }: WipeDataSettingsProps) {
+export function WipeDataSettings({ erase, onWiped }: WipeDataSettingsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +42,7 @@ export function WipeDataSettings({ db, onWiped }: WipeDataSettingsProps) {
     new Promise((resolve) => {
       Alert.alert(
         "Wipe all data?",
-        "This permanently deletes every conversation, model, and setting. This cannot be undone.",
+        "This permanently deletes every conversation, capsule, file, model and setting on this device, and turns off app lock. This cannot be undone.",
         [
           { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
           {
@@ -52,6 +51,8 @@ export function WipeDataSettings({ db, onWiped }: WipeDataSettingsProps) {
             onPress: () => resolve(true),
           },
         ],
+        // Android: tapping outside dismisses — that's a "no", not a hang.
+        { cancelable: true, onDismiss: () => resolve(false) },
       );
     });
 
@@ -59,11 +60,7 @@ export function WipeDataSettings({ db, onWiped }: WipeDataSettingsProps) {
     setBusy(true);
     setError(null);
     try {
-      const wiped = await wipeWithConfirmation(
-        db,
-        confirmViaAlert,
-        wipeAllData,
-      );
+      const wiped = await wipeWithConfirmation(confirmViaAlert, erase);
       if (wiped) {
         onWiped();
       }

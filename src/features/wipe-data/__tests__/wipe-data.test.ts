@@ -12,6 +12,10 @@ import {
 } from "@/__mocks__/expo-file-system";
 import { wipeAllData } from "../index";
 import {
+  __resetSqliteMock,
+  __storedDatabaseFiles,
+} from "@/__mocks__/expo-sqlite";
+import {
   __resetNotificationsMock,
   cancelAllScheduledNotificationsAsync,
 } from "@/__mocks__/expo-notifications";
@@ -20,8 +24,8 @@ beforeEach(() => {
   _resetDbForTesting();
   __resetFsMock();
   clearAllSettings();
-  // Mirrors production reality (see encrypt-vault's resetVault tests): the
-  // audit table already exists by the time a wipe could plausibly run.
+  // Mirrors production reality: the audit table already exists by the
+  // time a wipe could plausibly run (the launch gate migrates first).
   runMigrations(openDb(), [auditMigration]);
 });
 
@@ -84,9 +88,9 @@ describe("wipeAllData — happy path", () => {
 });
 
 describe("wipeAllData — audit logging", () => {
-  // Same idiom as encrypt-vault's resetVault tests: deleteDb() destroys the
-  // very database the audit entry was just written into, so the entry has
-  // to be observed while it still exists — stub deleteDb for just this.
+  // deleteDb() destroys the very database the audit entry was just written
+  // into, so the entry has to be observed while it still exists — stub
+  // deleteDb for just this.
   it("writes a 'wipe' entry to the audit log before deleting the database", async () => {
     const deleteDbSpy = jest
       .spyOn(dbModule, "deleteDb")
@@ -130,5 +134,33 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///cache/ImagePicker");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
     expect(__deletedDirectoryUris).toEqual([]);
+  });
+});
+
+describe("wipeAllData with no database open (4.7: erase from the lock screen)", () => {
+  it("still erases files, settings and both database files, without creating a database to log into", async () => {
+    setString("someSetting", "value");
+    _resetDbForTesting();
+    __resetSqliteMock(); // no database file exists at all
+
+    await wipeAllData(null);
+
+    expect(getString("someSetting")).toBeUndefined();
+    expect(__storedDatabaseFiles().size).toBe(0);
+  });
+});
+
+describe("wipeAllData — order (4.7, checker)", () => {
+  it("keeps settings (incl. the app-lock stale-copy marker) if deleting the database files fails", async () => {
+    setString("someSetting", "value");
+    const spy = jest.spyOn(dbModule, "deleteDb").mockImplementationOnce(() => {
+      throw new Error("Unable to delete the database file");
+    });
+    try {
+      await expect(wipeAllData(openDb())).rejects.toThrow("Unable to delete");
+    } finally {
+      spy.mockRestore();
+    }
+    expect(getString("someSetting")).toBe("value");
   });
 });

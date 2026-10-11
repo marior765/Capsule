@@ -13,7 +13,6 @@ import {
 import { StyleSheet } from "react-native-unistyles";
 import {
   hasBiometricUnlock,
-  resetVault,
   unlockVault,
   unlockVaultWithBiometrics,
 } from "@/features/encrypt-vault";
@@ -21,6 +20,7 @@ import { getLockAfter, shouldRelock } from "@/features/app-lock";
 import { LockScreen } from "@/widgets/LockScreen";
 import { createComponentTestIDs } from "@/shared/testing";
 import { openAtLaunch, openUnlocked } from "./launchDatabase";
+import { eraseEverything } from "./eraseEverything";
 
 type Phase = "starting" | "locked" | "ready" | "failed";
 
@@ -89,7 +89,7 @@ export function AppLockGate({ children }: PropsWithChildren) {
 
   const erase = async () => {
     try {
-      await resetVault();
+      await eraseEverything();
     } catch (e) {
       Alert.alert(
         "Couldn't erase everything",
