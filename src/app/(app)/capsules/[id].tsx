@@ -26,6 +26,7 @@ import {
   addAttachment,
   attachmentFileUri,
   removeAttachment,
+  shareAttachment,
 } from "@/features/manage-attachments";
 import { pickDocument, pickImage, type PickedSource } from "@/shared/picker";
 import { addReminder, cancelReminder } from "@/features/manage-reminders";
@@ -197,6 +198,28 @@ export default function CapsuleDetailScreen() {
     } finally {
       attachmentInFlight.current = false;
       setAttachmentBusyFieldId(null);
+    }
+  };
+
+  // Opens the file in another app through the share sheet (6.9).
+  const openInFlight = useRef(false);
+  const handleOpenAttachment = async (
+    fieldId: string,
+    attachmentId: string,
+  ) => {
+    // One share at a time — a double tap mustn't log or open it twice.
+    if (openInFlight.current) return;
+    openInFlight.current = true;
+    setAttachmentError(null);
+    try {
+      await shareAttachment(db, attachmentId);
+    } catch (e) {
+      setAttachmentError({
+        fieldId,
+        message: e instanceof Error ? e.message : "Couldn't open the file.",
+      });
+    } finally {
+      openInFlight.current = false;
     }
   };
 
@@ -409,6 +432,9 @@ export default function CapsuleDetailScreen() {
               onAddPhoto={() => handleAddAttachment(field.id, pickImage)}
               onRemove={(attachmentId) =>
                 handleRemoveAttachment(field.id, attachmentId)
+              }
+              onOpen={(attachmentId) =>
+                void handleOpenAttachment(field.id, attachmentId)
               }
             />
           </View>

@@ -16,6 +16,8 @@ type AttachmentListProps = {
   onAddFile: () => void;
   onAddPhoto: () => void;
   onRemove: (attachmentId: string) => void;
+  /** Opens the file in another app (share sheet) — how PDFs etc. are viewed. */
+  onOpen: (attachmentId: string) => void;
   /** True while a pick/copy is in progress — both add buttons are disabled. */
   busy: boolean;
   error: string | null;
@@ -32,6 +34,7 @@ export function AttachmentList({
   onAddFile,
   onAddPhoto,
   onRemove,
+  onOpen,
   busy,
   error,
 }: AttachmentListProps) {
@@ -47,21 +50,30 @@ export function AttachmentList({
         const size = formatFileSize(attachment.size);
         return (
           <View key={attachment.id} style={styles.row}>
-            {attachment.mimeType?.startsWith("image/") && (
-              <Image
-                source={{ uri }}
-                style={styles.thumbnail}
-                contentFit="cover"
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-            )}
-            <View style={styles.rowText}>
-              <Text style={styles.name} numberOfLines={1}>
-                {attachment.filename}
-              </Text>
-              {size !== "" && <Text style={styles.meta}>{size}</Text>}
-            </View>
+            <Pressable
+              testID={`${testIDs.pressables.open}_${attachment.id}`}
+              style={styles.openArea}
+              onPress={() => onOpen(attachment.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${attachment.filename}`}
+              accessibilityHint="Opens it in another app"
+            >
+              {attachment.mimeType?.startsWith("image/") && (
+                <Image
+                  source={{ uri }}
+                  style={styles.thumbnail}
+                  contentFit="cover"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
+              )}
+              <View style={styles.rowText}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {attachment.filename}
+                </Text>
+                {size !== "" && <Text style={styles.meta}>{size}</Text>}
+              </View>
+            </Pressable>
             <Pressable
               testID={`${testIDs.buttons.remove}_${attachment.id}`}
               onPress={() => onRemove(attachment.id)}
@@ -131,6 +143,12 @@ const styles = StyleSheet.create((theme) => ({
   rowText: {
     flex: 1,
   },
+  openArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.two,
+  },
   name: {
     color: theme.colors.text,
     fontFamily: theme.fonts.sans,
@@ -174,6 +192,7 @@ const testIDs = createComponentTestIDs("AttachmentList", {
   containers: ["root"] as const,
   texts: ["empty", "error"] as const,
   buttons: ["addFile", "addPhoto", "remove"] as const,
+  pressables: ["open"] as const,
 });
 
 AttachmentList.testIDs = testIDs;

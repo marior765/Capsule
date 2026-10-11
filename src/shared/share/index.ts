@@ -15,6 +15,11 @@ export class ShareUnavailableError extends Error {
   }
 }
 
+/** Whether the system share sheet can be shown on this device. */
+export async function canShare(): Promise<boolean> {
+  return isAvailableAsync();
+}
+
 export async function shareFile(
   uri: string,
   options: { mimeType?: string; title?: string } = {},
