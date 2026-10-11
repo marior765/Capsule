@@ -119,6 +119,19 @@ Flagged, not fixed (2026-09-15 — see journal beat 62).
 
 ---
 
+## Resolved (2026-10-11) — user decisions, round 2 (so testing is all that's left)
+
+- **App lock at launch (new 4.6):** build the real gate — lock screen, database opened with its key only after unlock, re-lock on return. Lock timing is a Privacy setting: Immediately / 1 min / 5 min, **default 1 minute**.
+- **Turn off app lock (4.6):** build it, keeping data — current passphrase required, then the database is re-saved without encryption.
+- **Audit:** add a `vault_setup` audit action for creating or removing the lock (replaces the misleading `decrypt`).
+- **Erase paths (new 4.7):** merge into one "erase everything" — files, chat images, reminders, settings, vault key, database.
+- **Files in exports (new 5.5):** zip bundle (JSON + files) using **`fflate`** (pure JS, no native code, no network) — user installs it: `npm install fflate`.
+- **Personas + snippets (new 5.6):** included in full backup/restore.
+- **Open non-image attachments (new 6.9):** **`expo-sharing`** — user installs it: `npx expo install expo-sharing`; wrapped in `shared/`, audited for network use.
+- **Reminders (new 8.11):** add "Pick date & time…" using `@expo/ui`'s date-time picker (already installed), keep the quick choices; tapping a notification opens its capsule.
+- **Small follow-ups (new 8.12):** block the chat double-send; show "notifications are off" as a notice, not an error; move the voice-model download onto `shared/fs` (relative paths, idempotent, egress-marked).
+- Not changed: 8.1 cloud AI and Phase 9 stay deferred; the iOS `tmp/*-Inbox` copies stay a known limit (no native helper); types-only declaration files stay outside the dependency gate.
+
 ## Resolved (2026-10-09) — user decisions on open blockers
 
 - **8.8 reminders:** install `expo-notifications`; local-only scheduling, OS permission requested on first reminder creation. Device check still required.

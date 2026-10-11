@@ -3,15 +3,15 @@
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
     "beat": 82,
-    "status": "complete",
+    "status": "running",
     "completedAt": "2026-10-11T20:40:59",
     "completionNote": "Second completion (after the 2026-10-09 reopen). Every plan step is done, done-in-code awaiting a device check (native: 3.x, 4.x, 6.8, 7.1-7.4, 8.4, 8.8 -- see BLOCKED.md), or deferred (8.1, Phase 9). Nothing pending or in_progress.",
-    "resumedAt": "2026-10-09",
-    "resumeNote": "Reopened after user resolved blocker decisions (see BLOCKED.md \"Resolved (2026-10-09)\")."
+    "resumedAt": "2026-10-11",
+    "resumeNote": "Reopened after round-2 decisions (BLOCKED.md 'Resolved (2026-10-11)'): new steps 4.6, 4.7, 5.5, 5.6, 6.9, 8.11, 8.12. 5.5 needs fflate and 6.9 needs expo-sharing installed by the user."
   },
   "cursor": {
-    "step": null,
-    "phase": null
+    "step": "4.6",
+    "phase": 4
   },
   "steps": {
     "1.2": {
@@ -288,12 +288,11 @@
       "notes": "Both halves done -- entity+feature layer (3a5a662, beat 35, incl. delete-capsule cascade addendum) + TagPicker widget wired into capsules/[id].tsx (037cf6e, beat 36). tagCapsule get-or-create by trimmed name, untagCapsule, deleteTag cascade."
     },
     "6.9": {
-      "status": "done",
-      "class": "logic",
-      "attempts": 1,
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "88b99d3",
-      "notes": "Deliberately built before 6.8 -- a relation field type (6.8) needs entities/link to exist first. entities/link: CapsuleLink CRUD (getLinksFrom/getLinksTo/deleteLinksByCapsule), v15 migration, registered in Providers immediately. features/link-capsules: linkCapsules (no dedup -- distinct from tagCapsule, a pair can have multiple labeled relationships), unlinkCapsules. delete-capsule now cascades capsule_links too. Plan text names entities/link only (no widget), unlike 6.5/6.6/6.7 -- fully done as stated, no UI half pending."
+      "notes": ""
     },
     "6.8": {
       "status": "done",
@@ -440,6 +439,48 @@
       ],
       "checkpoint": "e91f869",
       "notes": "Static guard test scans src/app; routes retrofitted; RECOMMENDED_MODELS got stable slug ids for row testIDs. Checker pass x2. Known guard limits (comment apostrophes, nested-prop testIDs, trailing spreads) accepted."
+    },
+    "4.6": {
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "notes": ""
+    },
+    "4.7": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "notes": ""
+    },
+    "5.5": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "notes": ""
+    },
+    "5.6": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "notes": ""
+    },
+    "8.11": {
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "notes": ""
+    },
+    "8.12": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "notes": ""
     }
   },
   "quarantinedThisRun": [],

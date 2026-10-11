@@ -118,12 +118,16 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 4.3 `entities/audit` + `PrivacyBanner` egress indicator + `EgressLog` viewer
 - [ ] 4.4 Settings → privacy screen
 - [ ] 4.5 `features/wipe-data` — secure full wipe (models, chats, capsules, settings)
+- [ ] 4.6 App lock at launch — lock screen (passphrase + biometrics), database opened with its key only after unlock, re-lock after leaving the app (Privacy setting: immediately / 1 min / 5 min, default 1 min), "Turn off app lock" that keeps your data, `vault_setup` audit entries (decided 2026-10-11)
+- [ ] 4.7 One "erase everything" — wipe and vault reset share one full cleanup: files, chat images, reminders, settings, vault key, database (decided 2026-10-11)
 
 ### Phase 5 — Portability ← key differentiator
 - [x] 5.1 `shared/format` — versioned portable format spec + serializers
 - [x] 5.2 `features/import-export` (single conversation, single capsule, whole vault) — conversations + whole conversation vault, and capsules (single + whole collection, self-contained with type schema, values, tags, versions, reminders, internal links). Embeddings and attachments excluded; personas/snippets are not part of any portable scope yet (see BLOCKED.md)
 - [x] 5.3 `features/backup-restore` — conversations scope done; capsules N/A (Phase 6 unbuilt), settings not yet covered
 - [x] 5.4 Migration importers (ChatGPT export, Claude export, CSV, JSON, Markdown) — ChatGPT + Claude export into conversations (both unverified against real export files, see BLOCKED.md; parent cycles broken on import), CSV / JSON / Markdown into capsules (rows → new type + capsules, notes → "Note" capsules)
+- [ ] 5.5 Files in exports — zip bundle (JSON + attachments + chat images) via `fflate`, for capsule export and full backup/restore (decided 2026-10-11)
+- [ ] 5.6 Personas and snippets in full backup/restore (decided 2026-10-11)
 
 ### Phase 6 — Capsule data core
 - [x] 6.1 `entities/capsule`, `entities/field`, `entities/capsule-type` — models + CRUD
@@ -134,6 +138,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 6.6 Tags / collections
 - [x] 6.7 `SchemaBuilder` + manage-schema feature
 - [ ] 6.8 Relation + attachment field types — relation done (RelationPicker, wired into capsule detail); attachment done in code (file/photo pickers via shared/picker, files copied into app storage, AttachmentList on the capsule screen, deleted with the capsule and on wipe) — needs a device check before ticking (see BLOCKED.md); non-image files can't be opened yet (expo-sharing decision)
+- [ ] 6.9 Open non-image attachments via the system share sheet (`expo-sharing`, wrapped in `shared/`) (decided 2026-10-11)
 - [x] 6.9 `entities/link` with graceful missing-target handling
 - [x] 6.10 Field validation
 
@@ -154,6 +159,8 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 8.8 Local reminders (on-device notifications) — done in code: on a capsule's screen you set a reminder from quick choices (in 1 hour, this evening, tomorrow 9am, in a week) or cancel one; it schedules a local OS notification (expo-notifications; permission asked on the first reminder; nothing leaves the device), and a reminder saved while notifications are off says "Not scheduled"; reminders are cancelled on capsule delete and the full wipe. Tapping a notification doesn't open the capsule yet. Needs a device check before ticking (see BLOCKED.md)
 - [x] 8.9 Accessibility pass — real accessibilityLabel on symbol-only controls, accessibilityRole/State on toggles/buttons matching real state, accessibilityLiveRegion on dynamic errors/confirmations, across the whole app in three beats: Capsules domain (12 widgets + 7 capsules/types routes), Chat domain (6 widgets + 6 routes), Settings/Home/CommandPalette domain (4 widgets + 3 routes; remaining routes/widgets confirmed to have no interactive elements of their own). Focus order and dynamic type support are explicitly out of scope for all three beats — not covered by this box
 - [x] 8.10 testID retrofit for every `src/app/` route via `createComponentTestIDs` (CLAUDE.md hard rule; decided 2026-10-09) — every interactive element in every route takes its testID from the route's `testIDs` object, and a static scan test (`shared/testing/__tests__/routeTestIDs.test.ts`) fails the suite if a route ever ships one without
+- [ ] 8.11 Reminders: "Pick date & time…" (`@expo/ui` date-time picker) alongside the quick choices; tapping a notification opens its capsule (decided 2026-10-11)
+- [ ] 8.12 Follow-ups: block chat double-send; "notifications are off" shown as a notice not an error; voice-model download moved onto `shared/fs` (decided 2026-10-11)
 
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format
