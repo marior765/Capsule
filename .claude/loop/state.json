@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 97,
+    "beat": 98,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.7",
+    "step": "10.8",
     "phase": 10
   },
   "steps": {
@@ -585,13 +585,23 @@
       ],
       "checkpoint": "9148db5",
       "notes": "Prop on all 23 scrollers; static guard in shared/testing (incl. namespaced scrollers). Simulator: single tap creates persona."
+    },
+    "10.7": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- toolbar style inserted under inputRow comment (comment described wrong style)"
+      ],
+      "checkpoint": "f0a1cda",
+      "notes": "Toolbar row (Snippets/Capsules/Image) above input row (mic + ChatInput). canSend helper. Simulator verified."
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1457)",
+    "jest": "pass (1466)",
     "eslint": "pass",
-    "at": "2026-10-16T23:51:58"
+    "at": "2026-10-17T00:00:06"
   }
 }

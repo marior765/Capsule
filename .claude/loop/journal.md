@@ -4982,4 +4982,18 @@ Gate: tsc clean, jest 1457, eslint clean. Checkpoint `9148db5`. Cursor → 10.7.
 
 ---
 
+## Beat 98 — 10.7: the chat box gets its width back
+
+The composer crammed mic + "Snippets" + "Capsules: off" + "Image" + the box
+into one row; the box shrank to a few letters and resized whenever a label
+changed. The text controls now have their own (wrapping) toolbar row above;
+the input row is just the mic and a full-width box. Send is disabled — and
+looks it — until there's text (`canSend`). Simulator: "Testing the wider
+message box" wraps by word, Send enables on typing. One checker round on a
+comment left describing the wrong style.
+
+Gate: tsc clean, jest 1466, eslint clean. Checkpoint `f0a1cda`. Cursor → 10.8.
+
+---
+
 <!-- Append new beats above this line. -->
