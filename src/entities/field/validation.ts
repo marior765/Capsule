@@ -72,10 +72,10 @@ export function validateFieldValue(
     }
 
     case "date": {
-      if (Number.isNaN(Date.parse(value))) {
+      if (!isCalendarDate(value)) {
         return {
           valid: false,
-          error: `${field.name} must be a valid date`,
+          error: `${field.name} must be a valid date (YYYY-MM-DD)`,
         };
       }
       return VALID;
@@ -135,4 +135,31 @@ export function validateFields(
     }
   }
   return errors;
+}
+
+/**
+ * A real calendar date: `YYYY-MM-DD`, optionally followed by an ISO time
+ * (`T10:15:00Z`, `T10:15:00.000+05:00`). Checked arithmetically rather than
+ * with `Date.parse`, which is engine-dependent — Hermes, the app's engine,
+ * accepts "2026-13-45", and every engine rolls "2026-02-30" into March.
+ */
+const ISO_DATE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
+
+function isCalendarDate(value: string): boolean {
+  const match = ISO_DATE.exec(value.trim());
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  return day <= daysInMonth(year, month);
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) {
+    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    return leap ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }

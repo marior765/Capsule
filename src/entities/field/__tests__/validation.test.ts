@@ -123,8 +123,62 @@ describe("validateFieldValue — date", () => {
     const field = makeField({ fieldType: "date", name: "Published" });
     expect(validateFieldValue(field, "not-a-date")).toEqual({
       valid: false,
-      error: "Published must be a valid date",
+      error: "Published must be a valid date (YYYY-MM-DD)",
     });
+  });
+});
+
+// 10.2: found in the simulator — "2026-13-45" passed validation and was
+// saved. `Date.parse` is engine-dependent: Hermes (the app's engine) accepts
+// it, V8 (Jest's) doesn't, and both roll "2026-02-30" over into March. The
+// check must be a real calendar check, independent of the JS engine.
+describe("validateFieldValue — date is a real calendar date (10.2)", () => {
+  const field = makeField({ fieldType: "date", name: "Finished" });
+  const invalid = {
+    valid: false,
+    error: "Finished must be a valid date (YYYY-MM-DD)",
+  };
+
+  it.each([
+    ["month 13", "2026-13-45"],
+    ["month 00", "2026-00-10"],
+    ["day 00", "2026-05-00"],
+    ["Feb 30", "2026-02-30"],
+    ["Feb 29 in a non-leap year", "2026-02-29"],
+    ["Feb 29 in a century non-leap year", "1900-02-29"],
+    ["Apr 31", "2026-04-31"],
+    ["unpadded parts", "2026-1-5"],
+    ["day-first order", "21-08-2026"],
+    ["slashes", "2026/08/21"],
+    ["trailing junk", "2026-08-21abc"],
+    ["a bare year", "2026"],
+  ])("fails %s (%s)", (_label, value) => {
+    expect(validateFieldValue(field, value)).toEqual(invalid);
+  });
+
+  it.each([
+    ["an ordinary date", "2026-08-21"],
+    ["Feb 29 in a leap year", "2028-02-29"],
+    ["Feb 29 in a 400-year leap year", "2000-02-29"],
+    ["Dec 31", "2026-12-31"],
+    ["an ISO timestamp", "2026-08-21T10:15:00Z"],
+    ["an ISO timestamp with offset", "2026-08-21T10:15:00.000+05:00"],
+    ["surrounding whitespace", " 2026-08-21 "],
+  ])("passes %s (%s)", (_label, value) => {
+    expect(validateFieldValue(field, value)).toEqual({ valid: true });
+  });
+
+  it("fails a timestamp whose calendar date is impossible", () => {
+    expect(validateFieldValue(field, "2026-02-30T10:00:00Z")).toEqual(invalid);
+  });
+
+  it("doesn't depend on Date.parse", () => {
+    const spy = jest.spyOn(Date, "parse").mockReturnValue(0);
+    try {
+      expect(validateFieldValue(field, "2026-13-45")).toEqual(invalid);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
