@@ -5027,4 +5027,16 @@ Gate: tsc clean, jest 1496, eslint clean. Checkpoint `a25ebf8`. Cursor → 10.10
 
 ---
 
+## Beat 101 — 10.10: real tab icons — run paused
+
+Each tab gets an expo-symbols SymbolView (SF Symbols on iOS, filled when
+focused; Material Symbols on Android from a font bundled in the package — no
+network). Symbol names are typed on both platforms so tsc rejects typos.
+Simulator: house / bubbles / stack / filled gear. Reviewer pass first time.
+
+Run paused here on the usage limit. Done this run: 10.1–10.10. Next: 10.11.
+Gate: tsc clean, jest 1503, eslint clean. Checkpoint `ef39f10`.
+
+---
+
 <!-- Append new beats above this line. -->
