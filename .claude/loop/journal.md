@@ -4925,4 +4925,23 @@ Gate: tsc clean, jest 1416/1416, eslint clean. Checkpoint `ade74cc`. Cursor → 
 
 ---
 
+## Beat 95 — 10.4: the command palette can be typed into
+
+Root cause shared with 10.5: hidden tab screens run with `headerShown:
+false`, so nothing insets them — the palette's input sat under the Dynamic
+Island and every tap hit the clock. SafeAreaView (top edge), a Cancel
+control (`onClose`, the route uses `router.back()` → Home under Tabs'
+firstRoute), and focus + reset on every visit (hidden tabs stay mounted, so
+`autoFocus` only fired once). Simulator: opens focused below the island,
+"dune" finds the capsule, Cancel → Home, reopen → empty focused input.
+
+Testing gap surfaced: no component-render library, and importing a widget
+in Jest crashes on unistyles' native module — UI steps rest on static
+source checks + the simulator. Queued as a decision in BLOCKED.md.
+Reviewer pass first time.
+
+Gate: tsc clean, jest 1420/1420, eslint clean. Checkpoint `5251519`. Cursor → 10.5.
+
+---
+
 <!-- Append new beats above this line. -->

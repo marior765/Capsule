@@ -1138,3 +1138,18 @@ expo-audio's `useAudioStream` (hook-only — needs the recording moved into a
 component); (c) decode AAC to PCM before transcribing (no decoder in the
 deps today). (a) is the smallest change that keeps `shared/stt` a plain
 function module.
+
+## Decision: a component-render test library (2026-10-16, raised in 10.4)
+
+Phase 10 is mostly layout/UX bugs, and this repo has no way to render a
+component in Jest: importing any widget pulls in react-native-unistyles,
+which needs its native module, and no render library is installed
+(`react-test-renderer` 19.2.3 is only present transitively and is
+deprecated). So UI steps are proven with static source checks plus a
+simulator check — weaker than real render tests.
+
+Option: add `@testing-library/react-native` as a devDependency plus a Jest
+mock for `react-native-unistyles` (StyleSheet.create → plain styles). That
+would let Phase 10 steps assert rendered behaviour (e.g. "Cancel calls
+onClose", "error text appears under the field"). Not installed unattended —
+your call.
