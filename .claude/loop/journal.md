@@ -4905,4 +4905,24 @@ Gate: tsc clean, jest 1405/1405, eslint clean. Checkpoint `edb1ecb`. Cursor → 
 
 ---
 
+## Beat 94 (cont.) — 10.3: no more duplicate screens after save/delete
+
+`router.replace("/capsules/<id>")` after saving swapped the edit screen for
+a fresh copy of the capsule screen, leaving the original beneath. Same bug
+in capsule delete, type delete and new type. First fix used
+`canGoBack()`/`back()` — the checker traced expo-router's source and showed
+those consult the TAB navigator too: a capsule pushed alone into the
+unvisited Capsules tab (from chat or a notification) would, after delete,
+"go back" to another tab and stay mounted. Final: `shared/navigation`
+`leaveScreen` = `canDismiss() ? dismiss() : replace(fallback)` — stack-local.
+`dismissTo` rejected: it appends when the target isn't in the stack.
+
+Also found while verifying: version restore can't clear a field that was
+empty in the snapshot (snapshots only record fields with a value row) →
+added as 10.33.
+
+Gate: tsc clean, jest 1416/1416, eslint clean. Checkpoint `ade74cc`. Cursor → 10.4.
+
+---
+
 <!-- Append new beats above this line. -->

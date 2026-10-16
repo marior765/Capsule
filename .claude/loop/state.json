@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.3",
+    "step": "10.4",
     "phase": 10
   },
   "steps": {
@@ -528,13 +528,31 @@
       ],
       "checkpoint": "edb1ecb",
       "notes": "Edit route already validated + stayed on screen; the date check used Date.parse, lenient on Hermes. Arithmetic calendar check. Verified in simulator. Reviewer pass. Note: previously-stored non-ISO dates (e.g. 2026/08/21) now show the inline error on any edit until reformatted."
+    },
+    "10.3": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- canGoBack()/back() cross into the tab navigator: deleting a capsule pushed alone into the unvisited Capsules tab jumps to another tab and leaves the deleted capsule mounted; types/new.tsx had the same replace bug; comment claimed notification/deep-link fallback that never triggers"
+      ],
+      "checkpoint": "ade74cc",
+      "notes": "shared/navigation leaveScreen = canDismiss ? dismiss : replace(fallback). Used by capsule edit save, capsule delete, type delete, new type. dismissTo rejected: pushes when target not in stack. Not simulator-verified (bad stored date blocked the save path); covered by unit + static guard (mutation-checked) + reviewer source tracing."
+    },
+    "10.33": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Found 2026-10-16 during 10.3 verification."
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1405)",
+    "jest": "pass (1416)",
     "eslint": "pass",
-    "at": "2026-10-16T19:00:49"
+    "at": "2026-10-16T19:08:17"
   }
 }
