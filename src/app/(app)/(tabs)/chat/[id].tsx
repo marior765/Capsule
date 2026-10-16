@@ -532,19 +532,7 @@ export default function ChatScreen() {
           {showSnippetPicker && (
             <SnippetPicker snippets={snippets} onSelect={handleInsertSnippet} />
           )}
-          <View style={styles.inputRow}>
-            <VoiceRecordButton
-              isRecording={isRecording}
-              // Voice input while editing is deliberately not supported —
-              // `initialText` below always shows `editing.content` while
-              // editing is active, so a transcription captured mid-edit would
-              // be silently discarded on the very next render. Disabling the
-              // button avoids that trap rather than papering over it.
-              disabled={!!editing}
-              onHoldStart={handleVoiceHoldStart}
-              onHoldCommit={handleVoiceHoldCommit}
-              onHoldCancel={handleVoiceHoldCancel}
-            />
+          <View style={styles.toolbar}>
             <Pressable
               testID={testIDs.buttons.snippets}
               style={styles.snippetsButton}
@@ -590,6 +578,20 @@ export default function ChatScreen() {
                 <Text style={styles.snippetsLabel}>Image</Text>
               </Pressable>
             )}
+          </View>
+          <View style={styles.inputRow}>
+            <VoiceRecordButton
+              isRecording={isRecording}
+              // Voice input while editing is deliberately not supported —
+              // `initialText` below always shows `editing.content` while
+              // editing is active, so a transcription captured mid-edit would
+              // be silently discarded on the very next render. Disabling the
+              // button avoids that trap rather than papering over it.
+              disabled={!!editing}
+              onHoldStart={handleVoiceHoldStart}
+              onHoldCommit={handleVoiceHoldCommit}
+              onHoldCancel={handleVoiceHoldCancel}
+            />
             <View style={styles.inputFlex}>
               <ChatInput
                 key={`${editing?.id ?? "new"}-${draftInsertKey}`}
@@ -637,6 +639,15 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.accent,
     fontFamily: theme.fonts.sans,
     fontSize: 12,
+  },
+  // The text controls get their own row so the message box keeps the full
+  // width beside the mic, whatever the labels say.
+  toolbar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.two,
+    backgroundColor: theme.colors.background,
   },
   // ChatInput already applies its own `padding: theme.spacing.three` on all
   // sides — this row only adds space for VoiceRecordButton, which sits

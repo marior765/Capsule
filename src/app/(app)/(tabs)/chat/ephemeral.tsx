@@ -178,13 +178,7 @@ export default function EphemeralChatScreen() {
           {showSnippetPicker && (
             <SnippetPicker snippets={snippets} onSelect={handleInsertSnippet} />
           )}
-          <View style={styles.inputRow}>
-            <VoiceRecordButton
-              isRecording={isRecording}
-              onHoldStart={handleVoiceHoldStart}
-              onHoldCommit={handleVoiceHoldCommit}
-              onHoldCancel={handleVoiceHoldCancel}
-            />
+          <View style={styles.toolbar}>
             <Pressable
               testID={testIDs.buttons.snippets}
               style={styles.snippetsButton}
@@ -200,6 +194,14 @@ export default function EphemeralChatScreen() {
                 {showSnippetPicker ? "Close" : "Snippets"}
               </Text>
             </Pressable>
+          </View>
+          <View style={styles.inputRow}>
+            <VoiceRecordButton
+              isRecording={isRecording}
+              onHoldStart={handleVoiceHoldStart}
+              onHoldCommit={handleVoiceHoldCommit}
+              onHoldCancel={handleVoiceHoldCancel}
+            />
             <View style={styles.inputFlex}>
               <ChatInput
                 key={draftInsertKey}
@@ -246,6 +248,15 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: "center",
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
+  },
+  // The text controls get their own row so the message box keeps the full
+  // width beside the mic, whatever the labels say.
+  toolbar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.two,
+    backgroundColor: theme.colors.background,
   },
   // ChatInput already applies its own `padding: theme.spacing.three` on all
   // sides — this row only adds space for VoiceRecordButton, which sits

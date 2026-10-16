@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
+import { canSend } from "./canSend";
 
 type ChatInputProps = {
   onSend: (text: string) => void;
@@ -21,11 +22,11 @@ export function ChatInput({
   sendLabel = "Send",
 }: ChatInputProps) {
   const [text, setText] = useState(initialText);
+  const sendable = canSend(text, disabled);
 
   const handleSend = () => {
-    const trimmed = text.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    if (!sendable) return;
+    onSend(text.trim());
     setText("");
   };
 
@@ -43,12 +44,12 @@ export function ChatInput({
       />
       <Pressable
         testID={testIDs.buttons.send}
-        style={[styles.send, disabled && styles.sendDisabled]}
+        style={[styles.send, !sendable && styles.sendDisabled]}
         onPress={handleSend}
-        disabled={disabled}
+        disabled={!sendable}
         accessibilityRole="button"
         accessibilityLabel={sendLabel}
-        accessibilityState={{ disabled }}
+        accessibilityState={{ disabled: !sendable }}
       >
         <Text style={styles.sendLabel}>{sendLabel}</Text>
       </Pressable>
@@ -81,7 +82,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.backgroundSelected,
   },
   sendDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   sendLabel: {
     color: theme.colors.text,
