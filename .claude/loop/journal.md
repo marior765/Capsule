@@ -4889,4 +4889,20 @@ box unchecked). Cursor → 10.2.
 
 ---
 
+## Beat 94 — 10.2: invalid dates no longer save
+
+The edit screen already validated and stayed put on errors — the bug was
+one layer down. The date check used `Date.parse`, which Hermes (the app's
+engine) happily accepts for "2026-13-45", while V8 (Jest's engine) rejects
+it — so the unit test for "invalid date" passed in CI and the app saved
+garbage. Both engines also roll "2026-02-30" into March. Replaced with an
+arithmetic calendar check plus a test that stubs `Date.parse` to prove the
+validator no longer depends on it. Verified on the simulator: the stored
+"2026-13-45" now shows "Finished must be a valid date (YYYY-MM-DD)" inline.
+Reviewer pass first time.
+
+Gate: tsc clean, jest 1405/1405, eslint clean. Checkpoint `edb1ecb`. Cursor → 10.3.
+
+---
+
 <!-- Append new beats above this line. -->

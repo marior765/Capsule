@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 93,
+    "beat": 94,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.2",
+    "step": "10.3",
     "phase": 10
   },
   "steps": {
@@ -518,13 +518,23 @@
       "failureSignatures": [],
       "checkpoint": null,
       "notes": "app.json name change requires prebuild/rebuild to verify."
+    },
+    "10.2": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [
+        "tests: 14 failed -- Date.parse accepted 2026-13-45 / 2026-02-30"
+      ],
+      "checkpoint": "edb1ecb",
+      "notes": "Edit route already validated + stayed on screen; the date check used Date.parse, lenient on Hermes. Arithmetic calendar check. Verified in simulator. Reviewer pass. Note: previously-stored non-ISO dates (e.g. 2026/08/21) now show the inline error on any edit until reformatted."
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1384)",
+    "jest": "pass (1405)",
     "eslint": "pass",
-    "at": "2026-10-16T18:50:52"
+    "at": "2026-10-16T19:00:49"
   }
 }
