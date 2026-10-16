@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import type { SQLiteDatabase } from "expo-sqlite";
 import type { Capsule } from "@/entities/capsule";
 import { searchCapsules } from "@/features/search-capsules";
@@ -10,6 +11,8 @@ import { filterCommands, type Command } from "./filterCommands";
 
 type CommandPaletteProps = {
   db: SQLiteDatabase;
+  /** The "Cancel" control — the caller decides where closing goes. */
+  onClose: () => void;
 };
 
 /**
@@ -74,9 +77,23 @@ type ResultItem =
  * that composes an already-tested feature function directly rather than
  * making its caller do it.
  */
-export function CommandPalette({ db }: CommandPaletteProps) {
+export function CommandPalette({ db, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [capsuleResults, setCapsuleResults] = useState<Capsule[]>([]);
+  const inputRef = useRef<TextInput>(null);
+
+  // The palette is a hidden tab screen, which stays mounted between visits —
+  // `autoFocus` only fires on the first one. Focus on every visit instead,
+  // and start each visit with an empty query.
+  useFocusEffect(
+    useCallback(() => {
+      inputRef.current?.focus();
+      return () => {
+        setQuery("");
+        setCapsuleResults([]);
+      };
+    }, []),
+  );
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
@@ -104,17 +121,35 @@ export function CommandPalette({ db }: CommandPaletteProps) {
   };
 
   return (
-    <View testID={testIDs.containers.root} style={styles.root}>
-      <TextInput
-        testID={testIDs.inputs.query}
-        style={styles.input}
-        value={query}
-        onChangeText={handleQueryChange}
-        placeholder="Search or jump to…"
-        autoFocus
-        autoCapitalize="none"
-        accessibilityLabel="Search or jump to"
-      />
+    <SafeAreaView
+      testID={testIDs.containers.root}
+      style={styles.root}
+      edges={["top"]}
+    >
+      <View style={styles.header}>
+        <TextInput
+          ref={inputRef}
+          testID={testIDs.inputs.query}
+          style={styles.input}
+          value={query}
+          onChangeText={handleQueryChange}
+          placeholder="Search or jump to…"
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          accessibilityLabel="Search or jump to"
+        />
+        <Pressable
+          testID={testIDs.buttons.close}
+          style={styles.close}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close search"
+        >
+          <Text style={styles.closeLabel}>Cancel</Text>
+        </Pressable>
+      </View>
       <FlatList
         testID={testIDs.containers.results}
         data={results}
@@ -149,8 +184,9 @@ export function CommandPalette({ db }: CommandPaletteProps) {
             )}
           </Pressable>
         )}
+        keyboardShouldPersistTaps="handled"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -159,11 +195,25 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.two,
+    marginHorizontal: theme.spacing.three,
+    marginTop: theme.spacing.two,
+  },
+  close: {
+    paddingVertical: theme.spacing.two,
+  },
+  closeLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
+  },
   input: {
+    flex: 1,
     backgroundColor: theme.colors.backgroundElement,
     borderRadius: theme.spacing.two,
-    marginHorizontal: theme.spacing.three,
-    marginTop: theme.spacing.three,
     paddingHorizontal: theme.spacing.two,
     paddingVertical: theme.spacing.two,
     color: theme.colors.text,
@@ -193,6 +243,7 @@ const testIDs = createComponentTestIDs("CommandPalette", {
   containers: ["root", "results"] as const,
   inputs: ["query"] as const,
   pressables: ["command", "capsuleResult"] as const,
+  buttons: ["close"] as const,
 });
 
 CommandPalette.testIDs = testIDs;

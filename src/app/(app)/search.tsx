@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useDb } from "@/app/providers";
 import { CommandPalette } from "@/widgets/CommandPalette";
 
@@ -12,5 +13,5 @@ import { CommandPalette } from "@/widgets/CommandPalette";
  */
 export default function SearchScreen() {
   const db = useDb();
-  return <CommandPalette db={db} />;
+  return <CommandPalette db={db} onClose={() => router.back()} />;
 }
