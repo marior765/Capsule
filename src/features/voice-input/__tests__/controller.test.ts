@@ -157,3 +157,46 @@ describe("createVoiceInputController — error handling", () => {
     expect(mockTranscribeAudio).not.toHaveBeenCalled();
   });
 });
+
+// Step 10.1 — a recording that fails to start (e.g. iOS refusing the audio
+// session) must not surface as an *unhandled* promise rejection while the
+// user is still holding the button; the failure belongs to commit()/cancel().
+describe("createVoiceInputController — failed start (10.1)", () => {
+  it("doesn't leave the failed start as an unhandled rejection", async () => {
+    mockStartRecording.mockRejectedValue(new Error("record failed"));
+    const unhandled = jest.fn();
+    process.on("unhandledRejection", unhandled);
+    try {
+      const controller = createVoiceInputController(async () => sttCtx);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(unhandled).not.toHaveBeenCalled();
+      await expect(controller.commit()).rejects.toThrow("record failed");
+    } finally {
+      process.off("unhandledRejection", unhandled);
+    }
+  });
+});
+
+// Reviewer finding (10.1): a model that fails to download or load reached the
+// screen as "Couldn't start recording" — wrong; the recording was fine.
+describe("createVoiceInputController — model failure (10.1)", () => {
+  it("marks a model/context failure as a VoiceModelError", async () => {
+    fakeRecording();
+    const { VoiceModelError } =
+      jest.requireActual<typeof import("../index")>("../index");
+    const controller = createVoiceInputController(async () => {
+      throw new Error("download failed: offline");
+    });
+    const error = await controller.commit().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(VoiceModelError);
+  });
+
+  it("leaves recording failures as they are", async () => {
+    mockStartRecording.mockRejectedValue(new Error("record failed"));
+    const { VoiceModelError } =
+      jest.requireActual<typeof import("../index")>("../index");
+    const controller = createVoiceInputController(async () => sttCtx);
+    const error = await controller.commit().catch((e: unknown) => e);
+    expect(error).not.toBeInstanceOf(VoiceModelError);
+  });
+});

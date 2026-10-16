@@ -4853,4 +4853,40 @@ what's left is device checks (BLOCKED.md) and the deferred 8.1 / Phase 9.
 
 ---
 
+## Beat 93 — reopen for Phase 10 (simulator QA)
+
+A hands-on pass in the iPhone 17 Pro simulator (2026-10-12) found 39 issues
+the green gate never saw: a mic that throws on iOS, a capsule edit that
+silently drops input, duplicate screens after save, a command palette whose
+input sits under the Dynamic Island, raw route names in every header. Folded
+into the plan as Phase 10 (32 steps). Two findings not turned into steps:
+quick-capture "X by Y" parsing (product decision) and general tap latency
+(needs profiling on device) — both queued in BLOCKED.md.
+
+Baseline gate: tsc clean, jest 1365/1365, eslint clean. Cursor → 10.1.
+
+---
+
+## Beat 93 (cont.) — 10.1: voice input actually works now
+
+The visible bug was iOS refusing to record until the audio session is in a
+record-capable mode. Fixing that exposed the real one: the recorder wrote
+44.1 kHz stereo AAC .m4a, and whisper.rn reads only 16 kHz mono 16-bit WAV —
+so voice input had never transcribed anything, on any device, and 1365
+green tests never noticed because every test mocked both ends.
+
+Checker failed round 1 on something the mocks hid again: expo-audio only
+flattens per-platform options inside its hook, so the nested `ios` LPCM
+settings were silently dropped by the native constructor. Also: releasing
+the session with only `allowsRecording:false` reset playsInSilentMode
+(native defaults are all false), muting read-aloud on a silent phone; and
+model-download failures were labelled "couldn't start recording". All fixed;
+verified on the simulator with `afinfo` (WAVE, 1 ch, 16000 Hz, Int16) and a
+real transcription. Android still records AAC → decision queued.
+
+Gate: tsc clean, jest 1384/1384, eslint clean. 10.1 done in code (native,
+box unchecked). Cursor → 10.2.
+
+---
+
 <!-- Append new beats above this line. -->

@@ -11,6 +11,13 @@ import { startRecording } from "../index";
 const mockRequestPermission = requestRecordingPermissionsAsync as jest.Mock;
 const mockAudioRecorder = AudioRecorder as unknown as jest.Mock;
 
+/** The options object each AudioRecorder construction received. */
+function mockAudioRecorderCalls(): Record<string, unknown>[] {
+  return mockAudioRecorder.mock.calls.map(
+    (c) => c[0] as Record<string, unknown>,
+  );
+}
+
 /** The real instance the mocked constructor produced on its most recent call. */
 function lastRecorderInstance() {
   const { results } = mockAudioRecorder.mock;
@@ -49,14 +56,38 @@ describe("startRecording — happy path", () => {
     expect(uri).toBe("file:///mock/take-1.m4a");
   });
 
-  it("defaults to the HIGH_QUALITY preset when no options are given", async () => {
+  // 10.1: whisper.rn only reads 16 kHz mono 16-bit PCM WAV. The old default
+  // (HIGH_QUALITY: 44.1 kHz stereo AAC .m4a) recorded fine and then failed
+  // every transcription — found in the simulator, not by this suite.
+  it("records 16 kHz mono by default — what whisper reads", async () => {
     const handle = await startRecording();
     await handle.stop();
-    // Constructed via the mocked AudioRecorder — its stored options reflect
-    // what startRecording actually passed to the constructor.
     expect(AudioRecorder).toHaveBeenCalledWith(
-      expect.objectContaining({ sampleRate: 44100, numberOfChannels: 2 }),
+      expect.objectContaining({ sampleRate: 16000, numberOfChannels: 1 }),
     );
+  });
+
+  // Reviewer finding (10.1): the native AudioRecorder constructor decodes a
+  // FLAT record — top-level outputFormat / linearPCM* keys, no `ios` key.
+  // expo-audio only flattens the per-platform sub-object inside its hook
+  // path, which this plain-function module doesn't use, so a nested `ios`
+  // object was silently ignored. Assert the shape native actually reads.
+  it("hands the native recorder flat iOS linear-PCM settings (no nested ios object)", async () => {
+    await startRecording();
+    const passed = mockAudioRecorderCalls()[0];
+    expect(passed).toEqual(
+      expect.objectContaining({
+        extension: ".wav",
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        outputFormat: "lpcm",
+        linearPCMBitDepth: 16,
+        linearPCMIsBigEndian: false,
+        linearPCMIsFloat: false,
+      }),
+    );
+    expect(passed).not.toHaveProperty("ios");
+    expect(passed).not.toHaveProperty("android");
   });
 
   // On real hardware, calling record() before the recorder has finished
@@ -73,6 +104,42 @@ describe("startRecording — happy path", () => {
   });
 });
 
+describe("startRecording — Android (10.1)", () => {
+  // Android's MediaRecorder can't write WAV, so it still records AAC — the
+  // file must then be named .m4a, not inherit the iOS ".wav".
+  it("names the Android AAC recording .m4a", async () => {
+    // A fresh module registry so the preset is re-flattened for Android.
+    // react-native and the expo-audio mock are taken from that same registry:
+    // Platform.OS is set there before shared/stt loads, and the recorder calls
+    // read back are the ones this run made.
+    let isolatedRecorder: jest.Mock | undefined;
+    let started: Promise<unknown> | undefined;
+    jest.isolateModules(() => {
+      const { Platform } =
+        jest.requireActual<typeof import("react-native")>("react-native");
+      Object.defineProperty(Platform, "OS", {
+        value: "android",
+        configurable: true,
+      });
+      isolatedRecorder = jest.requireActual<
+        typeof import("@/__mocks__/expo-audio")
+      >("expo-audio").AudioRecorder as unknown as jest.Mock;
+      const { startRecording: startOnAndroid } =
+        jest.requireActual<typeof import("../index")>("../index");
+      started = startOnAndroid();
+    });
+    await started;
+    const calls = isolatedRecorder?.mock.calls ?? [];
+    const passed = calls[calls.length - 1]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(passed).toEqual(
+      expect.objectContaining({ extension: ".m4a", outputFormat: "mpeg4" }),
+    );
+    expect(passed).not.toHaveProperty("linearPCMBitDepth");
+  });
+});
+
 describe("startRecording — edge cases", () => {
   it("merges caller options over the default preset rather than replacing it", async () => {
     await startRecording({ numberOfChannels: 1 });
@@ -80,7 +147,7 @@ describe("startRecording — edge cases", () => {
       expect.objectContaining({
         numberOfChannels: 1,
         // sampleRate is untouched — still the preset's value.
-        sampleRate: 44100,
+        sampleRate: 16000,
       }),
     );
   });

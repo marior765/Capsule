@@ -1,8 +1,12 @@
+import { Platform } from "react-native";
 import { initWhisper as _initWhisper, WhisperContext } from "whisper.rn";
 import {
   AudioModule,
+  AudioQuality,
+  IOSOutputFormat,
   RecordingPresets,
   requestRecordingPermissionsAsync,
+  setAudioModeAsync,
   type NativeAudioModule,
 } from "expo-audio";
 
@@ -169,7 +173,7 @@ export async function releaseStt(ctx: WhisperContext): Promise<void> {
 }
 
 /**
- * Overrides for expo-audio's `RecordingPresets.HIGH_QUALITY` default. Only
+ * Overrides for the whisper-ready default preset below. Only
  * the scalar fields — not per-platform nested options — since nothing in
  * this app needs finer control yet. Re-declared rather than re-exported so
  * features never import an expo-audio type directly.
@@ -180,6 +184,61 @@ export type RecordingOptions = {
   bitRate?: number;
   extension?: string;
 };
+
+/**
+ * What whisper.rn can actually read: 16 kHz, mono, 16-bit little-endian
+ * linear PCM in a WAV container. Recording anything else (the old default
+ * was HIGH_QUALITY — 44.1 kHz stereo AAC .m4a) succeeds and then fails every
+ * transcription.
+ *
+ * iOS writes exactly that. Android's MediaRecorder can't produce WAV at all,
+ * so there this still records the preset's AAC — Android capture needs a
+ * PCM-stream path of its own (see the 10.1 entry in BLOCKED.md).
+ */
+const WHISPER_SAMPLE_RATE = 16000;
+const WHISPER_RECORDING_PRESET_BY_PLATFORM = {
+  ...RecordingPresets.HIGH_QUALITY,
+  extension: ".wav",
+  sampleRate: WHISPER_SAMPLE_RATE,
+  numberOfChannels: 1,
+  bitRate: WHISPER_SAMPLE_RATE * 16,
+  // Android still records the preset's AAC, so its file keeps an honest
+  // .m4a name rather than inheriting the iOS ".wav".
+  android: {
+    ...RecordingPresets.HIGH_QUALITY.android,
+    extension: ".m4a",
+  },
+  ios: {
+    ...RecordingPresets.HIGH_QUALITY.ios,
+    extension: ".wav",
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.MAX,
+    sampleRate: WHISPER_SAMPLE_RATE,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+};
+
+/**
+ * The native AudioRecorder constructor reads a FLAT record (top-level
+ * `outputFormat`, `linearPCM*`…) and ignores nested `ios`/`android`
+ * objects. expo-audio flattens them only inside its `useAudioRecorder` hook,
+ * which this plain-function module can't use — so it's done here, the same
+ * way: common fields, then the current platform's sub-object on top.
+ */
+function flattenForPlatform(
+  preset: typeof WHISPER_RECORDING_PRESET_BY_PLATFORM,
+): Record<string, unknown> {
+  const { ios, android, web: _web, ...common } = preset;
+  if (Platform.OS === "ios") return { ...common, ...ios };
+  if (Platform.OS === "android") return { ...common, ...android };
+  return common;
+}
+
+const WHISPER_RECORDING_PRESET = flattenForPlatform(
+  WHISPER_RECORDING_PRESET_BY_PLATFORM,
+);
 
 /**
  * A recording in progress. `stop` ends it and resolves with the local file
@@ -197,10 +256,8 @@ export type RecordingHandle = {
  * `requestRecordingPermissionsAsync` only resolves once that's answered, so
  * the `.granted` check below never sees an in-between "undetermined" state.
  * Throws rather than letting a denial fail silently deep in the native
- * layer. `HIGH_QUALITY` is the default: whisper.cpp resamples internally
- * regardless of the input's sample rate or channel count, so there's no
- * correctness reason to hand-tune a leaner preset, only a minor storage/
- * processing cost this app doesn't optimise for yet.
+ * layer. Records in the format whisper reads (see
+ * `WHISPER_RECORDING_PRESET`).
  */
 export async function startRecording(
   options: RecordingOptions = {},
@@ -210,20 +267,53 @@ export async function startRecording(
     throw new Error("Microphone permission was not granted");
   }
 
-  const recorder = new audioModule.AudioRecorder({
-    ...RecordingPresets.HIGH_QUALITY,
-    ...options,
-  });
-  await recorder.prepareToRecordAsync();
-  recorder.record();
+  // iOS refuses to record ("Recording not allowed on iOS") until the audio
+  // session is in a recording-capable mode. `playsInSilentMode` is what makes
+  // expo-audio pick the play-and-record category, so both are set together.
+  await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
 
-  return {
-    stop: async () => {
-      await recorder.stop();
-      if (!recorder.uri) {
-        throw new Error("Recording produced no file");
-      }
-      return { uri: recorder.uri };
-    },
-  };
+  try {
+    const recorder = new audioModule.AudioRecorder({
+      ...WHISPER_RECORDING_PRESET,
+      ...options,
+    });
+    await recorder.prepareToRecordAsync();
+    recorder.record();
+
+    return {
+      stop: async () => {
+        try {
+          await recorder.stop();
+        } finally {
+          await releaseRecordingMode();
+        }
+        if (!recorder.uri) {
+          throw new Error("Recording produced no file");
+        }
+        return { uri: recorder.uri };
+      },
+    };
+  } catch (e) {
+    await releaseRecordingMode();
+    throw e;
+  }
+}
+
+/**
+ * Hands the audio session back once recording is over, so playback (e.g.
+ * read-aloud) isn't left routed through the record-capable category. A
+ * failure here never masks the recording's own outcome.
+ */
+async function releaseRecordingMode(): Promise<void> {
+  try {
+    // Every native AudioMode field defaults to false, so playsInSilentMode
+    // must be restated — leaving it out would mute read-aloud on a phone set
+    // to silent.
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+    });
+  } catch {
+    // Nothing useful to do — the next startRecording sets the mode again.
+  }
 }

@@ -2,16 +2,16 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 92,
-    "status": "complete",
+    "beat": 93,
+    "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
-    "resumedAt": "2026-10-11",
-    "resumeNote": "Reopened after round-2 decisions (BLOCKED.md 'Resolved (2026-10-11)'): new steps 4.6, 4.7, 5.5, 5.6, 6.9, 8.11, 8.12. 5.5 needs fflate and 6.9 needs expo-sharing installed by the user."
+    "resumedAt": "2026-10-16",
+    "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": null,
-    "phase": null
+    "step": "10.2",
+    "phase": 10
   },
   "steps": {
     "1.2": {
@@ -500,13 +500,31 @@
       "failureSignatures": [],
       "notes": "Double-send ref guard + disabled input in both chats; reminder notice; stt-model on shared/fs. Checker pass.",
       "checkpoint": "44f752a"
+    },
+    "10.1": {
+      "status": "done",
+      "class": "native",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- iOS LPCM settings nested under `ios` never reach native AudioRecorder (expo-audio flattens only in hook path); release mode dropped playsInSilentMode (mutes read-aloud on silent); model-load failures mislabelled as recording failures"
+      ],
+      "checkpoint": "251aaa0",
+      "notes": "Done in code (native, box unchecked). Root cause beyond the audio-mode throw: whisper.rn reads only 16k mono PCM WAV; recorder wrote 44.1k stereo AAC .m4a, so transcription always failed. Verified on simulator: afinfo WAVE 1ch 16000Hz Int16, whisper transcribed end to end. Android still AAC -> BLOCKED decision."
+    },
+    "10.13": {
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "app.json name change requires prebuild/rebuild to verify."
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1365/1365, 105 suites)",
+    "jest": "pass (1384)",
     "eslint": "pass",
-    "at": "2026-10-11T23:34:28"
+    "at": "2026-10-16T18:50:52"
   }
 }

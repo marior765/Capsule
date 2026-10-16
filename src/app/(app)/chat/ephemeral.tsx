@@ -8,6 +8,9 @@ import { getInferenceSettings } from "@/features/configure-inference";
 import { sendEphemeralMessage } from "@/features/send-message";
 import {
   createVoiceInputController,
+  describeVoiceError,
+  VOICE_EMPTY_HINT,
+  VOICE_HOLD_HINT,
   type VoiceInputController,
 } from "@/features/voice-input";
 import { getAllSnippets, type Snippet } from "@/entities/snippet";
@@ -45,7 +48,12 @@ export default function EphemeralChatScreen() {
 
   const [isRecording, setIsRecording] = useState(false);
   const voiceControllerRef = useRef<VoiceInputController | null>(null);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
+  // `kind` decides the styling only: a failure reads as an error, the
+  // "hold the mic" hint after a tap reads as a neutral notice.
+  const [voiceError, setVoiceError] = useState<{
+    text: string;
+    kind: "error" | "hint";
+  } | null>(null);
 
   // `draftInsertText`/`draftInsertKey`: the shared "replace whatever's
   // typed" mechanism ChatInput exposes via key-remount — originally built
@@ -84,11 +92,11 @@ export default function EphemeralChatScreen() {
       if (text.trim()) {
         setDraftInsertText(text);
         setDraftInsertKey((k) => k + 1);
+      } else {
+        setVoiceError({ text: VOICE_EMPTY_HINT, kind: "hint" });
       }
     } catch (e) {
-      setVoiceError(
-        e instanceof Error ? e.message : "Voice input failed to transcribe.",
-      );
+      setVoiceError({ text: describeVoiceError(e), kind: "error" });
     }
   };
 
@@ -96,6 +104,10 @@ export default function EphemeralChatScreen() {
     const controller = voiceControllerRef.current;
     voiceControllerRef.current = null;
     setIsRecording(false);
+    // An early release is almost always a tap — say how the button works.
+    // (It also fires if the button turns disabled mid-hold; the hint is
+    // harmless there.)
+    setVoiceError({ text: VOICE_HOLD_HINT, kind: "hint" });
     if (!controller) return;
 
     try {
@@ -149,10 +161,15 @@ export default function EphemeralChatScreen() {
           testID={testIDs.buttons.dismissVoiceError}
           onPress={() => setVoiceError(null)}
           accessibilityRole="button"
-          accessibilityLabel={`${voiceError}. Dismiss`}
+          accessibilityLabel={`${voiceError.text}. Dismiss`}
         >
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {voiceError} Tap to dismiss.
+          <Text
+            style={
+              voiceError.kind === "error" ? styles.error : styles.voiceHint
+            }
+            accessibilityLiveRegion="polite"
+          >
+            {voiceError.text} Tap to dismiss.
           </Text>
         </Pressable>
       )}
@@ -248,6 +265,13 @@ const styles = StyleSheet.create((theme) => ({
   },
   snippetsLabel: {
     color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
+  voiceHint: {
+    paddingHorizontal: theme.spacing.three,
+    paddingTop: theme.spacing.two,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
     fontSize: 12,
   },

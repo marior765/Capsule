@@ -80,7 +80,11 @@ export function createVoiceInputController(
 ): VoiceInputController {
   // Both start immediately, independently — neither waits on the other.
   const session = startVoiceInput();
-  const context = getSttContext();
+  // Tagged so the screen can say "the voice model couldn't load" rather than
+  // blaming a recording that worked.
+  const context = getSttContext().catch((cause: unknown) => {
+    throw new VoiceModelError(cause);
+  });
   // `cancel()` deliberately never touches `context` — discarding a
   // recording shouldn't care whether the STT model even loaded. But that
   // means if `context` rejects (a failed download, say) and the caller only
@@ -90,6 +94,10 @@ export function createVoiceInputController(
   // handler here doesn't alter `context`'s own resolution, so the
   // `Promise.all` below still gets the real rejection when commit() runs.
   context.catch(() => {});
+  // Same reasoning for a recording that fails to start (iOS refusing the
+  // audio session, say): the user is still holding the button, so nothing
+  // has awaited `session` yet. commit()/cancel() still see the rejection.
+  session.catch(() => {});
 
   return {
     cancel: async () => {
@@ -101,4 +109,47 @@ export function createVoiceInputController(
       return started.finish(ctx);
     },
   };
+}
+
+/**
+ * The voice (Whisper) model failed to download or load — as opposed to the
+ * recording itself failing. Wraps the original error as `cause`.
+ */
+export class VoiceModelError extends Error {
+  constructor(cause: unknown) {
+    super(
+      cause instanceof Error ? cause.message : "The voice model failed to load",
+    );
+    this.name = "VoiceModelError";
+    this.cause = cause;
+  }
+}
+
+/** Shown when a recording transcribed to nothing (silence, too quiet). */
+export const VOICE_EMPTY_HINT =
+  "Didn't catch that — try again a little closer.";
+
+/** Shown when the mic is tapped rather than held. */
+export const VOICE_HOLD_HINT = "Hold the mic to talk, then release to send.";
+
+/**
+ * A sentence the user can act on for a voice-input failure. Native errors
+ * arrive as exception dumps (class names, Swift file paths) — never shown
+ * as-is.
+ */
+export function describeVoiceError(error: unknown): string {
+  if (error instanceof VoiceModelError) {
+    return "The voice model couldn't load. Check Settings → Models, then try again.";
+  }
+  const message = error instanceof Error ? error.message : "";
+  if (/permission/i.test(message)) {
+    return "Capsule needs microphone access for voice input — allow it in Settings.";
+  }
+  if (/produced no file/i.test(message)) {
+    return "Nothing was recorded. Hold the mic a little longer and try again.";
+  }
+  if (/transcrib/i.test(message)) {
+    return "Couldn't turn that recording into text. Try again.";
+  }
+  return "Couldn't start recording. Try again.";
 }

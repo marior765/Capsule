@@ -32,12 +32,31 @@ export const requestRecordingPermissionsAsync = jest.fn(
   async (): Promise<MockPermissionResponse> => nextPermission,
 );
 
+export enum IOSOutputFormat {
+  LINEARPCM = "lpcm",
+  MPEG4AAC = "aac ",
+}
+
+export enum AudioQuality {
+  MIN = 0,
+  LOW = 0x20,
+  MEDIUM = 0x40,
+  HIGH = 0x60,
+  MAX = 0x7f,
+}
+
 export const RecordingPresets = {
   HIGH_QUALITY: {
     extension: ".m4a",
     sampleRate: 44100,
     numberOfChannels: 2,
     bitRate: 128000,
+    // Mirrors the real preset: the android sub-object carries no extension.
+    android: { outputFormat: "mpeg4", audioEncoder: "aac" },
+    ios: {
+      outputFormat: IOSOutputFormat.MPEG4AAC,
+      audioQuality: AudioQuality.MAX,
+    },
   },
   LOW_QUALITY: {
     extension: ".m4a",
@@ -90,11 +109,17 @@ export const AudioRecorder = jest
   options: Record<string, unknown>,
 ) => MockAudioRecorderInstance;
 
+/** Records every audio-session mode the code under test asks for, in order. */
+export const setAudioModeAsync = jest.fn(
+  async (_mode: Record<string, unknown>): Promise<void> => {},
+);
+
 export const AudioModule = { AudioRecorder };
 
 export function __resetAudioMock(): void {
   requestRecordingPermissionsAsync.mockClear();
   (AudioRecorder as unknown as jest.Mock).mockClear();
+  setAudioModeAsync.mockClear();
   nextPermission = {
     status: "granted",
     expires: "never",

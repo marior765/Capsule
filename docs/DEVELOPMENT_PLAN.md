@@ -162,6 +162,40 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 8.11 Reminders: "Pick date & time…" + tap opens the capsule — done in code: next to the quick choices, "Pick date & time…" opens the system picker (iPhone: one sheet; Android: date, then time); tapping a reminder notification opens its capsule, after unlock if app lock is on. Needs a device check before ticking (see BLOCKED.md) (decided 2026-10-11)
 - [x] 8.12 Follow-ups — chat can't send twice while a reply is coming; "notifications are off" shows as a notice, not an error; the voice-model download uses shared/fs (relative path, safe re-downloads, shown as network activity) (decided 2026-10-11)
 
+### Phase 10 — Simulator QA fixes (found 2026-10-12, iPhone 17 Pro simulator)
+- [ ] 10.1 Voice input: set the audio mode before recording so the mic doesn't throw "Recording not allowed on iOS"; show a plain-language error instead of the raw native exception; a short tap on the mic hints "hold to talk"
+- [ ] 10.2 Capsule edit: an invalid field value (e.g. date `2026-13-45`) shows an inline error and keeps the user on the edit screen with their input intact — never a silent no-save
+- [ ] 10.3 Capsule edit: saving returns to the existing capsule screen instead of pushing a duplicate one
+- [ ] 10.4 Command palette: input sits below the status bar/Dynamic Island, is focused on open and typeable, and the palette has a visible close control
+- [ ] 10.5 Models, Personas, Snippets, capsule types list and new-type screens get a proper header with a back button (no content under the status bar)
+- [ ] 10.6 Taps aren't swallowed while the keyboard is up (`keyboardShouldPersistTaps="handled"` on every scrolling form)
+- [ ] 10.7 Chat composer: the message box takes the remaining width (no letter-by-letter wrapping), stays stable when side labels change, and Send looks disabled when empty
+- [ ] 10.8 Reminder date picker: Cancel / Set reminder never overlap the time row; sheet respects the bottom safe area
+- [ ] 10.9 Human screen titles everywhere — no raw route names ("index", "[id]", "[id]/edit", "new", "ephemeral", "inference", "privacy", "import-export") in headers or back buttons
+- [ ] 10.10 Real tab-bar icons (SF Symbols on iOS) instead of placeholder triangles
+- [ ] 10.11 Home: title clears the status bar; shows recent capsules and conversations instead of an empty screen
+- [ ] 10.12 Navigation: creating a type from the Capsules empty state returns to Capsules; Capsule types reachable from Settings; a visible "New capsule" button on the Capsules tab
+- [ ] 10.13 App display name is "Capsule" (not "capsule") in system prompts
+- [ ] 10.14 Chat opens scrolled to the newest message and follows new replies
+- [ ] 10.15 Conversations get an automatic title from the first message instead of staying "New chat"
+- [ ] 10.16 Context counter ("ctx") reflects the conversation's real token usage and is labelled clearly
+- [ ] 10.17 Long-press on an assistant message offers Copy (and Regenerate on the last reply)
+- [ ] 10.18 "Capsules: on" can't be switched on while the capsule-search model is missing; the notice never covers the last message
+- [ ] 10.19 Chat "Export" is labelled for what it does (copy as Markdown), shows a lasting confirmation, and writes to the activity log
+- [ ] 10.20 Choose a persona in chat; personas can be edited, not only deleted
+- [ ] 10.21 Capsule type form: duplicate field names are rejected with a message; the per-field toggle has a visible label and aligned layout
+- [ ] 10.22 Date fields use a date picker instead of free-text YYYY-MM-DD
+- [ ] 10.23 Tag input: autocorrect/autocapitalize off
+- [ ] 10.24 Capsule list cards show tags and key field values; list view differs meaningfully from card view
+- [ ] 10.25 View toggle label is consistent (always names the current view or always the next); board view with "All" types doesn't hide every capsule behind a hint
+- [ ] 10.26 Selected filter/sort chips are clearly distinguishable
+- [ ] 10.27 Reminder screen: "notifications are off" shown once, with an "Open Settings" link
+- [ ] 10.28 Capsule history entries say what changed
+- [ ] 10.29 Inference settings: invalid numbers show an inline error
+- [ ] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
+- [ ] 10.31 Models screen lists the voice (Whisper) model with delete, and shows size + a download button for downloadable models
+- [ ] 10.32 Settings screen: drop the redundant "Settings" label under the header
+
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format
 - [ ] 9.2 LAN device discovery + E2E-encrypted transport, fully isolated behind a flag

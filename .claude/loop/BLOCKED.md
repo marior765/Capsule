@@ -1110,3 +1110,31 @@ types-only packages through the same gate as everything else.
 ## Failed verification
 
 _(none)_
+
+
+## Phase 10 decisions (2026-10-16)
+
+- **Quick capture parsing.** Typing "Dune by Frank Herbert" into quick capture puts the whole string in the title; Author stays empty. Should quick capture try to fill fields (e.g. "X by Y" → Author, or the local model extracting fields)? Not a step until decided.
+- **Tap latency.** In the simulator taps often landed 1–3 s late. Needs profiling on a real device (JS thread busy? re-render storm?) before it can be a concrete step.
+
+## 10.1 — voice input (2026-10-16)
+
+**Fixed in code:** the mic now switches the iOS audio session into recording
+mode before recording (was throwing "Recording not allowed on iOS"), records
+16 kHz mono 16-bit WAV on iOS (whisper.rn reads only that — the old 44.1 kHz
+stereo .m4a recorded fine and then failed every transcription), shows
+plain-language errors, and a tap (not a hold) shows "Hold the mic to talk".
+
+**Device check (iPhone or simulator with a mic):** in a chat, hold the mic,
+say a sentence, release → the words appear in the message box. Tap the mic
+briefly → the grey "Hold the mic to talk" hint appears. Deny microphone
+access in iOS Settings, then hold → "Capsule needs microphone access…".
+
+**Android — still broken, needs a decision.** Android's MediaRecorder cannot
+write WAV, so Android still records AAC and transcription will still fail
+there. Options: (a) capture PCM with `@fugood/react-native-audio-pcm-stream`
+(already in package.json, unused) and write a WAV header ourselves; (b) use
+expo-audio's `useAudioStream` (hook-only — needs the recording moved into a
+component); (c) decode AAC to PCM before transcribing (no decoder in the
+deps today). (a) is the smallest change that keeps `shared/stt` a plain
+function module.
