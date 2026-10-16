@@ -73,6 +73,7 @@ export function CapsuleList({
 
   return (
     <FlatList
+      keyboardShouldPersistTaps="handled"
       // Forces a remount on a numColumns change — FlatList doesn't
       // support changing it on a live instance.
       key={viewMode}

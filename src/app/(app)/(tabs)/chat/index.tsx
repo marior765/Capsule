@@ -46,6 +46,7 @@ export default function ChatListScreen() {
         </Pressable>
       </View>
       <FlatList
+        keyboardShouldPersistTaps="handled"
         data={conversations}
         keyExtractor={(c) => c.id}
         renderItem={({ item }) => (

@@ -73,7 +73,11 @@ export default function PersonasScreen() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      style={styles.root}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.heading}>
         {editingId ? "Edit persona" : "New persona"}
       </Text>

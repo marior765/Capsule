@@ -125,7 +125,11 @@ export default function ModelsScreen() {
   );
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      style={styles.root}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.heading}>Your models</Text>
       {models.length === 0 && (
         <Text style={styles.muted}>No models downloaded yet.</Text>

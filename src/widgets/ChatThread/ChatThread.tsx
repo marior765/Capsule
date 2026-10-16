@@ -105,6 +105,7 @@ export function ChatThread({
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
       <FlatList
+        keyboardShouldPersistTaps="handled"
         data={data}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

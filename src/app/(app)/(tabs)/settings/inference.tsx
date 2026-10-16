@@ -95,7 +95,11 @@ export default function InferenceScreen() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      style={styles.root}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.heading}>Inference</Text>
       <Text style={styles.meta}>
         Applies to every new reply. Changes are saved as you type.

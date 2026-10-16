@@ -397,6 +397,7 @@ export default function CapsuleDetailScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       testID={testIDs.containers.root}
       style={styles.root}
       contentContainerStyle={styles.content}

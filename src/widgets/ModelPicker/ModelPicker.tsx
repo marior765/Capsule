@@ -55,6 +55,7 @@ export function ModelPicker({
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
       <FlatList
+        keyboardShouldPersistTaps="handled"
         data={recommended}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

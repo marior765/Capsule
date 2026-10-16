@@ -39,6 +39,7 @@ export function CapsuleEditor({
 }: CapsuleEditorProps) {
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       testID={testIDs.containers.root}
       contentContainerStyle={styles.content}
     >

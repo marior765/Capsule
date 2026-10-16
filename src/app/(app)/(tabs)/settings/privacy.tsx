@@ -52,7 +52,7 @@ export default function PrivacyScreen() {
   };
 
   return (
-    <ScrollView style={styles.root}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={styles.root}>
       <PrivacyBanner />
       <Text style={styles.heading}>App lock</Text>
       {/* The database moved to another file: restart so nothing keeps the old connection. */}

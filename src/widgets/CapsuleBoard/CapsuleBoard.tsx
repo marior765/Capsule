@@ -36,6 +36,7 @@ export function CapsuleBoard({
 }: CapsuleBoardProps) {
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       testID={testIDs.containers.root}
       horizontal
       style={styles.root}
@@ -50,7 +51,10 @@ export function CapsuleBoard({
           <Text style={styles.columnHeading}>
             {column.label} ({column.capsules.length})
           </Text>
-          <ScrollView style={styles.columnList}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={styles.columnList}
+          >
             {column.capsules.map((capsule) => (
               <CapsuleCard
                 key={capsule.id}

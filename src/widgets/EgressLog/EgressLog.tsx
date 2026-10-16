@@ -29,7 +29,11 @@ export function EgressLog({ entries }: EgressLogProps) {
   }
 
   return (
-    <ScrollView testID={testIDs.containers.root} style={styles.root}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      testID={testIDs.containers.root}
+      style={styles.root}
+    >
       {entries.map((entry) => (
         <View key={entry.id} style={styles.row}>
           <Text style={styles.action}>{formatAuditAction(entry.action)}</Text>

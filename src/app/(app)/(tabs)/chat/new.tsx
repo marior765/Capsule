@@ -22,7 +22,11 @@ export default function NewChatScreen() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      style={styles.root}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.heading}>Start a chat</Text>
       <Text style={styles.meta}>
         Pick a persona, or start without one. Tapping any option begins the

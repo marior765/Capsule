@@ -49,7 +49,11 @@ const ENTRIES = [
 
 export default function SettingsScreen() {
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      style={styles.root}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.heading}>Settings</Text>
       {ENTRIES.map((entry) => (
         <Pressable

@@ -27,7 +27,10 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.title}>Welcome to Capsule</Text>
       <Text style={styles.subtitle}>
         A fully private, offline AI assistant. Download a model to get started —
