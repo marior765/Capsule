@@ -5014,4 +5014,17 @@ Gate: tsc clean, jest 1478, eslint clean. Checkpoint `abae49f`. Cursor → 10.9.
 
 ---
 
+## Beat 100 — 10.9: no more "index" / "[id]" in headers
+
+The three tab stacks were bare `<Stack />`s, so every header showed its
+route name. Each screen now has a human title ("Capsules", "Edit capsule",
+"Import & Export"…) and back buttons are chevron-only. A static guard walks
+each stack's route files and fails on any untitled screen — so a new route
+can't reintroduce a raw name. Simulator: "Capsule", "Capsules", "Import &
+Export". Reviewer pass first time.
+
+Gate: tsc clean, jest 1496, eslint clean. Checkpoint `a25ebf8`. Cursor → 10.10.
+
+---
+
 <!-- Append new beats above this line. -->
