@@ -2645,4 +2645,35 @@ platform source rather than the author's code.
 
 ---
 
+## 2026-10-16 — 1,365 green tests, and voice input had never worked
+
+**What:** A hands-on pass through the app in the iOS simulator (the agent
+driving taps and reading screenshots) turned up 39 issues, which became
+Phase 10 of the plan. The first one, "the mic throws an error", turned out
+to hide a worse one. iOS refused to record until the audio session was put
+into a recording mode. Once that was fixed, recording worked but every
+transcription failed: the recorder saved 44.1 kHz stereo AAC (.m4a), and
+whisper.rn only reads 16 kHz mono 16-bit WAV.
+
+**Why it hid:** every test mocked both ends, the microphone and the
+transcriber, so the format handed from one to the other was never checked.
+The independent reviewer subagent then caught a second bug of the same
+kind in the fix itself. expo-audio only applies its per-platform recording
+settings inside its React hook, so the iOS WAV settings passed straight to
+the native constructor were silently ignored, and a test asserting "the
+mock received the right options" passed anyway.
+
+**How it was proven:** the agent didn't stop at a green gate. It located the
+recording in the simulator's app container, inspected it with macOS `afinfo`
+(WAVE, 1 ch, 16000 Hz, Int16) and watched whisper put a transcription into
+the message box.
+
+**Article angle:** a mocked boundary is an untested boundary. When two
+mocks face each other, the contract between them (here, an audio format) is
+exactly what nobody checks. Ten minutes of exploratory testing on a
+simulator found what 100+ test suites couldn't, and a cheap ground-truth
+check (`afinfo` on the real file) beats one more unit test.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

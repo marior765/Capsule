@@ -21,7 +21,7 @@ have). Add a row to the status table when you adopt a feature for real.
 | Hooks (settings.json) | ✅ Used | 2026-06-09 |
 | Loops (`/loop`) | ✅ Used | 2026-08-13 |
 | `update-config` skill | ✅ Used | 2026-06-09 |
-| Scheduled agents (`/schedule`) | ✅ Learned | 2026-06-09 |
+| Scheduled agents (`/schedule`) | ✅ Used | 2026-10-16 |
 | Memory (persistent) | ✅ Used | 2026-10-11 |
 | `/plan` custom skill | ✅ Used | 2026-06-17 |
 | Plan mode (`defaultMode: plan`) | ✅ Learned | 2026-06-17 |
@@ -232,8 +232,13 @@ have). Add a row to the status table when you adopt a feature for real.
   - Weekly token cost report from `audit.log`
   - Weekly dependency audit
   - Pre-session progress summary
-- **Here:** Learned the full model. Not yet set up a live schedule — weekly token
-  report is the first candidate once real coding begins.
+- **Here:** First real use 2026-10-16: `/schedule "/loop /safe-loop all" at 11:31pm`.
+  It turned into a *local* one-shot cron (CronCreate) rather than a cloud routine,
+  because the cloud couldn't run it: GitHub wasn't connected, the Phase 10 plan
+  and loop state existed only on the Mac, uncommitted, and the loop never pushes,
+  so cloud results would never have come back. Lesson: a cloud routine needs its
+  inputs pushed and its outputs pushed back. Work that depends on a local
+  simulator or unpushed state stays local.
 
 ### Memory (persistent)
 - **What:** Per-fact `.md` files stored at `~/.claude/projects/<project>/memory/`

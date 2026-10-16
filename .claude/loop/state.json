@@ -508,7 +508,7 @@
       "failureSignatures": [
         "checker: fail -- iOS LPCM settings nested under `ios` never reach native AudioRecorder (expo-audio flattens only in hook path); release mode dropped playsInSilentMode (mutes read-aloud on silent); model-load failures mislabelled as recording failures"
       ],
-      "checkpoint": "251aaa0",
+      "checkpoint": "1a7d7bf",
       "notes": "Done in code (native, box unchecked). Root cause beyond the audio-mode throw: whisper.rn reads only 16k mono PCM WAV; recorder wrote 44.1k stereo AAC .m4a, so transcription always failed. Verified on simulator: afinfo WAVE 1ch 16000Hz Int16, whisper transcribed end to end. Android still AAC -> BLOCKED decision."
     },
     "10.13": {

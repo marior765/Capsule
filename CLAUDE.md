@@ -79,7 +79,6 @@ The list below are **one-shot triggers**. When a feature is used for the first t
 2. Remove that feature's line from this list immediately.
 
 **Pending triggers (remove each line on first use):**
-- Scheduled agents — first `/schedule` used
 - `/simplify` — first time invoked
 - `/security-review` — first time invoked
 - `/verify` — first time invoked
