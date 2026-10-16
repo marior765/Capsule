@@ -107,3 +107,28 @@ export function localDayAsUtcMidnight(date: Date): Date {
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
   );
 }
+
+/**
+ * `base` with its local day replaced by `picked`'s (time of day kept) — for
+ * the iOS date calendar, which lives apart from the time picker (10.8).
+ */
+export function withLocalDate(base: Date, picked: Date): Date {
+  return new Date(
+    picked.getFullYear(),
+    picked.getMonth(),
+    picked.getDate(),
+    base.getHours(),
+    base.getMinutes(),
+  );
+}
+
+/** `base` with its local time of day replaced by `picked`'s, on the minute. */
+export function withLocalTime(base: Date, picked: Date): Date {
+  return new Date(
+    base.getFullYear(),
+    base.getMonth(),
+    base.getDate(),
+    picked.getHours(),
+    picked.getMinutes(),
+  );
+}

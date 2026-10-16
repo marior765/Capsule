@@ -117,3 +117,41 @@ describe("localDayAsUtcMidnight (what Android's date dialog expects to start on)
     expect(localDayAsUtcMidnight(local).getTime()).toBe(Date.UTC(2026, 9, 10));
   });
 });
+
+// 10.8: on iOS the inline datetime picker's time row overflowed its measured
+// height and sat under the Cancel / Set buttons. The sheet now shows a date
+// calendar and a separate time row, each updating its own half of the value
+// in local time.
+describe("withLocalDate / withLocalTime (10.8: separate date and time pickers)", () => {
+  const { withLocalDate, withLocalTime } =
+    jest.requireActual<typeof import("../reminderTime")>("../reminderTime");
+  const base = new Date(2026, 9, 12, 21, 30, 0, 0); // 12 Oct 2026, 21:30 local
+
+  it("takes the day from the date picker and keeps the time", () => {
+    const picked = new Date(2026, 10, 3, 8, 5); // picker's own time is ignored
+    expect(withLocalDate(base, picked)).toEqual(
+      new Date(2026, 10, 3, 21, 30, 0, 0),
+    );
+  });
+
+  it("takes the time from the time picker and keeps the day", () => {
+    const picked = new Date(1999, 0, 1, 7, 45, 59); // picker's own day is ignored
+    expect(withLocalTime(base, picked)).toEqual(
+      new Date(2026, 9, 12, 7, 45, 0, 0),
+    );
+  });
+
+  it("drops seconds and milliseconds so reminders land on the minute", () => {
+    const picked = new Date(2026, 9, 12, 9, 15, 42, 123);
+    const result = withLocalTime(base, picked);
+    expect(result.getSeconds()).toBe(0);
+    expect(result.getMilliseconds()).toBe(0);
+  });
+
+  it("handles a date pick onto a month with fewer days", () => {
+    const jan31 = new Date(2027, 0, 31, 9, 0);
+    expect(withLocalDate(jan31, new Date(2027, 1, 28))).toEqual(
+      new Date(2027, 1, 28, 9, 0, 0, 0),
+    );
+  });
+});
