@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import { createCapsuleType } from "@/features/manage-schema";
 import { generateId } from "@/shared/lib";
+import { leaveScreen } from "@/shared/navigation";
 import { createComponentTestIDs } from "@/shared/testing";
 import { SchemaBuilder, type FieldDraft } from "@/widgets/SchemaBuilder";
 
@@ -47,7 +48,7 @@ export default function NewTypeScreen() {
         required: f.required,
       })),
     });
-    router.replace("/types");
+    leaveScreen(router, "/types");
   };
 
   return (

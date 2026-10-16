@@ -11,6 +11,7 @@ import {
 } from "@/entities/field";
 import { hasCapsuleEdits, saveCapsuleEdits } from "@/features/edit-capsule";
 import { snapshotCapsule } from "@/features/capsule-versioning";
+import { leaveScreen } from "@/shared/navigation";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleEditor } from "@/widgets/CapsuleEditor";
 
@@ -83,7 +84,7 @@ export default function EditCapsuleScreen() {
     }
     saveCapsuleEdits(db, id, editInput);
     embeddings.indexCapsule(id);
-    router.replace(`/capsules/${id}`);
+    leaveScreen(router, `/capsules/${id}`);
   };
 
   if (!found) {

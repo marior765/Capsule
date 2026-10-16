@@ -34,6 +34,7 @@ import {
   getCapsuleHistory,
   restoreCapsuleVersion,
 } from "@/features/capsule-versioning";
+import { leaveScreen } from "@/shared/navigation";
 import { createComponentTestIDs } from "@/shared/testing";
 import { TagPicker } from "@/widgets/TagPicker";
 import { RelationPicker, type RelationEntry } from "@/widgets/RelationPicker";
@@ -313,7 +314,7 @@ export default function CapsuleDetailScreen() {
       );
       return;
     }
-    router.replace("/capsules");
+    leaveScreen(router, "/capsules");
   };
 
   // Restoring rewrites title + field values and (per restoreCapsuleVersion's

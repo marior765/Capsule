@@ -15,6 +15,7 @@ import {
   updateField,
   type CapsuleType,
 } from "@/features/manage-schema";
+import { leaveScreen } from "@/shared/navigation";
 import { createComponentTestIDs } from "@/shared/testing";
 import { SchemaBuilder, type FieldDraft } from "@/widgets/SchemaBuilder";
 
@@ -90,7 +91,7 @@ export default function TypeDetailScreen() {
 
   const handleDelete = () => {
     deleteCapsuleType(db, id);
-    router.replace("/types");
+    leaveScreen(router, "/types");
   };
 
   if (!capsuleType) {

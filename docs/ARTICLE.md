@@ -2676,4 +2676,26 @@ check (`afinfo` on the real file) beats one more unit test.
 
 ---
 
+## 2026-10-16 — Your tests run on a different JavaScript engine than your app
+
+**What:** In the simulator, a capsule accepted "2026-13-45" as its Finished
+date. A unit test for "rejects an invalid date" existed and passed.
+
+**Why:** the validator used `Date.parse`. Jest runs on V8, which returns NaN
+for month 13. The app runs on Hermes, which doesn't. (Both engines also turn
+"2026-02-30" into 2 March without complaint.) The test was green on the
+engine nobody ships.
+
+**Fix:** a plain arithmetic calendar check, plus a test that stubs
+`Date.parse` to return a valid timestamp. That proves the validator no
+longer depends on any engine's date parsing.
+
+**Article angle:** in React Native, Jest's runtime (Node/V8) and the device
+runtime (Hermes) are different JavaScript engines. Anything engine-lenient,
+like date parsing, `Intl` or regex edge cases, can pass in CI and fail on
+the phone. Either avoid those APIs in validation logic, or test on the
+engine you ship.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

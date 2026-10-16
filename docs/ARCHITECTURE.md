@@ -110,6 +110,7 @@ src/
     storage/              # MMKV wrapper for settings
     crypto/               # key handling, encrypt/decrypt helpers
     format/               # portable format schema + (de)serializers
+    navigation/           # leaveScreen: pop within the current stack, never stack a duplicate
     lib/                  # pure utils
     types/                # shared TS types (no domain logic)
     config/               # feature flags, constants
