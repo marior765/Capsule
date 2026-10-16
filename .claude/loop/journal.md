@@ -4996,4 +4996,22 @@ Gate: tsc clean, jest 1466, eslint clean. Checkpoint `f0a1cda`. Cursor → 10.8.
 
 ---
 
+## Beat 99 — 10.8: the reminder sheet's time row is reachable again
+
+@expo/ui's combined inline datetime picker overflows the height its native
+host measures, so the time row hid under Cancel / Set. iOS now shows an
+inline date calendar plus its own "Time" row (compact picker), each updating
+half the value through pure local-time combiners; the sheet pads for the
+home indicator. The simulator caught two more native-sizing quirks on the
+way (the compact picker's host collapsing to ~0 width — first spilling off
+the right edge, then the left — fixed with flex:1). Verified end to end:
+wheel to 02:00 → Set → "Today, 02:00". Checker round 1: missing testIDs on
+the pickers and a lost `minimumDate` (past times became pickable).
+
+That closes the user's top-priority list (1, 2, 3, 4, 5, 7, 8).
+
+Gate: tsc clean, jest 1478, eslint clean. Checkpoint `abae49f`. Cursor → 10.9.
+
+---
+
 <!-- Append new beats above this line. -->

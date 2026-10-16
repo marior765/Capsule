@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 98,
+    "beat": 99,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.8",
+    "step": "10.9",
     "phase": 10
   },
   "steps": {
@@ -595,13 +595,23 @@
       ],
       "checkpoint": "f0a1cda",
       "notes": "Toolbar row (Snippets/Capsules/Image) above input row (mic + ChatInput). canSend helper. Simulator verified."
+    },
+    "10.8": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- new pickers had no testIDs; time picker lost minimumDate (past times pickable); static tests too loose"
+      ],
+      "checkpoint": "abae49f",
+      "notes": "iOS: inline date calendar + compact time row (flex:1 host) with withLocalDate/withLocalTime; safe-area padding. Simulator: picked 02:00, saved \"Today, 02:00\". Android unchanged."
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1466)",
+    "jest": "pass (1478)",
     "eslint": "pass",
-    "at": "2026-10-17T00:00:06"
+    "at": "2026-10-17T00:12:51"
   }
 }
