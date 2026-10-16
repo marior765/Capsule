@@ -56,8 +56,8 @@ describe("leaveScreen", () => {
 const APP = join(__dirname, "../../../app/(app)");
 
 describe.each([
-  ["capsule edit → save", "capsules/[id]/edit.tsx"],
-  ["capsule screen → delete", "capsules/[id].tsx"],
+  ["capsule edit → save", "(tabs)/capsules/[id]/edit.tsx"],
+  ["capsule screen → delete", "(tabs)/capsules/[id].tsx"],
   ["type screen → delete", "types/[id].tsx"],
   ["new type → create", "types/new.tsx"],
 ])("%s", (_label, file) => {

@@ -82,9 +82,9 @@ export function CommandPalette({ db, onClose }: CommandPaletteProps) {
   const [capsuleResults, setCapsuleResults] = useState<Capsule[]>([]);
   const inputRef = useRef<TextInput>(null);
 
-  // The palette is a hidden tab screen, which stays mounted between visits —
-  // `autoFocus` only fires on the first one. Focus on every visit instead,
-  // and start each visit with an empty query.
+  // Focus the input whenever the palette gains focus and start empty — a
+  // guard beyond `autoFocus` (first mount only) in case the palette ever
+  // stays mounted beneath another screen.
   useFocusEffect(
     useCallback(() => {
       inputRef.current?.focus();
@@ -110,11 +110,16 @@ export function CommandPalette({ db, onClose }: CommandPaletteProps) {
     ),
   ];
 
+  // dismissTo rather than push: the palette sits on the outer stack above
+  // the tabs, and pushing a tab route from here would mount a second tab
+  // navigator on top of the first. dismissTo pops back to the existing tabs
+  // when the target lives there, and otherwise replaces the palette with the
+  // target (Back then returns to where the palette was opened from).
   const handleSelect = (item: ResultItem) => {
     if (item.kind === "capsule") {
-      router.push(`/capsules/${item.capsule.id}`);
+      router.dismissTo(`/capsules/${item.capsule.id}`);
     } else {
-      router.push(item.command.path);
+      router.dismissTo(item.command.path);
     }
     setQuery("");
     setCapsuleResults([]);

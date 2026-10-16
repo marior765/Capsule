@@ -132,36 +132,45 @@ Routes are **thin shells** — import widgets/features, wire params, nothing mor
 ```
 src/app/
   (app)/
-    _layout.tsx                 # tab or stack shell; mounts app-lock gate
-    index.tsx                   # home: recent conversations + pinned capsules
+    _layout.tsx                 # outer Stack: (tabs) at the bottom, secondary screens pushed on top
+                                #   (header + chevron back to the tab that opened them);
+                                #   initialRouteName "(tabs)" so deep links keep the tabs beneath
+    (tabs)/
+      _layout.tsx               # the four tabs: Home, Chat, Capsules, Settings
+      index.tsx                 # home
+      chat/                     # own Stack
+        index.tsx               # conversation list
+        new.tsx                 # start new conversation
+        ephemeral.tsx           # unsaved chat
+        [id].tsx                # active chat thread (ChatThread + ChatInput)
+      capsules/                 # own Stack
+        index.tsx               # all capsules (list + search + filter)
+        new.tsx                 # create flow (pick type → CapsuleEditor)
+        [id].tsx                # capsule detail
+        [id]/edit.tsx           # edit existing capsule
+      settings/                 # own Stack
+        index.tsx               # settings hub
+        privacy.tsx             # app-lock, wipe, audit log
+        storage.tsx             # encryption status, backup/restore
+        inference.tsx           # default sampling params, context length
+        import-export.tsx
+        appearance.tsx          # theme
+        sync.tsx                # DEFERRED — LAN sync controls, off by default
 
-    chat/
-      index.tsx                 # conversation list
-      new.tsx                   # start new conversation (picks model + optional persona)
-      [id].tsx                  # active chat thread (ChatThread + ChatInput)
-    models/
-      index.tsx                 # downloaded models, download new, delete
-    personas/
-      index.tsx                 # manage system prompts / personas
-
-    capsules/
-      index.tsx                 # all capsules (list + search + filter)
-      new.tsx                   # create flow (pick type → CapsuleEditor)
-      [id].tsx                  # capsule detail
-      [id]/edit.tsx             # edit existing capsule
+    # Secondary screens — on the outer stack, not tabs
+    models/index.tsx            # downloaded models, download new, delete
+    personas/index.tsx          # manage system prompts / personas
+    snippets/index.tsx          # reusable prompt text
     types/
       index.tsx                 # manage CapsuleTypes / templates
       new.tsx                   # SchemaBuilder for a new type
       [id].tsx                  # edit a type's schema
-
-    search.tsx                  # unified search (conversations + capsules)
-    settings/
-      index.tsx                 # settings hub
-      privacy.tsx               # app-lock, wipe, audit log, egress indicator
-      storage.tsx               # encryption status, backup/restore
-      inference.tsx             # default sampling params, context length
-      import-export.tsx
-      appearance.tsx            # theme
-      sync.tsx                  # DEFERRED — LAN sync controls, off by default
+    search.tsx                  # command palette (no header; own safe-area inset)
   onboarding.tsx                # first-run: welcome → download first model → first chat
 ```
+
+Navigating **into a tab** from a secondary screen uses `router.dismissTo(href)`,
+not `push` — a push there would mount a second tab navigator on top of the
+first. Code that can run from either place (e.g. the notification-tap
+handler) uses `openRoute` (`shared/navigation`), which picks push or dismissTo
+from the current segments. Leaving a screen uses `leaveScreen`.

@@ -31,3 +31,31 @@ export function leaveScreen(router: ScreenRouter, fallback: Href): void {
     router.replace(fallback);
   }
 }
+
+/** The slice of expo-router's `router` that `openRoute` needs. */
+export type OpeningRouter = {
+  push: (href: Href) => void;
+  dismissTo: (href: Href) => void;
+};
+
+/**
+ * Opens `href` from wherever the user currently is, given the current
+ * `useSegments()`.
+ *
+ * Secondary screens sit on an outer stack above the tabs. From one of them,
+ * `push` to a tab route would mount a second tab navigator, so `dismissTo`
+ * pops back to the existing tabs instead. From inside the tabs it's the
+ * other way round — `dismissTo` there is a POP_TO the tab navigator ignores
+ * (the open silently does nothing), while `push` works.
+ */
+export function openRoute(
+  router: OpeningRouter,
+  segments: readonly string[],
+  href: Href,
+): void {
+  if (segments.includes("(tabs)")) {
+    router.push(href);
+  } else {
+    router.dismissTo(href);
+  }
+}

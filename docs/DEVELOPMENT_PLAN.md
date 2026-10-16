@@ -167,7 +167,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.2 Capsule edit: an invalid field value (e.g. date `2026-13-45`) shows an inline error and keeps the user on the edit screen with their input intact — never a silent no-save
 - [x] 10.3 Capsule edit: saving returns to the existing capsule screen instead of pushing a duplicate one
 - [x] 10.4 Command palette: input sits below the status bar/Dynamic Island, is focused on open and typeable, and the palette has a visible close control
-- [ ] 10.5 Models, Personas, Snippets, capsule types list and new-type screens get a proper header with a back button (no content under the status bar)
+- [x] 10.5 Models, Personas, Snippets, capsule types list and new-type screens get a proper header with a back button (no content under the status bar)
 - [ ] 10.6 Taps aren't swallowed while the keyboard is up (`keyboardShouldPersistTaps="handled"` on every scrolling form)
 - [ ] 10.7 Chat composer: the message box takes the remaining width (no letter-by-letter wrapping), stays stable when side labels change, and Send looks disabled when empty
 - [ ] 10.8 Reminder date picker: Cancel / Set reminder never overlap the time row; sheet respects the bottom safe area
@@ -195,6 +195,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
 - [ ] 10.31 Models screen lists the voice (Whisper) model with delete, and shows size + a download button for downloadable models
 - [ ] 10.32 Settings screen: drop the redundant "Settings" label under the header
+- [ ] 10.34 Tab stacks (chat, capsules, settings) anchor to their index screen (`unstable_settings.initialRouteName`), so a screen opened directly into an unvisited tab — e.g. the palette's "Ephemeral chat", a notification's capsule — gets a back button to that tab's list (found 2026-10-16 verifying 10.5)
 - [ ] 10.33 Version restore clears fields that were empty in the snapshot (found 2026-10-16: snapshots only record fields that have a value row, so restoring a version taken before a field was filled leaves the newer value in place)
 
 ### Phase 9 — Future releases (deferred)
