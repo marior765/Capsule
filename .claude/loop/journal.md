@@ -4944,4 +4944,29 @@ Gate: tsc clean, jest 1420/1420, eslint clean. Checkpoint `5251519`. Cursor → 
 
 ---
 
+## Beat 96 — 10.5: secondary screens get headers and back buttons
+
+Models, Personas, Snippets and the capsule-type screens were hidden screens
+of the Tabs navigator — no header, content under the status bar, Back meant
+"switch tab". Restructured to expo-router's stack-above-tabs pattern: the
+four tabs moved into a `(tabs)` group; `(app)/_layout` is now a Stack with
+the tabs at the bottom and secondary screens pushed on top (titles,
+chevron-only back — the default label showed "(tabs)"). URLs unchanged.
+
+Two checker rounds, both on real navigation semantics traced through
+expo-router's router source: (1) `push` to a tab route from an outer-stack
+screen mounts a SECOND tab navigator → palette uses `dismissTo`; deep links
+needed `initialRouteName: "(tabs)"`. (2) My notification fix used
+`dismissTo` everywhere, but from a focused tab that's a POP_TO the TabRouter
+silently drops — a reminder tap would do nothing, including on cold launch.
+Final: `shared/navigation` `openRoute(router, segments, href)` — push inside
+the tabs, dismissTo from a secondary screen.
+
+Found while verifying: tab stacks have no initial route, so a screen opened
+directly into an unvisited tab has no back button → 10.34.
+
+Gate: tsc clean, jest 1451/1451, eslint clean. Checkpoint `b091ce8`. Cursor → 10.6.
+
+---
+
 <!-- Append new beats above this line. -->
