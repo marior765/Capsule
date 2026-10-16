@@ -171,7 +171,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.6 Taps aren't swallowed while the keyboard is up (`keyboardShouldPersistTaps="handled"` on every scrolling form)
 - [x] 10.7 Chat composer: the message box takes the remaining width (no letter-by-letter wrapping), stays stable when side labels change, and Send looks disabled when empty
 - [x] 10.8 Reminder date picker: Cancel / Set reminder never overlap the time row; sheet respects the bottom safe area
-- [ ] 10.9 Human screen titles everywhere — no raw route names ("index", "[id]", "[id]/edit", "new", "ephemeral", "inference", "privacy", "import-export") in headers or back buttons
+- [x] 10.9 Human screen titles everywhere — no raw route names ("index", "[id]", "[id]/edit", "new", "ephemeral", "inference", "privacy", "import-export") in headers or back buttons
 - [ ] 10.10 Real tab-bar icons (SF Symbols on iOS) instead of placeholder triangles
 - [ ] 10.11 Home: title clears the status bar; shows recent capsules and conversations instead of an empty screen
 - [ ] 10.12 Navigation: creating a type from the Capsules empty state returns to Capsules; Capsule types reachable from Settings; a visible "New capsule" button on the Capsules tab
