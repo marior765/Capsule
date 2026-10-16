@@ -4969,4 +4969,17 @@ Gate: tsc clean, jest 1451/1451, eslint clean. Checkpoint `b091ce8`. Cursor → 
 
 ---
 
+## Beat 97 — 10.6: one tap is enough with the keyboard up
+
+React Native scrollers default to keyboardShouldPersistTaps="never": the
+first tap only dismisses the keyboard. Set "handled" on all 23 scrollers and
+added a static guard (shared/testing/keyboardTaps) so a new screen can't
+regress. Simulator: a single tap on "Create persona" now creates it.
+Reviewer pass first time; its one suggestion (namespaced scrollers like
+Animated.ScrollView) folded into the guard.
+
+Gate: tsc clean, jest 1457, eslint clean. Checkpoint `9148db5`. Cursor → 10.7.
+
+---
+
 <!-- Append new beats above this line. -->
