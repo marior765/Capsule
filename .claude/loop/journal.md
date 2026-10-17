@@ -5052,4 +5052,17 @@ Gate: tsc clean, jest 1512, eslint clean. Checkpoint `a69735e`. Cursor → 10.12
 
 ---
 
+## Beat 103 — 10.12: entry points
+
+Reconciled first: "creating a type from the Capsules empty state returns to
+Capsules" was already true — 10.5 put types/new on the outer stack and 10.3's
+leaveScreen dismisses back to the opening tab, whose list refreshes on
+focus. Added the missing two: a "New" header button on the Capsules list
+(full creation form) and a "Capsule types" entry in Settings. Simulator
+verified both. Reviewer pass first time.
+
+Gate: tsc clean, jest 1515, eslint clean. Checkpoint `620ea8e`. Cursor → 10.13.
+
+---
+
 <!-- Append new beats above this line. -->
