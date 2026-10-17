@@ -40,3 +40,27 @@ describe("entry points (10.12)", () => {
     expect(typesNew).toMatch(/leaveScreen\(router,/);
   });
 });
+
+// Regression found on a cold launch (10.12): a module-level
+// StyleSheet.create in a nested _layout.tsx runs before unistyles is
+// configured — expo-router evaluates layouts before the root layout's
+// providers import the unistyles setup — and crashes the app on start. Hot
+// reload hid it. Layouts must read the theme at render time instead.
+describe("layout files and unistyles", () => {
+  const { readdirSync, statSync } =
+    jest.requireActual<typeof import("fs")>("fs");
+  function layouts(dir: string): string[] {
+    return readdirSync(dir).flatMap((name) => {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) return layouts(path);
+      return name === "_layout.tsx" ? [path] : [];
+    });
+  }
+
+  it.each(layouts(join(__dirname, "../../../app")).map((p) => [p]))(
+    "%s creates no stylesheet at module load",
+    (path) => {
+      expect(readFileSync(path, "utf8")).not.toMatch(/StyleSheet\.create\(/);
+    },
+  );
+});

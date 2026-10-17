@@ -1,9 +1,18 @@
-import { FlatList, Pressable, Text, View } from "react-native";
+import { useRef } from "react";
+import {
+  FlatList,
+  Pressable,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import type { Message } from "@/entities/message";
 import { ChatBubble } from "@/widgets/ChatBubble";
 import { MessageSources, type SourceChip } from "@/widgets/MessageSources";
 import { createComponentTestIDs } from "@/shared/testing";
+import { isNearBottom } from "./followBottom";
 
 /** Position of a message among its siblings, e.g. `‹ 2/3 ›`. */
 export type BranchPosition = { index: number; total: number };
@@ -45,6 +54,39 @@ export function ChatThread({
     : null;
 
   const data = streamingMessage ? [...messages, streamingMessage] : messages;
+
+  // Open at the newest message and follow new content (streamed tokens, new
+  // replies) — but only while the reader is at the bottom. Scrolling up to
+  // reread stops following until they scroll back down. Only the reader's own
+  // scrolling (end of drag / momentum) updates this: plain onScroll also
+  // fires on mount at offset 0 and during programmatic scrolls, which would
+  // switch following off before the first scroll to the end.
+  const listRef = useRef<FlatList<Message>>(null);
+  const following = useRef(true);
+  const hasScrolledInitially = useRef(false);
+
+  // Deferred a frame: a scrollToEnd issued synchronously from the first
+  // onContentSizeChange is dropped — the list's viewport isn't laid out yet.
+  const scrollToNewest = () => {
+    if (!following.current) return;
+    const animated = hasScrolledInitially.current;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated });
+    });
+    hasScrolledInitially.current = true;
+  };
+
+  // The reader is moving the list: stop following at once, so streamed tokens
+  // don't drag it back down mid-scroll. The end handlers re-check the spot.
+  const handleUserScrollBegin = () => {
+    following.current = false;
+  };
+
+  const handleUserScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    following.current = isNearBottom(event.nativeEvent);
+  };
 
   const renderItem = ({ item }: { item: Message }) => {
     const branch = branches?.[item.id];
@@ -106,6 +148,15 @@ export function ChatThread({
     <View testID={testIDs.containers.root} style={styles.root}>
       <FlatList
         keyboardShouldPersistTaps="handled"
+        ref={listRef}
+        onContentSizeChange={scrollToNewest}
+        onLayout={() => {
+          if (hasScrolledInitially.current) scrollToNewest();
+        }}
+        onScrollBeginDrag={handleUserScrollBegin}
+        onMomentumScrollBegin={handleUserScrollBegin}
+        onScrollEndDrag={handleUserScrollEnd}
+        onMomentumScrollEnd={handleUserScrollEnd}
         data={data}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

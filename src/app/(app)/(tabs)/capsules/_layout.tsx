@@ -1,10 +1,15 @@
 import { router, Stack } from "expo-router";
 import { Pressable, Text } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import { useUnistyles } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
 
-/** The Capsules list's "New" header button — the full creation form. */
+/**
+ * The Capsules list's "New" header button — the full creation form. Reads
+ * the theme at render time: a module-level StyleSheet.create in a layout
+ * runs before unistyles is configured and crashes a cold launch.
+ */
 function NewCapsuleButton() {
+  const { theme } = useUnistyles();
   return (
     <Pressable
       testID={testIDs.buttons.newCapsule}
@@ -13,7 +18,15 @@ function NewCapsuleButton() {
       accessibilityRole="button"
       accessibilityLabel="New capsule"
     >
-      <Text style={styles.headerButton}>New</Text>
+      <Text
+        style={{
+          color: theme.colors.accent,
+          fontFamily: theme.fonts.sans,
+          fontSize: 17,
+        }}
+      >
+        New
+      </Text>
     </Pressable>
   );
 }
@@ -34,14 +47,6 @@ export default function CapsulesLayout() {
     </Stack>
   );
 }
-
-const styles = StyleSheet.create((theme) => ({
-  headerButton: {
-    color: theme.colors.accent,
-    fontFamily: theme.fonts.sans,
-    fontSize: 17,
-  },
-}));
 
 const testIDs = createComponentTestIDs("CapsulesLayout", {
   buttons: ["newCapsule"] as const,
