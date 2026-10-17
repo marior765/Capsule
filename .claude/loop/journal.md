@@ -5079,4 +5079,20 @@ Gate: tsc clean, jest 1517, eslint clean. Checkpoint `a11502f`. Cursor → 10.14
 
 ---
 
+## Beat 105 — 10.14 in progress; a cold-launch crash fixed — paused
+
+Verifying 10.14 on a cold launch exposed a crash introduced in 10.12: a
+module-level unistyles StyleSheet.create in capsules/_layout.tsx runs before
+the theme is configured (expo-router evaluates nested layouts before the root
+layout's providers). Hot reload had hidden it. Fixed (useUnistyles at render)
+plus a guard: no _layout file may create a stylesheet at module load.
+
+10.14: scrollToEnd from the first onContentSizeChange was a silent no-op —
+proved with an on-screen debug readout — fixed by deferring a frame. Checker
+failed round 1: following stayed on during a drag, so streamed tokens would
+yank the reader back down; now stops on scroll begin. Re-review pending —
+box unchecked. Paused on the usage limit. Checkpoint `a8b0143`.
+
+---
+
 <!-- Append new beats above this line. -->
