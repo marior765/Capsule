@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 107,
+    "beat": 108,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.16",
+    "step": "10.17",
     "phase": 10
   },
   "steps": {
@@ -677,6 +677,16 @@
       "failureSignatures": [],
       "checkpoint": null,
       "notes": "Found 2026-10-18 verifying 10.15."
+    },
+    "10.16": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- branch switch kept a stale exact count"
+      ],
+      "checkpoint": "8a4e17a",
+      "notes": "shared/llm promptTokens/generatedTokens (tokens_evaluated is full prompt incl. cache, verified in llama.rn cpp); send/branch return contextTokens; chat shows real count or \u2248 estimate vs contextLength; resets on branch switch/error. Simulator: \u224821 -> 92 / 4,096."
     }
   },
   "quarantinedThisRun": [
@@ -684,8 +694,8 @@
   ],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1542)",
+    "jest": "pass (1556)",
     "eslint": "pass",
-    "at": "2026-10-18T00:41:55"
+    "at": "2026-10-18T00:50:51"
   }
 }

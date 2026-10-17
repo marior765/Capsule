@@ -5124,4 +5124,18 @@ Gate: tsc clean, jest 1542, eslint clean. Checkpoint `7e58cc2`. Cursor → 10.16
 
 ---
 
+## Beat 108 — 10.16: an honest context counter
+
+"251 ctx" summed only streamed reply tokens (user messages stored 0). The
+counter now uses what llama.rn itself counted — tokens_evaluated (the full
+prompt, including cached tokens — the checker confirmed it in llama.rn's
+C++) plus tokens_predicted — shown as "Context 92 / 4,096 tokens" against
+the configured window, or "≈" estimated before the first reply. Checker
+round 1 caught a stale exact count after switching branches; it now resets
+to the estimate. Simulator: ≈21 on open → 92 after one turn.
+
+Gate: tsc clean, jest 1556, eslint clean. Checkpoint `8a4e17a`. Cursor → 10.17.
+
+---
+
 <!-- Append new beats above this line. -->
