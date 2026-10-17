@@ -5138,4 +5138,19 @@ Gate: tsc clean, jest 1556, eslint clean. Checkpoint `8a4e17a`. Cursor → 10.17
 
 ---
 
+## Beat 109 — 10.17: Copy and Regenerate on replies
+
+Long-press a reply → Copy, plus Regenerate on the latest one. Regenerate
+reuses the edit/branch path, so the previous answer stays one tap away
+("‹ 2/2") — no new persistence model. Checker round 1 caught an
+accessibility regression the simulator couldn't show: making the bubble a
+Pressable collapsed it into one VoiceOver element, hiding the Edit and
+code-Copy buttons inside. Fix: root stays non-accessible, and replies get a
+visible "⋯" options button (mirroring "Edit") — reachable by screen readers
+and by anyone who doesn't know about long-press.
+
+Gate: tsc clean, jest 1566, eslint clean. Checkpoint `ba4657e`. Cursor → 10.18.
+
+---
+
 <!-- Append new beats above this line. -->
