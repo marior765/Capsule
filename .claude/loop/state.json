@@ -2,8 +2,8 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 101,
-    "status": "paused",
+    "beat": 102,
+    "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
     "resumedAt": "2026-10-16",
@@ -11,7 +11,7 @@
     "pauseNote": "Usage limit reached 2026-10-17 after 10.10. Resume with /loop /safe-loop all at cursor 10.11."
   },
   "cursor": {
-    "step": "10.11",
+    "step": "10.12",
     "phase": 10
   },
   "steps": {
@@ -626,13 +626,23 @@
       ],
       "checkpoint": "ef39f10",
       "notes": "SymbolView per tab, typed SF/Android names, filled when focused (iOS). Android font bundled (no network). Simulator verified."
+    },
+    "10.11": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 0,
+      "failureSignatures": [
+        "tests: module missing / 5 static failures"
+      ],
+      "checkpoint": "a69735e",
+      "notes": "features/home-overview getRecentActivity; Home route SafeArea + recent lists. Simulator verified."
     }
   },
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1503)",
+    "jest": "pass (1512)",
     "eslint": "pass",
-    "at": "2026-10-17T00:25:44"
+    "at": "2026-10-17T11:36:07"
   }
 }

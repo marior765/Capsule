@@ -5039,4 +5039,17 @@ Gate: tsc clean, jest 1503, eslint clean. Checkpoint `ef39f10`.
 
 ---
 
+## Beat 102 — 10.11: Home has content (run resumed)
+
+Resumed after the usage-limit pause. Home was a title (under the clock) and
+a search box over empty space. New `features/home-overview`
+(`getRecentActivity`, tested on the real SQLite test DB) feeds two lists —
+recent capsules and conversations, refreshed on focus — and the screen
+insets below the status bar. Simulator: Dune + the chat listed; tapping
+opens the capsule. Reviewer pass first time.
+
+Gate: tsc clean, jest 1512, eslint clean. Checkpoint `a69735e`. Cursor → 10.12.
+
+---
+
 <!-- Append new beats above this line. -->
