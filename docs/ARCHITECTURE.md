@@ -65,6 +65,7 @@ src/
     edit-capsule/
     delete-capsule/
     search-capsules/
+    home-overview/        # recent capsules + conversations for the Home tab
     filter-sort-capsules/
     manage-schema/        # build/edit a CapsuleType
     link-capsules/
