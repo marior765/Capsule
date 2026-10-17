@@ -2698,4 +2698,36 @@ engine you ship.
 
 ---
 
+## 2026-10-17 — Knowing when to stop: the step the loop quarantined
+
+**What:** "Chat opens at the newest message and follows replies" sounds like
+a one-liner: call `scrollToEnd`. On the simulator it took a debugging
+session just to learn that a synchronous `scrollToEnd` from the list's first
+`onContentSizeChange` is silently dropped. The agent couldn't see why, so it
+put a yellow debug readout on screen. That showed the handler firing and the
+scroll doing nothing; deferring it a frame fixed it.
+
+**Then the reviewer went deeper.** Across three rounds it read React
+Native's native scroll code (Java on Android, Objective-C++ on iOS) and found
+three separate event-ordering traps. Momentum events fire for the app's own
+scrolls, and on Android a drag-begin event arrives *before* the
+momentum-end of the animation it cancels. Each fix was correct for the
+previous finding and exposed the next.
+
+**Why it stopped:** the loop has a hard ceiling of three attempts per step.
+Hitting it doesn't mean failure. It means "you're now reasoning about
+behaviour you can't observe." Without an Android device, a fourth attempt
+would be one more guess about event order. So the loop quarantined the step.
+It kept the simulator-verified version on main, saved the better unmerged
+state machine as a patch, and wrote down the exact remaining fix and the
+device test that would settle it.
+
+**Article angle:** an autonomous agent's most valuable rule may be the one
+that makes it stop. Maker-checker review found bugs no test could. The
+attempt ceiling then turned an open-ended loop into a clean handoff: here is
+what's proven, here is what's saved, here is what a human with the right
+hardware should check.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
