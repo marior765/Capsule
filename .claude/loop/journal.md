@@ -5065,4 +5065,18 @@ Gate: tsc clean, jest 1515, eslint clean. Checkpoint `620ea8e`. Cursor → 10.13
 
 ---
 
+## Beat 104 — 10.13: the app is called "Capsule"
+
+`expo.name` → "Capsule" (slug and URL scheme stay "capsule" — renaming the
+scheme would break capsule:// links). The gitignored native projects were
+patched to match so a rebuild without prebuild shows it. Checker traced
+@expo/config-plugins: a non-clean prebuild keeps the existing ios/capsule
+project (no case-only rename), and flagged that `prebuild --clean` would drop
+the hand-written Podfile quick-crypto block — BLOCKED.md now says so.
+Native: box unchecked, device check queued.
+
+Gate: tsc clean, jest 1517, eslint clean. Checkpoint `a11502f`. Cursor → 10.14.
+
+---
+
 <!-- Append new beats above this line. -->

@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 103,
+    "beat": 104,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -11,7 +11,7 @@
     "pauseNote": "Usage limit reached 2026-10-17 after 10.10. Resume with /loop /safe-loop all at cursor 10.11."
   },
   "cursor": {
-    "step": "10.13",
+    "step": "10.14",
     "phase": 10
   },
   "steps": {
@@ -513,12 +513,14 @@
       "notes": "Done in code (native, box unchecked). Root cause beyond the audio-mode throw: whisper.rn reads only 16k mono PCM WAV; recorder wrote 44.1k stereo AAC .m4a, so transcription always failed. Verified on simulator: afinfo WAVE 1ch 16000Hz Int16, whisper transcribed end to end. Android still AAC -> BLOCKED decision."
     },
     "10.13": {
-      "status": "pending",
+      "status": "done",
       "class": "native",
       "attempts": 0,
-      "failureSignatures": [],
-      "checkpoint": null,
-      "notes": "app.json name change requires prebuild/rebuild to verify."
+      "failureSignatures": [
+        "test: name was \"capsule\""
+      ],
+      "checkpoint": "a11502f",
+      "notes": "app.json expo.name Capsule; slug/scheme kept. Untracked native projects patched. Device check in BLOCKED (box unchecked)."
     },
     "10.2": {
       "status": "done",
@@ -651,8 +653,8 @@
   "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1515)",
+    "jest": "pass (1517)",
     "eslint": "pass",
-    "at": "2026-10-17T11:41:40"
+    "at": "2026-10-17T11:45:42"
   }
 }
