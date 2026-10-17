@@ -22,6 +22,12 @@ const ENTRIES = [
     href: "/models",
   },
   {
+    id: "capsuleTypes",
+    label: "Capsule types",
+    hint: "Templates and their fields",
+    href: "/types",
+  },
+  {
     id: "personas",
     label: "Personas",
     hint: "Reusable system prompts",
