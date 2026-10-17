@@ -520,7 +520,7 @@
         "test: name was \"capsule\""
       ],
       "checkpoint": "a11502f",
-      "notes": "app.json expo.name Capsule; slug/scheme kept. Untracked native projects patched. Device check in BLOCKED (box unchecked)."
+      "notes": "app.json expo.name Capsule; slug/scheme kept. Untracked native projects patched. Device check in BLOCKED (box unchecked). User accepted 2026-10-18 without device check; ticked."
     },
     "10.2": {
       "status": "done",

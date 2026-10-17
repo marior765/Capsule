@@ -175,7 +175,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.10 Real tab-bar icons (SF Symbols on iOS) instead of placeholder triangles
 - [x] 10.11 Home: title clears the status bar; shows recent capsules and conversations instead of an empty screen
 - [x] 10.12 Navigation: creating a type from the Capsules empty state returns to Capsules; Capsule types reachable from Settings; a visible "New capsule" button on the Capsules tab
-- [ ] 10.13 App display name is "Capsule" (not "capsule") in system prompts
+- [x] 10.13 App display name is "Capsule" (not "capsule") in system prompts
 - [ ] 10.14 Chat opens scrolled to the newest message and follows new replies
 - [ ] 10.15 Conversations get an automatic title from the first message instead of staying "New chat"
 - [ ] 10.16 Context counter ("ctx") reflects the conversation's real token usage and is labelled clearly
