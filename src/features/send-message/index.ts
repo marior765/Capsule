@@ -1,5 +1,7 @@
 import {
+  DEFAULT_CONVERSATION_TITLE,
   getConversationById,
+  titleFromFirstMessage,
   updateConversation,
 } from "@/entities/conversation";
 import {
@@ -198,8 +200,17 @@ export async function sendMessage(
     }
     throw error;
   }
+  // A conversation still called "New chat" is named after its first message
+  // (10.15); a title the user chose, or a conversation already under way, is
+  // left alone.
+  const isFirstMessage = conversation?.activeLeafId == null;
+  const autoTitle =
+    isFirstMessage && conversation?.title === DEFAULT_CONVERSATION_TITLE
+      ? { title: titleFromFirstMessage(input.text) }
+      : {};
   updateConversation(db, input.conversationId, {
     activeLeafId: userMessage.id,
+    ...autoTitle,
   });
 
   // A dangling personaId (persona deleted) simply yields no system prompt.

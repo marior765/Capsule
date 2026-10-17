@@ -424,3 +424,45 @@ describe("sendMessage — images only go to a vision-capable model", () => {
     expect(sentMessages().some((m) => m.imageUrl)).toBe(false);
   });
 });
+
+// Step 10.15 — a conversation still called "New chat" is named after its
+// first message; one the user has named (or one already under way) is left
+// alone.
+describe("sendMessage — automatic title (10.15)", () => {
+  const { getConversationById, updateConversation } = jest.requireActual<
+    typeof import("@/entities/conversation")
+  >("@/entities/conversation");
+
+  it("names a new conversation after its first message", async () => {
+    updateConversation(db, "conv-1", { title: "New chat" });
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Plan a trip to Lisbon",
+    });
+    expect(getConversationById(db, "conv-1")?.title).toBe(
+      "Plan a trip to Lisbon",
+    );
+  });
+
+  it("leaves a title the user chose untouched", async () => {
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Plan a trip to Lisbon",
+    });
+    expect(getConversationById(db, "conv-1")?.title).toBe("Chat");
+  });
+
+  it("only names it from the first message, not later ones", async () => {
+    updateConversation(db, "conv-1", { title: "New chat" });
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "First question",
+    });
+    updateConversation(db, "conv-1", { title: "New chat" });
+    await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Second question",
+    });
+    expect(getConversationById(db, "conv-1")?.title).toBe("New chat");
+  });
+});

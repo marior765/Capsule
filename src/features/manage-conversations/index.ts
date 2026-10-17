@@ -5,6 +5,7 @@ import {
   insertConversation,
   updateConversation,
   type Conversation,
+  DEFAULT_CONVERSATION_TITLE,
 } from "@/entities/conversation";
 import {
   deleteImagesByConversation,
@@ -27,7 +28,7 @@ export function createConversation(
   const now = Date.now();
   const conversation: Conversation = {
     id: generateId(),
-    title: input.title ?? "New chat",
+    title: input.title ?? DEFAULT_CONVERSATION_TITLE,
     modelId: input.modelId ?? null,
     personaId: input.personaId ?? null,
     activeLeafId: null,

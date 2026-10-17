@@ -16,7 +16,8 @@ export default function NewChatScreen() {
     const conversation = createConversation(db, {
       modelId: activeModel?.id ?? null,
       personaId: persona?.id ?? null,
-      title: persona ? persona.name : undefined,
+      // No title: every chat starts as "New chat" and is named after its
+      // first message (10.15) — a persona name would make them all alike.
     });
     router.replace(`/chat/${conversation.id}`);
   };
