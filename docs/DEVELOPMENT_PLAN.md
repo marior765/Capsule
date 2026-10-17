@@ -179,7 +179,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 10.14 Chat opens scrolled to the newest message and follows new replies
 - [x] 10.15 Conversations get an automatic title from the first message instead of staying "New chat"
 - [x] 10.16 Context counter ("ctx") reflects the conversation's real token usage and is labelled clearly
-- [ ] 10.17 Long-press on an assistant message offers Copy (and Regenerate on the last reply)
+- [x] 10.17 Long-press on an assistant message offers Copy (and Regenerate on the last reply)
 - [ ] 10.18 "Capsules: on" can't be switched on while the capsule-search model is missing; the notice never covers the last message
 - [ ] 10.19 Chat "Export" is labelled for what it does (copy as Markdown), shows a lasting confirmation, and writes to the activity log
 - [ ] 10.20 Choose a persona in chat; personas can be edited, not only deleted

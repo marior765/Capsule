@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
 import { useDb, useEmbeddings, useLlm, useStt } from "@/app/providers";
@@ -35,7 +35,11 @@ import {
 import { getAllSnippets, type Snippet } from "@/entities/snippet";
 import { createComponentTestIDs } from "@/shared/testing";
 import { ChatInput } from "@/widgets/ChatInput";
-import { ChatThread, type BranchPosition } from "@/widgets/ChatThread";
+import {
+  ChatThread,
+  messageActions,
+  type BranchPosition,
+} from "@/widgets/ChatThread";
 import { estimateTokens, InferenceStats } from "@/widgets/InferenceStats";
 import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
@@ -298,11 +302,14 @@ export default function ChatScreen() {
   // model. A ref, so it holds before the "sending" re-render lands.
   const sendInFlight = useRef(false);
 
-  const handleSend = async (text: string) => {
+  // `regenerateFrom` re-sends an earlier user message through the edit
+  // (branch) path, so the previous reply stays reachable with ‹ › (10.17).
+  const handleSend = async (text: string, regenerateFrom?: Message) => {
     if (!ctx || !id || sendInFlight.current) return;
     sendInFlight.current = true;
-    const target = editing;
-    setEditing(null);
+    const target = regenerateFrom ?? editing;
+    // Regenerating leaves an edit in progress alone.
+    if (!regenerateFrom) setEditing(null);
     setError(null);
     // Claim the pending image BEFORE any await (capsule search can take
     // seconds), so nothing the user does meanwhile can delete or swap the
@@ -383,6 +390,32 @@ export default function ChatScreen() {
       sendInFlight.current = false;
       refresh();
     }
+  };
+
+  // Long-press on a reply (10.17): copy it, or ask for another answer to the
+  // latest one.
+  const handleLongPressMessage = (message: Message) => {
+    const actions = messageActions(message, messages);
+    if (actions.length === 0) return;
+    const regenerate = actions.find((a) => a.key === "regenerate");
+    Alert.alert("Message", undefined, [
+      {
+        text: "Copy",
+        onPress: () => {
+          void Clipboard.setStringAsync(message.content).catch(() => {});
+        },
+      },
+      ...(regenerate?.key === "regenerate" && canChat
+        ? [
+            {
+              text: "Regenerate",
+              onPress: () =>
+                void handleSend(regenerate.from.content, regenerate.from),
+            },
+          ]
+        : []),
+      { text: "Cancel", style: "cancel" as const },
+    ]);
   };
 
   const handleSwitchBranch = (message: Message, direction: -1 | 1) => {
@@ -473,6 +506,7 @@ export default function ChatScreen() {
         sources={sources}
         images={images}
         onOpenSource={(capsuleId) => router.push(`/capsules/${capsuleId}`)}
+        onLongPressMessage={handleLongPressMessage}
       />
       {editing && (
         <Pressable

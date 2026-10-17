@@ -29,6 +29,8 @@ type ChatThreadProps = {
   onOpenSource?: (capsuleId: string) => void;
   /** Current `file://` URI of each message's attached image (8.4), keyed by message id. */
   images?: Record<string, string>;
+  /** Long-press on a message bubble (10.17). */
+  onLongPressMessage?: (message: Message) => void;
 };
 
 export function ChatThread({
@@ -40,6 +42,7 @@ export function ChatThread({
   sources,
   onOpenSource,
   images,
+  onLongPressMessage,
 }: ChatThreadProps) {
   const streamingMessage: Message | null = streamingText
     ? {
@@ -98,6 +101,11 @@ export function ChatThread({
           message={item}
           onEdit={onEdit}
           imageUri={images?.[item.id]}
+          onLongPress={
+            item.role === "assistant" && item.id !== "__streaming__"
+              ? onLongPressMessage
+              : undefined
+          }
         />
         {sources?.[item.id] && onOpenSource && (
           <MessageSources chips={sources[item.id]} onOpen={onOpenSource} />

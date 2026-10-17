@@ -18,6 +18,8 @@ type ChatBubbleProps = {
   onEdit?: (message: Message) => void;
   /** Current `file://` URI of an image attached to this message (8.4), if any. */
   imageUri?: string;
+  /** Long-press on the bubble (10.17) — the caller decides what to offer. */
+  onLongPress?: (message: Message) => void;
 };
 
 // One instance is enough — it holds no per-message state, so it doesn't need
@@ -119,48 +121,71 @@ function markdownRules(messageId: string): RenderRules {
   };
 }
 
-export function ChatBubble({ message, onEdit, imageUri }: ChatBubbleProps) {
+export function ChatBubble({
+  message,
+  onEdit,
+  imageUri,
+  onLongPress,
+}: ChatBubbleProps) {
   const { theme } = useUnistyles();
   const isUser = message.role === "user";
   const canEdit = isUser && onEdit != null;
 
   return (
-    <View
-      testID={`${testIDs.containers.root}_${message.id}`}
+    <Pressable
+      testID={`${testIDs.pressables.bubble}_${message.id}`}
+      onLongPress={onLongPress ? () => onLongPress(message) : undefined}
+      disabled={!onLongPress}
+      // Not one accessible element: that would hide the Edit and code-Copy
+      // buttons inside from VoiceOver. Screen readers use "⋯" instead.
+      accessible={false}
       style={[styles.bubble, isUser ? styles.user : styles.assistant]}
     >
-      {imageUri && (
-        <Image
-          testID={`${testIDs.images.attached}_${message.id}`}
-          source={{ uri: imageUri }}
-          style={styles.image}
-          contentFit="cover"
-          accessible
-          accessibilityLabel="Attached image"
-        />
-      )}
-      <View testID={testIDs.texts.content}>
-        <Markdown
-          rules={markdownRules(message.id)}
-          markdownit={markdownParser}
-          style={{
-            body: { color: theme.colors.text, fontFamily: theme.fonts.sans },
-          }}
-        >
-          {message.content}
-        </Markdown>
+      <View testID={`${testIDs.containers.root}_${message.id}`}>
+        {imageUri && (
+          <Image
+            testID={`${testIDs.images.attached}_${message.id}`}
+            source={{ uri: imageUri }}
+            style={styles.image}
+            contentFit="cover"
+            accessible
+            accessibilityLabel="Attached image"
+          />
+        )}
+        <View testID={testIDs.texts.content}>
+          <Markdown
+            rules={markdownRules(message.id)}
+            markdownit={markdownParser}
+            style={{
+              body: { color: theme.colors.text, fontFamily: theme.fonts.sans },
+            }}
+          >
+            {message.content}
+          </Markdown>
+        </View>
+        {onLongPress && !isUser && (
+          <Pressable
+            testID={`${testIDs.buttons.options}_${message.id}`}
+            onPress={() => onLongPress(message)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Message options"
+          >
+            <Text style={styles.edit}>⋯</Text>
+          </Pressable>
+        )}
+        {canEdit && (
+          <Pressable
+            testID={`${testIDs.buttons.edit}_${message.id}`}
+            onPress={() => onEdit(message)}
+            accessibilityRole="button"
+            accessibilityLabel="Edit message"
+          >
+            <Text style={styles.edit}>Edit</Text>
+          </Pressable>
+        )}
       </View>
-      {canEdit && (
-        <Pressable
-          testID={`${testIDs.buttons.edit}_${message.id}`}
-          onPress={() => onEdit(message)}
-          accessibilityRole="button"
-          accessibilityLabel="Edit message"
-        >
-          <Text style={styles.edit}>Edit</Text>
-        </Pressable>
-      )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -223,8 +248,9 @@ const styles = StyleSheet.create((theme) => ({
 const testIDs = createComponentTestIDs("ChatBubble", {
   containers: ["root"] as const,
   texts: ["content"] as const,
-  buttons: ["edit", "copyCode"] as const,
+  buttons: ["edit", "copyCode", "options"] as const,
   images: ["attached"] as const,
+  pressables: ["bubble"] as const,
 });
 
 ChatBubble.testIDs = testIDs;
