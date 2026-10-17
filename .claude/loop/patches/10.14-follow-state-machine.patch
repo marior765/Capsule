@@ -1,0 +1,209 @@
+diff --git a/src/widgets/ChatThread/ChatThread.tsx b/src/widgets/ChatThread/ChatThread.tsx
+index 588adf4..58ff483 100644
+--- a/src/widgets/ChatThread/ChatThread.tsx
++++ b/src/widgets/ChatThread/ChatThread.tsx
+@@ -12,7 +12,12 @@ import type { Message } from "@/entities/message";
+ import { ChatBubble } from "@/widgets/ChatBubble";
+ import { MessageSources, type SourceChip } from "@/widgets/MessageSources";
+ import { createComponentTestIDs } from "@/shared/testing";
+-import { isNearBottom } from "./followBottom";
++import {
++  INITIAL_FOLLOW_STATE,
++  isNearBottom,
++  nextFollowState,
++  type FollowEvent,
++} from "./followBottom";
+ 
+ /** Position of a message among its siblings, e.g. `‹ 2/3 ›`. */
+ export type BranchPosition = { index: number; total: number };
+@@ -57,18 +62,17 @@ export function ChatThread({
+ 
+   // Open at the newest message and follow new content (streamed tokens, new
+   // replies) — but only while the reader is at the bottom. Scrolling up to
+-  // reread stops following until they scroll back down. Only the reader's own
+-  // scrolling (end of drag / momentum) updates this: plain onScroll also
+-  // fires on mount at offset 0 and during programmatic scrolls, which would
+-  // switch following off before the first scroll to the end.
++  // reread stops following until they scroll back down. Only the reader's
++  // own scrolling changes this (see nextFollowState): React Native also
++  // fires scroll/momentum events for the app's programmatic scrolls.
+   const listRef = useRef<FlatList<Message>>(null);
+-  const following = useRef(true);
++  const follow = useRef(INITIAL_FOLLOW_STATE);
+   const hasScrolledInitially = useRef(false);
+ 
+   // Deferred a frame: a scrollToEnd issued synchronously from the first
+   // onContentSizeChange is dropped — the list's viewport isn't laid out yet.
+   const scrollToNewest = () => {
+-    if (!following.current) return;
++    if (!follow.current.following) return;
+     const animated = hasScrolledInitially.current;
+     requestAnimationFrame(() => {
+       listRef.current?.scrollToEnd({ animated });
+@@ -76,17 +80,11 @@ export function ChatThread({
+     hasScrolledInitially.current = true;
+   };
+ 
+-  // The reader is moving the list: stop following at once, so streamed tokens
+-  // don't drag it back down mid-scroll. The end handlers re-check the spot.
+-  const handleUserScrollBegin = () => {
+-    following.current = false;
+-  };
+-
+-  const handleUserScrollEnd = (
+-    event: NativeSyntheticEvent<NativeScrollEvent>,
+-  ) => {
+-    following.current = isNearBottom(event.nativeEvent);
++  const onFollowEvent = (event: FollowEvent) => {
++    follow.current = nextFollowState(follow.current, event);
+   };
++  const nearBottom = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
++    isNearBottom(event.nativeEvent);
+ 
+   const renderItem = ({ item }: { item: Message }) => {
+     const branch = branches?.[item.id];
+@@ -153,10 +151,14 @@ export function ChatThread({
+         onLayout={() => {
+           if (hasScrolledInitially.current) scrollToNewest();
+         }}
+-        onScrollBeginDrag={handleUserScrollBegin}
+-        onMomentumScrollBegin={handleUserScrollBegin}
+-        onScrollEndDrag={handleUserScrollEnd}
+-        onMomentumScrollEnd={handleUserScrollEnd}
++        onScrollBeginDrag={() => onFollowEvent({ type: "dragBegin" })}
++        onScrollEndDrag={(e) =>
++          onFollowEvent({ type: "dragEnd", nearBottom: nearBottom(e) })
++        }
++        onMomentumScrollBegin={() => onFollowEvent({ type: "momentumBegin" })}
++        onMomentumScrollEnd={(e) =>
++          onFollowEvent({ type: "momentumEnd", nearBottom: nearBottom(e) })
++        }
+         data={data}
+         keyExtractor={(item) => item.id}
+         renderItem={renderItem}
+diff --git a/src/widgets/ChatThread/__tests__/followBottom.test.ts b/src/widgets/ChatThread/__tests__/followBottom.test.ts
+index 2b0c599..db958ed 100644
+--- a/src/widgets/ChatThread/__tests__/followBottom.test.ts
++++ b/src/widgets/ChatThread/__tests__/followBottom.test.ts
+@@ -73,5 +73,73 @@ describe("ChatThread wiring (static)", () => {
+     expect(source).toMatch(/onMomentumScrollEnd=/);
+     expect(source).not.toMatch(/\bonScroll=/);
+     expect(source).toMatch(/isNearBottom\(/);
++    expect(source).toMatch(/nextFollowState\(/);
++  });
++});
++
++// Reviewer finding (10.14 round 2): React Native fires momentum events for
++// the app's OWN scrolls too — Android's animated scrollToEnd emits
++// onMomentumScrollBegin/End, iOS emits onMomentumScrollEnd after every
++// programmatic scroll. Treating those as the reader scrolling switched
++// following off with no touch, leaving a long chat stuck mid-history. Only
++// momentum that follows a real drag may change whether the thread follows.
++describe("nextFollowState (drag-gated momentum)", () => {
++  const { nextFollowState, INITIAL_FOLLOW_STATE } =
++    jest.requireActual<typeof import("../followBottom")>("../followBottom");
++
++  it("starts following, with no drag in progress", () => {
++    expect(INITIAL_FOLLOW_STATE).toEqual({
++      following: true,
++      userScrolling: false,
++    });
++  });
++
++  it("ignores momentum from the app's own scrolls (no drag first)", () => {
++    let s = INITIAL_FOLLOW_STATE;
++    s = nextFollowState(s, { type: "momentumBegin" });
++    s = nextFollowState(s, { type: "momentumEnd", nearBottom: false });
++    expect(s).toEqual({ following: true, userScrolling: false });
++  });
++
++  it("stops following the moment the reader starts dragging", () => {
++    const s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "dragBegin" });
++    expect(s).toEqual({ following: false, userScrolling: true });
++  });
++
++  it("a drag that ends away from the bottom keeps following off", () => {
++    let s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "dragBegin" });
++    s = nextFollowState(s, { type: "dragEnd", nearBottom: false });
++    expect(s.following).toBe(false);
++  });
++
++  it("a flick up: drag ends near the bottom, momentum carries it away", () => {
++    let s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "dragBegin" });
++    s = nextFollowState(s, { type: "dragEnd", nearBottom: true });
++    s = nextFollowState(s, { type: "momentumBegin" });
++    expect(s.following).toBe(false);
++    s = nextFollowState(s, { type: "momentumEnd", nearBottom: false });
++    expect(s).toEqual({ following: false, userScrolling: false });
++  });
++
++  it("scrolling back down to the bottom resumes following", () => {
++    let s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "dragBegin" });
++    s = nextFollowState(s, { type: "dragEnd", nearBottom: false });
++    s = nextFollowState(s, { type: "dragBegin" });
++    s = nextFollowState(s, { type: "dragEnd", nearBottom: false });
++    s = nextFollowState(s, { type: "momentumBegin" });
++    s = nextFollowState(s, { type: "momentumEnd", nearBottom: true });
++    expect(s).toEqual({ following: true, userScrolling: false });
++  });
++
++  it("after a drag fully settles, later programmatic momentum is ignored again", () => {
++    let s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "dragBegin" });
++    s = nextFollowState(s, { type: "dragEnd", nearBottom: true });
++    s = nextFollowState(s, { type: "momentumBegin" });
++    s = nextFollowState(s, { type: "momentumEnd", nearBottom: true });
++    expect(s).toEqual({ following: true, userScrolling: false });
++    // The app's own animated scroll now emits momentum — must not stop following.
++    s = nextFollowState(s, { type: "momentumBegin" });
++    s = nextFollowState(s, { type: "momentumEnd", nearBottom: false });
++    expect(s).toEqual({ following: true, userScrolling: false });
+   });
+ });
+diff --git a/src/widgets/ChatThread/followBottom.ts b/src/widgets/ChatThread/followBottom.ts
+index dc699ea..536776c 100644
+--- a/src/widgets/ChatThread/followBottom.ts
++++ b/src/widgets/ChatThread/followBottom.ts
+@@ -22,3 +22,43 @@ export function isNearBottom({
+     contentSize.height - layoutMeasurement.height - contentOffset.y;
+   return distance <= FOLLOW_THRESHOLD;
+ }
++
++/** Whether the thread follows new content, and whether the reader is mid-scroll. */
++export type FollowState = { following: boolean; userScrolling: boolean };
++
++export type FollowEvent =
++  | { type: "dragBegin" }
++  | { type: "dragEnd"; nearBottom: boolean }
++  | { type: "momentumBegin" }
++  | { type: "momentumEnd"; nearBottom: boolean };
++
++export const INITIAL_FOLLOW_STATE: FollowState = {
++  following: true,
++  userScrolling: false,
++};
++
++/**
++ * React Native fires momentum events for the app's own scrolls as well —
++ * Android's animated scrollToEnd emits momentum begin/end, iOS emits
++ * momentum end after every programmatic scroll. So momentum only counts when
++ * it follows a real drag; otherwise it's the thread following itself and is
++ * ignored.
++ */
++export function nextFollowState(
++  state: FollowState,
++  event: FollowEvent,
++): FollowState {
++  switch (event.type) {
++    case "dragBegin":
++      return { following: false, userScrolling: true };
++    case "dragEnd":
++      // Stay "scrolling": a flick's momentum is still the reader's.
++      return { following: event.nearBottom, userScrolling: true };
++    case "momentumBegin":
++      return state.userScrolling ? { ...state, following: false } : state;
++    case "momentumEnd":
++      return state.userScrolling
++        ? { following: event.nearBottom, userScrolling: false }
++        : state;
++  }
++}

@@ -1168,3 +1168,35 @@ label). A plain `expo prebuild` (not `--clean`) is safe and also renames the
 built product to Capsule.app. Avoid `--clean`: it would drop the hand-written
 Podfile post_install block (react-native-quick-crypto deployment-target
 floor), which no config plugin recreates.
+
+## 10.14 — QUARANTINED: chat follow-scroll on Android (2026-10-17)
+
+**What's on main (a8b0143):** the chat opens at the newest message and follows
+replies — verified on the iOS simulator. Deferring `scrollToEnd` a frame was
+the key fix (a synchronous call from the first `onContentSizeChange` is a
+silent no-op). Following stops when the reader starts dragging.
+
+**Why quarantined:** three checker rounds each found a different, real
+React Native event-ordering problem — all from reading RN's native source,
+none reproducible without an Android device:
+1. following stayed on during a drag → tokens hijacked an upward scroll (fixed on main);
+2. RN fires momentum events for the app's OWN scrolls (Android animated
+   scrollToEnd emits momentum begin/end; iOS emits momentum end after every
+   programmatic scroll) → on Android a long chat can stop following partway
+   through history, no touch needed. **Still on main.**
+3. the improved state machine (saved, not on main) still lets Android's
+   grab-during-animation order `dragBegin → momentumEnd(nearBottom)` turn
+   following back on mid-drag.
+
+**Saved work:** `.claude/loop/patches/10.14-follow-state-machine.patch` —
+a pure, tested `nextFollowState` (drag-gated momentum, 7 tests) that fixes
+(2). Apply with `git apply`. Remaining fix for (3), per the checker: split
+the state into `phase: "idle" | "dragging" | "settling"`; ignore momentum
+while dragging; `dragEnd` → following = nearBottom, phase settling; act on
+momentum only while settling; add a test for dragBegin → momentumEnd(true)
+leaving following off.
+
+**Device check (Android emulator/phone):** open a long conversation (should
+land at the newest message); send a message and let a long reply stream
+without touching (should follow to the end); start a long reply, then grab
+and drag up mid-stream (must not be pulled back down).

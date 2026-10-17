@@ -5095,4 +5095,17 @@ box unchecked. Paused on the usage limit. Checkpoint `a8b0143`.
 
 ---
 
+## Beat 106 — 10.14 quarantined (attempt ceiling)
+
+Three checker rounds, three different real findings, all about React
+Native's native scroll-event ordering (Android ReactScrollView /
+ReactScrollViewHelper, iOS RCTScrollViewComponentView) — none observable
+without an Android device. Rather than keep guessing past the ceiling, the
+step is quarantined: main keeps the iOS-verified version (a8b0143), the
+better drag-gated state machine is saved as a patch, and BLOCKED.md holds
+the precise remaining fix plus the Android device check. First quarantine
+this run. Cursor → 10.15.
+
+---
+
 <!-- Append new beats above this line. -->
