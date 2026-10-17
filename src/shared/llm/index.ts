@@ -70,6 +70,10 @@ export type CompletionParams = {
 
 export type CompletionResult = {
   text: string;
+  /** Tokens the prompt took, as llama.rn counted them; null if unreported. */
+  promptTokens: number | null;
+  /** Tokens generated for the reply. */
+  generatedTokens: number;
 };
 
 /**
@@ -165,7 +169,14 @@ export async function runCompletion(
     });
   }
 
-  return { text: result.text };
+  const evaluated: unknown = result.tokens_evaluated;
+  const predicted: unknown = result.tokens_predicted;
+  return {
+    text: result.text,
+    promptTokens:
+      typeof evaluated === "number" && evaluated > 0 ? evaluated : null,
+    generatedTokens: typeof predicted === "number" ? predicted : streamed,
+  };
 }
 
 export function abortCompletion(ctx: LlamaContext): void {

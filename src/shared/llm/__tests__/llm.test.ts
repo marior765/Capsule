@@ -454,3 +454,43 @@ describe("shared/llm — releaseMultimodalSupport", () => {
     ).resolves.not.toThrow();
   });
 });
+
+// Step 10.16 — the chat's "ctx" counter summed only the reply tokens it had
+// streamed (user messages counted 0), so a long conversation showed "251
+// ctx". llama.rn reports how many tokens the prompt really was
+// (tokens_evaluated) and how many it generated (tokens_predicted).
+describe("shared/llm — token counts (10.16)", () => {
+  function contextReturning(result: Record<string, unknown>) {
+    return {
+      completion: jest.fn(async () => result),
+      stopCompletion: jest.fn(),
+      release: jest.fn(async () => {}),
+    } as unknown as LlamaContext;
+  }
+
+  it("reports prompt and generated token counts from llama.rn", async () => {
+    const ctx = contextReturning({
+      text: "Hi",
+      tokens_evaluated: 812,
+      tokens_predicted: 37,
+    });
+    const result = await runCompletion(
+      ctx,
+      { messages: HELLO, maxTokens: 10 },
+      () => {},
+    );
+    expect(result.promptTokens).toBe(812);
+    expect(result.generatedTokens).toBe(37);
+  });
+
+  it("falls back to the streamed count when llama.rn omits the numbers", async () => {
+    const { ctx } = fakeContext(["a", "b", "c"]);
+    const result = await runCompletion(
+      ctx,
+      { messages: HELLO, maxTokens: 5 },
+      () => {},
+    );
+    expect(result.promptTokens).toBeNull();
+    expect(result.generatedTokens).toBe(3);
+  });
+});

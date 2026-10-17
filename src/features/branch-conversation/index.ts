@@ -56,7 +56,11 @@ export async function branchFromMessage(
   },
   /** Send the conversation's images only to a vision-capable context (same rule as `sendMessage`'s `withImages`). */
   options: { withImages?: boolean } = {},
-): Promise<{ userMessage: Message; assistantMessage: Message }> {
+): Promise<{
+  userMessage: Message;
+  assistantMessage: Message;
+  contextTokens: number | null;
+}> {
   const original = findMessage(db, messageId);
   if (!original) {
     throw new Error(`Cannot branch: message ${messageId} not found`);
@@ -152,7 +156,13 @@ export async function branchFromMessage(
     updatedAt: Date.now(),
   });
 
-  return { userMessage, assistantMessage };
+  // Context the conversation now takes (prompt + reply), as the model
+  // counted it; null if it didn't report a prompt size.
+  const contextTokens =
+    result.promptTokens === null
+      ? null
+      : result.promptTokens + result.generatedTokens;
+  return { userMessage, assistantMessage, contextTokens };
 }
 
 /** Makes `leafId` the visible branch tip of the conversation. */

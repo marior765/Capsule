@@ -382,3 +382,17 @@ describe("branchFromMessage — images only for a vision-capable model", () => {
     expect(sent.some((m) => m.imageUrl)).toBe(false);
   });
 });
+
+// Step 10.16 — an edited (branched) turn reports the context it now takes,
+// same contract as sendMessage.
+describe("branchFromMessage — context in use (10.16)", () => {
+  it("returns prompt + generated tokens", async () => {
+    mockRunCompletion.mockResolvedValueOnce({
+      text: "Reply",
+      promptTokens: 300,
+      generatedTokens: 20,
+    });
+    const { contextTokens } = await branchFromMessage(db, ctx, "u2", "Edited");
+    expect(contextTokens).toBe(320);
+  });
+});

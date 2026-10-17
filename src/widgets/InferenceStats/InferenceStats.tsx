@@ -1,27 +1,30 @@
 import { Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
+import { formatContextUsage } from "./formatContext";
 
 type InferenceStatsProps = {
   tokensPerSecond?: number;
   contextUsed?: number;
+  /** The model's context window size (the "of" in "750 / 4,096"). */
   contextTotal?: number;
+  /** True when `contextUsed` is an estimate, not the model's own count. */
+  contextApproximate?: boolean;
 };
 
 export function InferenceStats({
   tokensPerSecond,
   contextUsed,
   contextTotal,
+  contextApproximate = false,
 }: InferenceStatsProps) {
   const parts: string[] = [];
   if (tokensPerSecond !== undefined) {
     parts.push(`${tokensPerSecond.toFixed(1)} tok/s`);
   }
-  if (contextUsed !== undefined) {
+  if (contextUsed !== undefined && contextTotal !== undefined) {
     parts.push(
-      contextTotal !== undefined
-        ? `${contextUsed}/${contextTotal} ctx`
-        : `${contextUsed} ctx`,
+      formatContextUsage(contextUsed, contextTotal, contextApproximate),
     );
   }
 

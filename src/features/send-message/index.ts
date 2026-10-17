@@ -142,7 +142,12 @@ export async function sendMessage(
   input: SendMessageInput,
   onToken?: (token: string) => void,
   settings: InferenceSettings = DEFAULT_INFERENCE,
-): Promise<{ userMessage: Message; assistantMessage: Message }> {
+): Promise<{
+  userMessage: Message;
+  assistantMessage: Message;
+  /** Context the conversation now takes (prompt + reply); null if unknown. */
+  contextTokens: number | null;
+}> {
   const conversation = getConversationById(db, input.conversationId);
 
   const userMessage: Message = {
@@ -262,7 +267,11 @@ export async function sendMessage(
     updatedAt: Date.now(),
   });
 
-  return { userMessage, assistantMessage };
+  const contextTokens =
+    result.promptTokens === null
+      ? null
+      : result.promptTokens + result.generatedTokens;
+  return { userMessage, assistantMessage, contextTokens };
 }
 
 /**

@@ -466,3 +466,33 @@ describe("sendMessage — automatic title (10.15)", () => {
     expect(getConversationById(db, "conv-1")?.title).toBe("New chat");
   });
 });
+
+// Step 10.16 — sendMessage reports how much of the model's context the
+// conversation now takes: the prompt it sent plus the reply it got.
+describe("sendMessage — context in use (10.16)", () => {
+  it("returns prompt + generated tokens as the context in use", async () => {
+    mockRunCompletion.mockResolvedValueOnce({
+      text: "Hello",
+      promptTokens: 700,
+      generatedTokens: 50,
+    });
+    const result = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hi",
+    });
+    expect(result.contextTokens).toBe(750);
+  });
+
+  it("is null when the model didn't report a prompt size", async () => {
+    mockRunCompletion.mockResolvedValueOnce({
+      text: "Hello",
+      promptTokens: null,
+      generatedTokens: 5,
+    });
+    const result = await sendMessage(db, ctx, {
+      conversationId: "conv-1",
+      text: "Hi",
+    });
+    expect(result.contextTokens).toBeNull();
+  });
+});

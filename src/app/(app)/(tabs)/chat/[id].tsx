@@ -36,7 +36,7 @@ import { getAllSnippets, type Snippet } from "@/entities/snippet";
 import { createComponentTestIDs } from "@/shared/testing";
 import { ChatInput } from "@/widgets/ChatInput";
 import { ChatThread, type BranchPosition } from "@/widgets/ChatThread";
-import { InferenceStats } from "@/widgets/InferenceStats";
+import { estimateTokens, InferenceStats } from "@/widgets/InferenceStats";
 import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
 import { toSourceChips, type SourceChip } from "@/widgets/MessageSources";
@@ -140,6 +140,9 @@ export default function ChatScreen() {
   // silently dismisses an unrelated, unread generation error, and vice
   // versa — two different failure modes with nothing to do with each other.
   const [isRecording, setIsRecording] = useState(false);
+  // Context the conversation takes, as the model reported it after the last
+  // turn sent from this screen (10.16); null until then.
+  const [reportedContext, setReportedContext] = useState<number | null>(null);
   const voiceControllerRef = useRef<VoiceInputController | null>(null);
   // `kind` decides the styling only: a failure reads as an error, the
   // "hold the mic" hint after a tap reads as a neutral notice.
@@ -333,7 +336,7 @@ export default function ChatScreen() {
       }
 
       if (target) {
-        await branchFromMessage(
+        const turn = await branchFromMessage(
           db,
           ctx,
           target.id,
@@ -343,10 +346,11 @@ export default function ChatScreen() {
           grounding,
           { withImages: vision },
         );
+        setReportedContext(turn.contextTokens);
       } else {
         // Handed over to sendMessage, which copies it into app storage and
         // removes the picker's temp copy whether or not the send succeeds.
-        await sendMessage(
+        const turn = await sendMessage(
           db,
           ctx,
           {
@@ -365,8 +369,11 @@ export default function ChatScreen() {
           (t) => stream(t, acc),
           getInferenceSettings(),
         );
+        setReportedContext(turn.contextTokens);
       }
     } catch (e) {
+      // The last reported count no longer matches what's on screen.
+      setReportedContext(null);
       // Without this the promise rejects into nothing and a failed generation
       // is indistinguishable from an empty reply.
       setError(e instanceof Error ? e.message : "Generation failed.");
@@ -399,6 +406,8 @@ export default function ChatScreen() {
     }
 
     switchBranch(db, id, leafId);
+    // The model's count belonged to the branch it was reported for.
+    setReportedContext(null);
     refresh();
   };
 
@@ -425,13 +434,22 @@ export default function ChatScreen() {
     }
   };
 
-  const contextUsed = messages.reduce((sum, m) => sum + m.tokenCount, 0);
+  // The model's own count after the last turn in this session; until then
+  // (a conversation just opened, or a model that doesn't report it) an
+  // estimate from the visible messages, shown with "≈".
+  const contextUsed =
+    reportedContext ?? estimateTokens(messages.map((m) => m.content));
+  const contextLength = getInferenceSettings().contextLength;
   const canChat = status === "ready" && ctx != null;
 
   return (
     <View style={styles.root}>
       <View style={styles.statsRow}>
-        <InferenceStats contextUsed={contextUsed} />
+        <InferenceStats
+          contextUsed={contextUsed}
+          contextTotal={contextLength}
+          contextApproximate={reportedContext === null}
+        />
         {messages.length > 0 && (
           <Pressable
             testID={testIDs.buttons.export}
