@@ -1153,3 +1153,18 @@ mock for `react-native-unistyles` (StyleSheet.create → plain styles). That
 would let Phase 10 steps assert rendered behaviour (e.g. "Cancel calls
 onClose", "error text appears under the field"). Not installed unattended —
 your call.
+
+## 10.13 — app display name "Capsule" (2026-10-17)
+
+**Done in code:** `expo.name` in app.json is now "Capsule" (slug and URL
+scheme stay "capsule"). The local, untracked native projects were updated to
+match (ios Info.plist CFBundleDisplayName, android strings.xml app_name) so a
+rebuild without prebuild shows it too.
+
+**Device check:** rebuild (`npx expo run:ios`), then on the home screen the
+icon label reads "Capsule", and the notification-permission prompt says
+"“Capsule” Would Like to Send You Notifications". Same on Android (launcher
+label). A plain `expo prebuild` (not `--clean`) is safe and also renames the
+built product to Capsule.app. Avoid `--clean`: it would drop the hand-written
+Podfile post_install block (react-native-quick-crypto deployment-target
+floor), which no config plugin recreates.
