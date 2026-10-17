@@ -5108,4 +5108,20 @@ this run. Cursor → 10.15.
 
 ---
 
+## Beat 107 — 10.15: chats name themselves (resumed after disk-full pause)
+
+Resumed once the user freed space. A conversation still called "New chat" is
+titled from its first message (one line, ≤40 characters — counted as
+characters so an emoji is never split — cut at a word). The simulator
+showed a second cause: the new-chat screen titled persona chats after the
+persona ("Tester"), so they never auto-titled and all looked alike — now
+every chat starts as "New chat". Verified: "Best pastry in Porto?" in the
+list. Found in passing: the branch switcher counts other conversations'
+first messages as alternatives ("‹ 3/3" on a brand-new chat) → 10.35.
+Reviewer pass first time.
+
+Gate: tsc clean, jest 1542, eslint clean. Checkpoint `7e58cc2`. Cursor → 10.16.
+
+---
+
 <!-- Append new beats above this line. -->

@@ -2,16 +2,15 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 106,
-    "status": "paused",
+    "beat": 107,
+    "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
     "resumedAt": "2026-10-16",
-    "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8).",
-    "pauseNote": "Disk full (182 MB free) 2026-10-17 before starting 10.15 \u2014 gate cannot run. Resume after the user frees space."
+    "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.15",
+    "step": "10.16",
     "phase": 10
   },
   "steps": {
@@ -660,6 +659,24 @@
       ],
       "checkpoint": "a8b0143",
       "notes": "Quarantined at attempt ceiling. main=a8b0143 (iOS works; Android bug 2 present). Improved state machine saved in .claude/loop/patches/10.14-follow-state-machine.patch. Remaining fix + Android device check in BLOCKED.md."
+    },
+    "10.15": {
+      "status": "done",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [
+        "tests: 7 failed (helper missing, title not set)"
+      ],
+      "checkpoint": "7e58cc2",
+      "notes": "entities/conversation titleFromFirstMessage + DEFAULT; sendMessage sets it on first message when title is default; new chat no longer titled after persona. Simulator verified. No backfill of old chats."
+    },
+    "10.35": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": null,
+      "notes": "Found 2026-10-18 verifying 10.15."
     }
   },
   "quarantinedThisRun": [
@@ -667,8 +684,8 @@
   ],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1531)",
+    "jest": "pass (1542)",
     "eslint": "pass",
-    "at": "2026-10-17T23:50:08"
+    "at": "2026-10-18T00:41:55"
   }
 }
