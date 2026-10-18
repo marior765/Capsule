@@ -4,7 +4,11 @@ import { Alert, Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
 import { useDb, useEmbeddings, useLlm, useStt } from "@/app/providers";
-import { prepareGrounding } from "@/features/capsule-rag";
+import {
+  capsulesInUse,
+  prepareGrounding,
+  toggleCapsules,
+} from "@/features/capsule-rag";
 import { getEmbeddingModelUri } from "@/features/manage-embedding-model";
 import { getBoolean, setBoolean } from "@/shared/storage";
 import { getConversationById } from "@/entities/conversation";
@@ -116,21 +120,26 @@ export default function ChatScreen() {
   // per conversation in local settings (the full wipe clears it).
   const embeddings = useEmbeddings();
   const useCapsulesKey = `chat.useCapsules.${id}`;
-  const [useCapsules, setUseCapsules] = useState(
+  const [capsulesChosen, setCapsulesChosen] = useState(
     () => getBoolean(useCapsulesKey) ?? false,
   );
   const [searchingCapsules, setSearchingCapsules] = useState(false);
   const [groundingNotice, setGroundingNotice] = useState<string | null>(null);
+  const [needsCapsuleModel, setNeedsCapsuleModel] = useState(false);
+  // On only while the capsule-search model is downloaded (10.18) — a
+  // conversation remembered as "on" whose model was deleted shows "off".
+  const hasCapsuleModel = getEmbeddingModelUri() !== undefined;
+  const useCapsules = capsulesInUse(capsulesChosen, hasCapsuleModel);
 
   const toggleUseCapsules = () => {
-    const next = !useCapsules;
-    setUseCapsules(next);
-    setBoolean(useCapsulesKey, next);
-    setGroundingNotice(
-      next && !getEmbeddingModelUri()
-        ? "Capsule search needs its model — download it in Models → Capsule search."
-        : null,
+    const { enabled, needsModel } = toggleCapsules(
+      useCapsules,
+      getEmbeddingModelUri() !== undefined,
     );
+    setCapsulesChosen(enabled);
+    setBoolean(useCapsulesKey, enabled);
+    setNeedsCapsuleModel(needsModel);
+    setGroundingNotice(null);
   };
 
   // Recording state and the pending controller are separate: `isRecording`
@@ -549,6 +558,22 @@ export default function ChatScreen() {
           </Text>
         </Pressable>
       )}
+      {canChat && needsCapsuleModel && !hasCapsuleModel && (
+        <Pressable
+          testID={testIDs.buttons.getCapsuleModel}
+          onPress={() => {
+            setNeedsCapsuleModel(false);
+            router.push("/models");
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Capsule search needs its model. Open Models to download it"
+        >
+          <Text style={styles.capsuleNotice}>
+            Capsule search needs its model.{" "}
+            <Text style={styles.capsuleNoticeLink}>Download it in Models</Text>
+          </Text>
+        </Pressable>
+      )}
       {canChat && (searchingCapsules || groundingNotice !== null) && (
         <Text
           testID={testIDs.texts.capsuleNotice}
@@ -742,6 +767,9 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 12,
   },
+  capsuleNoticeLink: {
+    color: theme.colors.accent,
+  },
   pendingImage: {
     flexDirection: "row",
     alignItems: "center",
@@ -786,6 +814,7 @@ const testIDs = createComponentTestIDs("ChatScreen", {
     "dismissError",
     "dismissVoiceError",
     "manageModels",
+    "getCapsuleModel",
   ] as const,
   texts: ["capsuleNotice"] as const,
   containers: ["pendingImage"] as const,

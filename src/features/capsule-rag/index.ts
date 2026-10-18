@@ -17,6 +17,7 @@ import { cosineSimilarity } from "./cosineSimilarity";
 
 export { buildCapsuleText } from "./buildCapsuleText";
 export { cosineSimilarity } from "./cosineSimilarity";
+export { capsulesInUse, toggleCapsules } from "./capsulesSetting";
 
 /**
  * Indexes one capsule: builds its text, embeds it (via `shared/llm`'s
