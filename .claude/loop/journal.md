@@ -5153,4 +5153,20 @@ Gate: tsc clean, jest 1566, eslint clean. Checkpoint `ba4657e`. Cursor → 10.18
 
 ---
 
+## Beat 110 — 10.18: the Capsules switch stops lying
+
+Without the capsule-search model, tapping "Capsules: off" now leaves it off
+and shows "Capsule search needs its model. Download it in Models" (link
+opens Models); a conversation remembered as "on" whose model was deleted
+shows "off". Checker round 1: the notice outlived the problem when the
+model was downloaded via Settings, and my "never covers the last message"
+fix (an opaque background) was cosmetic — the real cause of that overlap
+was the thread not scrolling to the newest message, already fixed by the
+follow-scroll. Removed the no-op; the test now guards that the notice stays
+in layout flow.
+
+Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19.
+
+---
+
 <!-- Append new beats above this line. -->

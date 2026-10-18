@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 109,
+    "beat": 110,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.18",
+    "step": "10.19",
     "phase": 10
   },
   "steps": {
@@ -697,6 +697,16 @@
       ],
       "checkpoint": "ba4657e",
       "notes": "messageActions helper; bubble long-press + visible \u22ef options button; Regenerate via branch path (old reply via \u2039 \u203a). Simulator verified Copy/Regenerate/\u22ef."
+    },
+    "10.18": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [
+        "checker: fail -- needs-model notice stayed after model installed via another path; background style was cosmetic"
+      ],
+      "checkpoint": "5e71fb8",
+      "notes": "toggleCapsules/capsulesInUse in capsule-rag; notice + Models link only while model missing. Overlap root cause = pre-10.14 no follow-scroll. Simulator verified."
     }
   },
   "quarantinedThisRun": [
@@ -704,8 +714,8 @@
   ],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1566)",
+    "jest": "pass (1574)",
     "eslint": "pass",
-    "at": "2026-10-18T00:58:43"
+    "at": "2026-10-18T05:09:19"
   }
 }
