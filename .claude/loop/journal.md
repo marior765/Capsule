@@ -5210,3 +5210,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - A cycling button whose label names a state is ambiguous by construction; replaced with a segmented control that names all three and marks the current one.
 - Board view with no groupable type now explains why, offers one-tap boardable types, and keeps the capsules listed (as cards) instead of hiding them.
 - Not seen in sim: the type buttons (no single-select type in the test data); covered by pure helper tests.
+
+## Beat 118 — 10.26 selected chips distinguishable (done, 1bca58f)
+- Old selected vs unselected greys were ~1.1:1; now accent fill (3.2:1 against unselected), same pair as SchemaBuilder/FieldRenderer chips.
+- Note: light-mode white on #0A84FF text is 3.65:1 (below 4.5:1 AA for 13pt). App-wide accent token, used by all chips; not changed here.
