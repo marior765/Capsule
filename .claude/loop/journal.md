@@ -5196,3 +5196,6 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - The iOS inline calendar's native view draws past the height it reports: first layout overlapped Done/Cancel, a minHeight made it overflow the screen after it settled, a fixed height still overlapped. Fix that holds: put Cancel/Done in a header ABOVE the calendar so overflow can't cover them.
 - A Modal that stays open across a Fast Refresh can stop responding to taps: verify modal fixes after a cold relaunch, not a hot reload.
 - Validation message no longer names a typed format. Android dialog path queued for a device check (BLOCKED.md).
+
+## Beat 115 — 10.23 tag input autocorrect off (done, 93aa95e)
+- autoCapitalize was already none; added autoCorrect/spellCheck false. Reviewer confirmed TagPicker is the only place a tag name is typed.

@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 114,
+    "beat": 115,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.23",
+    "step": "10.24",
     "phase": 10
   },
   "steps": {
@@ -748,6 +748,16 @@
       ],
       "checkpoint": "57c47e9",
       "notes": "FieldDateInput (iOS calendar sheet, Android dialog read in UTC) + fieldDate helpers; old invalid values shown as stored. Reviewer pass. Android device check queued in BLOCKED.md."
+    },
+    "10.23": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 1,
+      "failureSignatures": [
+        "tagInput static test: autoCorrect missing"
+      ],
+      "checkpoint": "93aa95e",
+      "notes": "autoCorrect/spellCheck off (autoCapitalize none already); only tag entry point in the app. Reviewer pass."
     }
   },
   "quarantinedThisRun": [
@@ -755,8 +765,8 @@
   ],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1610)",
+    "jest": "pass (1611)",
     "eslint": "pass",
-    "at": "2026-10-25T14:20:00"
+    "at": "2026-10-25T14:25:00"
   }
 }
