@@ -5190,3 +5190,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Feature backstop: DuplicateFieldNameError from addField, createCapsuleType (checked before any write) and updateField renames. Restore/import paths use insertCapsuleField directly, so old data with duplicates still restores.
 - Reviewer fail #1 (valid): fixed-width Required column still drifted because the arrow controls after it varied per row (first/middle/last). Fix: always reserve both arrow slots. My one-field sim check couldn't show it — layout checks need first, middle and last rows.
 - Sim: duplicate message + disabled Add; 3 rows aligned.
+
+## Beat 114 — 10.22 date picker for date fields (done, 57c47e9)
+- FieldDateInput in widgets/FieldRenderer; stored format unchanged ("YYYY-MM-DD"), so no migration; old invalid free text stays visible with Clear.
+- The iOS inline calendar's native view draws past the height it reports: first layout overlapped Done/Cancel, a minHeight made it overflow the screen after it settled, a fixed height still overlapped. Fix that holds: put Cancel/Done in a header ABOVE the calendar so overflow can't cover them.
+- A Modal that stays open across a Fast Refresh can stop responding to taps: verify modal fixes after a cold relaunch, not a hot reload.
+- Validation message no longer names a typed format. Android dialog path queued for a device check (BLOCKED.md).

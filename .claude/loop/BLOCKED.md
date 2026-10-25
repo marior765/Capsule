@@ -1189,3 +1189,6 @@ leaving following off.
 land at the newest message); send a message and let a long reply stream
 without touching (should follow to the end); start a long reply, then grab
 and drag up mid-stream (must not be pulled back down).
+
+## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
+iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.
