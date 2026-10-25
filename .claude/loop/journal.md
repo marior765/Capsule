@@ -5205,3 +5205,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Widgets cannot import features, so CapsuleCard declares a structurally identical CardPreview type; the app layer passes the feature result in.
 - List row: one dense line "Book · Frank Herbert · …" + #tags; card tile: labelled lines + tags. Sim verified both.
 - Not done here: board-view cards still title+type; bulk queries could replace per-capsule ones for huge vaults.
+
+## Beat 117 — 10.25 view control + board fallback (done, 86d274d)
+- A cycling button whose label names a state is ambiguous by construction; replaced with a segmented control that names all three and marks the current one.
+- Board view with no groupable type now explains why, offers one-tap boardable types, and keeps the capsules listed (as cards) instead of hiding them.
+- Not seen in sim: the type buttons (no single-select type in the test data); covered by pure helper tests.
