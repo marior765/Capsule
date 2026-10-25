@@ -5170,3 +5170,10 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ---
 
 <!-- Append new beats above this line. -->
+
+## Beat 111 — 10.19 chat export (done, 3029445)
+- Files: features/export-chat/record.ts (+index export, test), chat/[id].tsx.
+- Tests first: recordChatExport against real test SQLite + static route checks; failed 5 before impl.
+- Sim: label "Copy as Markdown"; tap → "Copied ✓"; audit_entries row 'export | Copied conversation "Best pastry in Porto?" (4 messages) as Markdown' in the app DB.
+- Gotcha: `sed -i ''` on `[id].tsx` leaves a `.!NNN![id].tsx` temp file that Metro's require.context picks up → bundle rebuild fails silently in-app. Use Edit/python for route files.
+- Reviewer: pass; applied its two cheap findings (iOS announceForAccessibility; confirmation before the log write, log failure isolated).
