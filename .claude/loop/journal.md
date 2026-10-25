@@ -5184,3 +5184,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Sim: Tester → Pirate saved to DB; Personas Edit loads the form. Restored the test chat to Tester afterwards.
 - Lessons: the simulator screenshot often trails a tap by one action — confirm with a second screenshot or the DB before assuming a bug. A label flipping "Persona: X"→"Close" shifted the Capsules button under the next tap, so the label now stays the same open or closed.
 - keyboardTaps guard regex matches `useRef<ScrollView>` generics; use `ComponentRef<typeof ScrollView>`.
+
+## Beat 113 — 10.21 duplicate field names + Required label (done, 8d39cda, 2 attempts)
+- Name rule lives in entities/field (normalize: trim, collapse spaces, lowercase) so widget and feature share it without a widget→feature import.
+- Feature backstop: DuplicateFieldNameError from addField, createCapsuleType (checked before any write) and updateField renames. Restore/import paths use insertCapsuleField directly, so old data with duplicates still restores.
+- Reviewer fail #1 (valid): fixed-width Required column still drifted because the arrow controls after it varied per row (first/middle/last). Fix: always reserve both arrow slots. My one-field sim check couldn't show it — layout checks need first, middle and last rows.
+- Sim: duplicate message + disabled Add; 3 rows aligned.
