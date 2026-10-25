@@ -5177,3 +5177,10 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Sim: label "Copy as Markdown"; tap → "Copied ✓"; audit_entries row 'export | Copied conversation "Best pastry in Porto?" (4 messages) as Markdown' in the app DB.
 - Gotcha: `sed -i ''` on `[id].tsx` leaves a `.!NNN![id].tsx` temp file that Metro's require.context picks up → bundle rebuild fails silently in-app. Use Edit/python for route files.
 - Reviewer: pass; applied its two cheap findings (iOS announceForAccessibility; confirmation before the log write, log failure isolated).
+
+## Beat 112 — 10.20 persona in chat + edit (done, 2407292)
+- Editing already existed (tap row) but was invisible: form above, off-screen; added explicit Edit + scrollTo top.
+- Chat toolbar "Persona: <name|none>" toggles an inline PersonaSelector; choice applies from the next message (send reads personaId per send). Deleted persona → "none".
+- Sim: Tester → Pirate saved to DB; Personas Edit loads the form. Restored the test chat to Tester afterwards.
+- Lessons: the simulator screenshot often trails a tap by one action — confirm with a second screenshot or the DB before assuming a bug. A label flipping "Persona: X"→"Close" shifted the Capsules button under the next tap, so the label now stays the same open or closed.
+- keyboardTaps guard regex matches `useRef<ScrollView>` generics; use `ComponentRef<typeof ScrollView>`.
