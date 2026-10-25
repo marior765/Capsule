@@ -22,3 +22,4 @@ export {
   validateFields,
   type FieldValidationResult,
 } from "./validation";
+export { findFieldNameClash, normalizeFieldName } from "./fieldName";

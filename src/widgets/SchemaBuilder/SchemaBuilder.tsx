@@ -3,6 +3,7 @@ import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { buildTestID, createComponentTestIDs } from "@/shared/testing";
 import type { FieldType } from "@/entities/field";
+import { newFieldNameError } from "./fieldNameError";
 import { moveField } from "./moveField";
 
 export type FieldDraft = {
@@ -82,9 +83,12 @@ export function SchemaBuilder({
   const [draftName, setDraftName] = useState("");
   const [draftType, setDraftType] = useState<FieldType>("text");
 
+  const nameError = newFieldNameError(fields, draftName);
+  const canAdd = draftName.trim() !== "" && nameError === null;
+
   const handleAddField = () => {
     const trimmed = draftName.trim();
-    if (!trimmed) return;
+    if (!canAdd) return;
     onAddField({ name: trimmed, fieldType: draftType, required: false });
     setDraftName("");
     setDraftType("text");
@@ -133,43 +137,62 @@ export function SchemaBuilder({
               {FIELD_TYPE_LABELS[field.fieldType]}
             </Text>
           </View>
-          <Switch
-            testID={buildTestID(
-              "input",
-              "SchemaBuilder",
-              `required_${field.id}`,
-            )}
-            value={field.required}
-            onValueChange={() => onToggleRequired(field.id)}
-            accessibilityLabel={`${field.name} required`}
-          />
-          {index > 0 && (
+          <View style={styles.requiredToggle}>
+            <Switch
+              testID={buildTestID(
+                "input",
+                "SchemaBuilder",
+                `required_${field.id}`,
+              )}
+              value={field.required}
+              onValueChange={() => onToggleRequired(field.id)}
+              accessibilityLabel={`${field.name} required`}
+            />
+            <Text
+              style={styles.requiredLabel}
+              accessible={false}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            >
+              Required
+            </Text>
+          </View>
+          {/* Both arrow slots always take their space (an empty one when the
+              move isn't possible), so the Required column lines up on every
+              row — first, middle and last. */}
+          {index > 0 ? (
             <Pressable
               testID={buildTestID(
                 "pressable",
                 "SchemaBuilder",
                 `moveUp_${field.id}`,
               )}
+              style={styles.moveSlot}
               onPress={() => handleMove(index, "up")}
               accessibilityRole="button"
               accessibilityLabel={`Move ${field.name} up`}
             >
               <Text style={styles.moveLabel}>↑</Text>
             </Pressable>
+          ) : (
+            <View style={styles.moveSlot} />
           )}
-          {index < fields.length - 1 && (
+          {index < fields.length - 1 ? (
             <Pressable
               testID={buildTestID(
                 "pressable",
                 "SchemaBuilder",
                 `moveDown_${field.id}`,
               )}
+              style={styles.moveSlot}
               onPress={() => handleMove(index, "down")}
               accessibilityRole="button"
               accessibilityLabel={`Move ${field.name} down`}
             >
               <Text style={styles.moveLabel}>↓</Text>
             </Pressable>
+          ) : (
+            <View style={styles.moveSlot} />
           )}
           <Pressable
             testID={buildTestID(
@@ -194,7 +217,17 @@ export function SchemaBuilder({
         onChangeText={setDraftName}
         placeholder="Field name (e.g. Author)"
         accessibilityLabel="New field name"
+        accessibilityHint={nameError ?? undefined}
       />
+      {nameError && (
+        <Text
+          testID={testIDs.texts.fieldNameError}
+          style={styles.error}
+          accessibilityLiveRegion="polite"
+        >
+          {nameError}
+        </Text>
+      )}
       <View testID={testIDs.containers.typeOptions} style={styles.optionsRow}>
         {FIELD_TYPES.map((fieldType) => {
           const selected = draftType === fieldType;
@@ -223,9 +256,11 @@ export function SchemaBuilder({
       </View>
       <Pressable
         testID={testIDs.buttons.addField}
-        style={styles.primary}
+        style={[styles.primary, !canAdd && styles.primaryDisabled]}
         onPress={handleAddField}
+        disabled={!canAdd}
         accessibilityRole="button"
+        accessibilityState={{ disabled: !canAdd }}
       >
         <Text style={styles.primaryLabel}>Add field</Text>
       </Pressable>
@@ -279,6 +314,29 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.text,
     fontFamily: theme.fonts.sans,
   },
+  // Switch over its own caption, a fixed width so every row's controls line
+  // up whatever the field name's length.
+  requiredToggle: {
+    alignItems: "center",
+    width: 64,
+  },
+  requiredLabel: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  error: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: -theme.spacing.one,
+    marginBottom: theme.spacing.two,
+  },
+  moveSlot: {
+    width: 24,
+    alignItems: "center",
+  },
   moveLabel: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.rounded,
@@ -319,6 +377,9 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.spacing.two,
     backgroundColor: theme.colors.backgroundSelected,
   },
+  primaryDisabled: {
+    opacity: 0.5,
+  },
   primaryLabel: {
     color: theme.colors.text,
     fontFamily: theme.fonts.rounded,
@@ -328,7 +389,7 @@ const styles = StyleSheet.create((theme) => ({
 const testIDs = createComponentTestIDs("SchemaBuilder", {
   containers: ["root", "fieldRow", "typeOptions"] as const,
   inputs: ["name", "description", "newFieldName"] as const,
-  texts: ["emptyFields"] as const,
+  texts: ["emptyFields", "fieldNameError"] as const,
   buttons: ["addField"] as const,
 });
 

@@ -8,6 +8,8 @@ import {
 import {
   deleteCapsuleField,
   deleteFieldsByCapsuleType,
+  findFieldNameClash,
+  getCapsuleFieldById,
   getFieldsByCapsuleType,
   insertCapsuleField,
   updateCapsuleField,
@@ -22,6 +24,14 @@ export type FieldInput = {
   config?: string | null;
   required?: boolean;
 };
+
+/** A type can't have two fields with the same name (case and spacing ignored). */
+export class DuplicateFieldNameError extends Error {
+  constructor(readonly existingName: string) {
+    super(`This type already has a field called "${existingName}".`);
+    this.name = "DuplicateFieldNameError";
+  }
+}
 
 export type CreateCapsuleTypeInput = {
   name: string;
@@ -41,6 +51,14 @@ export function createCapsuleType(
   db: SQLiteDatabase,
   input: CreateCapsuleTypeInput,
 ): CapsuleType {
+  // Checked before anything is written, so a refused type leaves no rows.
+  const seen: { id: string; name: string }[] = [];
+  (input.fields ?? []).forEach((fieldInput, index) => {
+    const clash = findFieldNameClash(seen, fieldInput.name);
+    if (clash) throw new DuplicateFieldNameError(clash.name);
+    seen.push({ id: String(index), name: fieldInput.name });
+  });
+
   const now = Date.now();
   const capsuleType: CapsuleType = {
     id: generateId(),
@@ -100,6 +118,8 @@ export function addField(
 ): CapsuleField {
   const now = Date.now();
   const existing = getFieldsByCapsuleType(db, capsuleTypeId);
+  const clash = findFieldNameClash(existing, input.name);
+  if (clash) throw new DuplicateFieldNameError(clash.name);
   const sortOrder =
     existing.length === 0
       ? 0
@@ -129,6 +149,17 @@ export function updateField(
   fieldId: string,
   patch: Partial<FieldInput>,
 ): void {
+  if (patch.name !== undefined) {
+    const field = getCapsuleFieldById(db, fieldId);
+    if (field) {
+      const clash = findFieldNameClash(
+        getFieldsByCapsuleType(db, field.capsuleTypeId),
+        patch.name,
+        fieldId,
+      );
+      if (clash) throw new DuplicateFieldNameError(clash.name);
+    }
+  }
   updateCapsuleField(db, fieldId, {
     ...patch,
     updatedAt: Date.now(),

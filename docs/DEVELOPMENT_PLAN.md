@@ -183,7 +183,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.18 "Capsules: on" can't be switched on while the capsule-search model is missing; the notice never covers the last message
 - [x] 10.19 Chat "Export" is labelled for what it does (copy as Markdown), shows a lasting confirmation, and writes to the activity log
 - [x] 10.20 Choose a persona in chat; personas can be edited, not only deleted
-- [ ] 10.21 Capsule type form: duplicate field names are rejected with a message; the per-field toggle has a visible label and aligned layout
+- [x] 10.21 Capsule type form: duplicate field names are rejected with a message; the per-field toggle has a visible label and aligned layout
 - [ ] 10.22 Date fields use a date picker instead of free-text YYYY-MM-DD
 - [ ] 10.23 Tag input: autocorrect/autocapitalize off
 - [ ] 10.24 Capsule list cards show tags and key field values; list view differs meaningfully from card view

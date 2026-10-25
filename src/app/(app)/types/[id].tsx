@@ -1,11 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
 import {
   addField,
   deleteCapsuleType,
+  DuplicateFieldNameError,
   getCapsuleTypeById,
   getFieldsByCapsuleType,
   removeField,
@@ -56,7 +57,16 @@ export default function TypeDetailScreen() {
   // than hand-patching local state, so this screen can never drift out of
   // sync with what's actually persisted.
   const handleAddField = (draft: Omit<FieldDraft, "id">) => {
-    addField(db, id, draft);
+    try {
+      addField(db, id, draft);
+    } catch (e) {
+      // SchemaBuilder already refuses a duplicate as it's typed; backstop.
+      if (e instanceof DuplicateFieldNameError) {
+        Alert.alert("Can't add field", e.message);
+        return;
+      }
+      throw e;
+    }
     refresh();
   };
 

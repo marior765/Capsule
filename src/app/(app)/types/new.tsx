@@ -1,9 +1,12 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, Text } from "react-native";
+import { Alert, Pressable, ScrollView, Text } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
-import { createCapsuleType } from "@/features/manage-schema";
+import {
+  createCapsuleType,
+  DuplicateFieldNameError,
+} from "@/features/manage-schema";
 import { generateId } from "@/shared/lib";
 import { leaveScreen } from "@/shared/navigation";
 import { createComponentTestIDs } from "@/shared/testing";
@@ -39,15 +42,25 @@ export default function NewTypeScreen() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
-    createCapsuleType(db, {
-      name: trimmedName,
-      description: description.trim() || null,
-      fields: fields.map((f) => ({
-        name: f.name,
-        fieldType: f.fieldType,
-        required: f.required,
-      })),
-    });
+    try {
+      createCapsuleType(db, {
+        name: trimmedName,
+        description: description.trim() || null,
+        fields: fields.map((f) => ({
+          name: f.name,
+          fieldType: f.fieldType,
+          required: f.required,
+        })),
+      });
+    } catch (e) {
+      // SchemaBuilder already refuses a duplicate as it's typed; this is
+      // the backstop, so the type is never half-created.
+      if (e instanceof DuplicateFieldNameError) {
+        Alert.alert("Can't create type", e.message);
+        return;
+      }
+      throw e;
+    }
     leaveScreen(router, "/types");
   };
 
