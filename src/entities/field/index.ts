@@ -23,3 +23,4 @@ export {
   type FieldValidationResult,
 } from "./validation";
 export { findFieldNameClash, normalizeFieldName } from "./fieldName";
+export { formatDateValue, formatFieldValue, parseDateValue } from "./display";

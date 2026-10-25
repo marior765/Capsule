@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
 import type { Capsule } from "@/entities/capsule";
+import { listSubtitle, visibleTags, type CardPreview } from "./cardSummary";
 
 type CapsuleCardProps = {
   capsule: Capsule;
@@ -30,6 +31,12 @@ type CapsuleCardProps = {
    * styling; `CapsuleList` decides `numColumns`.
    */
   viewMode?: "list" | "card";
+  /**
+   * Tags and the first filled-in field values (10.24), resolved by the
+   * caller. The list row packs them into one line; the card tile labels
+   * each value. Absent → title and type only.
+   */
+  preview?: CardPreview;
 };
 
 /**
@@ -46,8 +53,14 @@ export function CapsuleCard({
   selectionMode = false,
   selected = false,
   viewMode = "list",
+  preview,
 }: CapsuleCardProps) {
   const isCard = viewMode === "card";
+  const tags = visibleTags(preview?.tags ?? [], isCard ? 3 : 2);
+  const tagText = [
+    ...tags.shown.map((tag) => `#${tag}`),
+    ...(tags.more > 0 ? [`+${tags.more}`] : []),
+  ].join("  ");
   return (
     <Pressable
       testID={`${testIDs.pressables.root}_${capsule.id}`}
@@ -59,7 +72,12 @@ export function CapsuleCard({
       onPress={onPress}
       accessibilityRole={selectionMode ? "checkbox" : "button"}
       accessibilityState={selectionMode ? { checked: selected } : undefined}
-      accessibilityLabel={`${capsule.title}, ${capsuleTypeName ?? "Unknown type"}`}
+      accessibilityLabel={[
+        capsule.title,
+        capsuleTypeName ?? "Unknown type",
+        ...(preview?.fields ?? []).map((f) => `${f.name} ${f.value}`),
+        ...(preview?.tags.length ? [`tags ${preview.tags.join(", ")}`] : []),
+      ].join(", ")}
     >
       {selectionMode && (
         // Decorative — the Pressable's own accessibilityRole/State above
@@ -82,7 +100,46 @@ export function CapsuleCard({
         >
           {capsule.title}
         </Text>
-        <Text style={styles.typeName}>{capsuleTypeName ?? "Unknown type"}</Text>
+        {isCard ? (
+          <>
+            <Text style={styles.typeName}>
+              {capsuleTypeName ?? "Unknown type"}
+            </Text>
+            {(preview?.fields.length ?? 0) > 0 && (
+              <View testID={`${testIDs.texts.fields}_${capsule.id}`}>
+                {preview?.fields.map((field, index) => (
+                  <Text
+                    // Index too: older or imported data can hold two
+                    // fields with one name on the same type.
+                    key={`${index}-${field.name}`}
+                    style={styles.fieldLine}
+                    numberOfLines={1}
+                  >
+                    <Text style={styles.fieldName}>{field.name}: </Text>
+                    {field.value}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </>
+        ) : (
+          <Text
+            testID={`${testIDs.texts.fields}_${capsule.id}`}
+            style={styles.typeName}
+            numberOfLines={1}
+          >
+            {listSubtitle(capsuleTypeName, preview)}
+          </Text>
+        )}
+        {tagText !== "" && (
+          <Text
+            testID={`${testIDs.texts.tags}_${capsule.id}`}
+            style={styles.tags}
+            numberOfLines={1}
+          >
+            {tagText}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
@@ -120,6 +177,21 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 15,
   },
+  fieldLine: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.half,
+  },
+  fieldName: {
+    color: theme.colors.textSecondary,
+  },
+  tags: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.one,
+  },
   cardTitle: {
     fontFamily: theme.fonts.rounded,
   },
@@ -133,7 +205,7 @@ const styles = StyleSheet.create((theme) => ({
 
 const testIDs = createComponentTestIDs("CapsuleCard", {
   pressables: ["root"] as const,
-  texts: ["checkbox"] as const,
+  texts: ["checkbox", "fields", "tags"] as const,
 });
 
 CapsuleCard.testIDs = testIDs;

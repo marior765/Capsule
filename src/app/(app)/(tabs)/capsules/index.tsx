@@ -19,6 +19,10 @@ import {
   type SortDirection,
 } from "@/features/filter-sort-capsules";
 import { searchCapsules } from "@/features/search-capsules";
+import {
+  getCapsulePreviews,
+  type CapsulePreview,
+} from "@/features/capsule-preview";
 import { createCapsule } from "@/features/create-capsule";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleList } from "@/widgets/CapsuleList";
@@ -32,6 +36,14 @@ export default function CapsuleListScreen() {
   const db = useDb();
   const embeddings = useEmbeddings();
   const [capsules, setCapsules] = useState<Capsule[]>([]);
+  // Tags and key field values for every capsule's card (10.24), re-read
+  // whenever the list is — on focus, so edits made on a capsule show here.
+  const [previews, setPreviews] = useState<Record<string, CapsulePreview>>({});
+  const reloadCapsules = useCallback(() => {
+    const all = getAllCapsules(db);
+    setCapsules(all);
+    setPreviews(getCapsulePreviews(db, all));
+  }, [db]);
   const [capsuleTypes, setCapsuleTypes] = useState<CapsuleType[]>([]);
   const [query, setQuery] = useState("");
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
@@ -45,9 +57,9 @@ export default function CapsuleListScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setCapsules(getAllCapsules(db));
+      reloadCapsules();
       setCapsuleTypes(getAllCapsuleTypes(db));
-    }, [db]),
+    }, [db, reloadCapsules]),
   );
 
   const capsuleTypesById = Object.fromEntries(
@@ -101,7 +113,7 @@ export default function CapsuleListScreen() {
   // Selection mode only exits, and selection only fully clears, once
   // nothing is left to retry.
   const handleDeleted = (result: BulkOperationResult<void>) => {
-    setCapsules(getAllCapsules(db));
+    reloadCapsules();
     const failedIds = new Set(result.failed.map((f) => f.id));
     setSelectedIds(failedIds);
     if (failedIds.size === 0) {
@@ -118,7 +130,7 @@ export default function CapsuleListScreen() {
   const handleCapture = (input: { capsuleTypeId: string; title: string }) => {
     const created = createCapsule(db, input);
     embeddings.indexCapsule(created.id);
-    setCapsules(getAllCapsules(db));
+    reloadCapsules();
   };
 
   return (
@@ -235,6 +247,7 @@ export default function CapsuleListScreen() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           viewMode={viewMode}
+          previewsById={previews}
         />
       )}
     </View>

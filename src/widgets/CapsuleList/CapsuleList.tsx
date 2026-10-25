@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
 import type { Capsule } from "@/entities/capsule";
 import type { CapsuleType } from "@/entities/capsule-type";
-import { CapsuleCard } from "@/widgets/CapsuleCard";
+import { CapsuleCard, type CardPreview } from "@/widgets/CapsuleCard";
 import { toggleSelection } from "./toggleSelection";
 
 type CapsuleListProps = {
@@ -37,6 +37,8 @@ type CapsuleListProps = {
    * changes and never otherwise.
    */
   viewMode?: "list" | "card";
+  /** Each capsule's tags and key field values (10.24), keyed by id. */
+  previewsById?: Record<string, CardPreview>;
 };
 
 /** Renders every capsule as a `CapsuleCard`, or an empty-state message. */
@@ -48,6 +50,7 @@ export function CapsuleList({
   selectedIds,
   onSelectionChange,
   viewMode = "list",
+  previewsById,
 }: CapsuleListProps) {
   if (capsules.length === 0) {
     return (
@@ -90,6 +93,7 @@ export function CapsuleList({
           selectionMode={selectionMode}
           selected={selectedIds?.has(item.id) ?? false}
           viewMode={viewMode}
+          preview={previewsById?.[item.id]}
         />
       )}
       contentContainerStyle={styles.content}
