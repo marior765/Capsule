@@ -5199,3 +5199,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 
 ## Beat 115 — 10.23 tag input autocorrect off (done, 93aa95e)
 - autoCapitalize was already none; added autoCorrect/spellCheck false. Reviewer confirmed TagPicker is the only place a tag name is typed.
+
+## Beat 116 — 10.24 capsule cards show tags + key fields (done, ce7e41d)
+- New features/capsule-preview builds tags + first 3 filled fields per capsule (real-DB tests); entities/field gains formatFieldValue and now owns date formatting (FieldRenderer re-exports).
+- Widgets cannot import features, so CapsuleCard declares a structurally identical CardPreview type; the app layer passes the feature result in.
+- List row: one dense line "Book · Frank Herbert · …" + #tags; card tile: labelled lines + tags. Sim verified both.
+- Not done here: board-view cards still title+type; bulk queries could replace per-capsule ones for huge vaults.
