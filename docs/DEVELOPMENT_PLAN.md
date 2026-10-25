@@ -181,7 +181,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.16 Context counter ("ctx") reflects the conversation's real token usage and is labelled clearly
 - [x] 10.17 Long-press on an assistant message offers Copy (and Regenerate on the last reply)
 - [x] 10.18 "Capsules: on" can't be switched on while the capsule-search model is missing; the notice never covers the last message
-- [ ] 10.19 Chat "Export" is labelled for what it does (copy as Markdown), shows a lasting confirmation, and writes to the activity log
+- [x] 10.19 Chat "Export" is labelled for what it does (copy as Markdown), shows a lasting confirmation, and writes to the activity log
 - [ ] 10.20 Choose a persona in chat; personas can be edited, not only deleted
 - [ ] 10.21 Capsule type form: duplicate field names are rejected with a message; the per-field toggle has a visible label and aligned layout
 - [ ] 10.22 Date fields use a date picker instead of free-text YYYY-MM-DD

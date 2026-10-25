@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AccessibilityInfo, Alert, Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
 import { useDb, useEmbeddings, useLlm, useStt } from "@/app/providers";
@@ -27,7 +27,10 @@ import {
   switchBranch,
 } from "@/features/branch-conversation";
 import { getInferenceSettings } from "@/features/configure-inference";
-import { exportConversationAsMarkdown } from "@/features/export-chat";
+import {
+  exportConversationAsMarkdown,
+  recordChatExport,
+} from "@/features/export-chat";
 import { sendMessage, type Grounding } from "@/features/send-message";
 import {
   createVoiceInputController,
@@ -51,6 +54,8 @@ import { toSourceChips, type SourceChip } from "@/widgets/MessageSources";
 
 /** How long a message waits for capsule search before going out ungrounded. */
 const CAPSULE_SEARCH_TIMEOUT_MS = 4000;
+// Long enough to read after looking back up from the keyboard or thread.
+const COPY_CONFIRMATION_MS = 4000;
 
 const STATUS_MESSAGE: Record<string, string> = {
   "no-model": "Download a model to start chatting.",
@@ -457,8 +462,16 @@ export default function ChatScreen() {
   // API (same one `ChatBubble`'s code-block copy already uses), not a
   // network action. `getConversationById` here (rather than trusting some
   // already-loaded conversation object) means the exported title is always
-  // whatever's actually saved right now, not a stale render's copy of it.
+  // whatever's actually saved right now, not a stale render's copy of it,
+  // and the copy is written to the activity log, like every other export.
   const [exported, setExported] = useState(false);
+  const exportedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (exportedTimer.current) clearTimeout(exportedTimer.current);
+    },
+    [],
+  );
   const handleExport = async () => {
     if (!id) return;
     const conversation = getConversationById(db, id);
@@ -468,7 +481,21 @@ export default function ChatScreen() {
       const ok = await Clipboard.setStringAsync(markdown);
       if (ok) {
         setExported(true);
-        setTimeout(() => setExported(false), 1500);
+        AccessibilityInfo.announceForAccessibility("Copied as Markdown");
+        if (exportedTimer.current) clearTimeout(exportedTimer.current);
+        exportedTimer.current = setTimeout(
+          () => setExported(false),
+          COPY_CONFIRMATION_MS,
+        );
+        try {
+          recordChatExport(db, {
+            title: conversation.title,
+            messageCount: messages.length,
+          });
+        } catch {
+          // The text is already on the clipboard; a failed log write must
+          // not take the confirmation away with it.
+        }
       }
     } catch {
       // Clipboard access can fail for platform reasons outside this app's
@@ -498,10 +525,12 @@ export default function ChatScreen() {
             style={styles.exportButton}
             onPress={handleExport}
             accessibilityRole="button"
-            accessibilityLabel={exported ? "Copied" : "Export"}
+            accessibilityLabel={
+              exported ? "Copied as Markdown" : "Copy as Markdown"
+            }
           >
             <Text style={styles.exportLabel} accessibilityLiveRegion="polite">
-              {exported ? "Copied!" : "Export"}
+              {exported ? "Copied ✓" : "Copy as Markdown"}
             </Text>
           </Pressable>
         )}

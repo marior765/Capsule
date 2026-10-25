@@ -42,3 +42,5 @@ export function exportConversationAsMarkdown(
 
   return lines.join("\n") + "\n";
 }
+
+export { recordChatExport, type ChatExportRecord } from "./record";
