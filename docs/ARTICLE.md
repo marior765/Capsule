@@ -2730,4 +2730,35 @@ hardware should check.
 
 ---
 
+## 2026-10-25 — Layout you can't measure, and a reviewer that checked the third row
+
+Two of the day's steps were small UI fixes, and both went wrong in ways no
+unit test could show.
+
+The date picker (10.22) wraps the native iOS calendar. Its view draws taller
+than the height it reports to React Native. The first layout put the last
+week of the month under the Done button. Adding a `minHeight` fixed that
+under hot reload, but after a cold launch the sheet overflowed off the
+screen. A fixed height overlapped again. The fix that held was to stop
+fighting the measurement: put Cancel and Done in a header *above* the
+calendar, where its overflow can't cover them. Along the way, a modal left
+open across a Fast Refresh stopped answering taps entirely. That was a
+false alarm, but it cost time until a cold relaunch showed the real
+behaviour.
+
+In 10.21 the agent gave each field row's "Required" switch a fixed-width
+column and checked it in the simulator with one field. The independent
+reviewer failed the step: rows show one or two reorder arrows depending on
+whether they're first, middle or last, so with three fields the column still
+drifted. The fix was to always reserve both arrow slots. The re-check with
+three rows passed.
+
+**Article angle:** when a native view's size can't be trusted, design so it
+doesn't matter, and verify layout fixes after a cold start. "It looks right"
+also needs a sample that covers the variations: first, middle and last.
+A reviewer reasoning from the code caught what a one-row screenshot
+couldn't show.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
