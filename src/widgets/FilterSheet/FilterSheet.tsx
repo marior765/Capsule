@@ -59,7 +59,14 @@ export function FilterSheet({
           accessibilityState={{ selected: selectedTypeId === null }}
           accessibilityLabel="All types"
         >
-          <Text style={styles.chipLabel}>All</Text>
+          <Text
+            style={[
+              styles.chipLabel,
+              selectedTypeId === null && styles.chipLabelSelected,
+            ]}
+          >
+            All
+          </Text>
         </Pressable>
         {capsuleTypes.map((capsuleType) => (
           <Pressable
@@ -74,7 +81,14 @@ export function FilterSheet({
             accessibilityState={{ selected: selectedTypeId === capsuleType.id }}
             accessibilityLabel={capsuleType.name}
           >
-            <Text style={styles.chipLabel}>{capsuleType.name}</Text>
+            <Text
+              style={[
+                styles.chipLabel,
+                selectedTypeId === capsuleType.id && styles.chipLabelSelected,
+              ]}
+            >
+              {capsuleType.name}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -97,7 +111,9 @@ export function FilterSheet({
                   : option.label
               }
             >
-              <Text style={styles.chipLabel}>
+              <Text
+                style={[styles.chipLabel, isActive && styles.chipLabelSelected]}
+              >
                 {option.label}
                 {isActive ? (sortDirection === "asc" ? " ↑" : " ↓") : ""}
               </Text>
@@ -131,8 +147,13 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.spacing.one,
     borderRadius: theme.spacing.two,
   },
+  // Accent fill + contrasting label, as SchemaBuilder's type chips do — the
+  // old selected grey was barely different from the unselected one.
   chipSelected: {
-    backgroundColor: theme.colors.backgroundSelected,
+    backgroundColor: theme.colors.accent,
+  },
+  chipLabelSelected: {
+    color: theme.colors.background,
   },
   chipLabel: {
     color: theme.colors.text,
