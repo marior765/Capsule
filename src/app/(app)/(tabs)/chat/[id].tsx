@@ -1,6 +1,13 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AccessibilityInfo, Alert, Pressable, Text, View } from "react-native";
+import {
+  AccessibilityInfo,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import * as Clipboard from "expo-clipboard";
 import { useDb, useEmbeddings, useLlm, useStt } from "@/app/providers";
@@ -31,6 +38,10 @@ import {
   exportConversationAsMarkdown,
   recordChatExport,
 } from "@/features/export-chat";
+import {
+  getConversationPersona,
+  setConversationPersona,
+} from "@/features/manage-conversations";
 import { sendMessage, type Grounding } from "@/features/send-message";
 import {
   createVoiceInputController,
@@ -39,6 +50,7 @@ import {
   VOICE_HOLD_HINT,
   type VoiceInputController,
 } from "@/features/voice-input";
+import { getAllPersonas, type Persona } from "@/entities/persona";
 import { getAllSnippets, type Snippet } from "@/entities/snippet";
 import { createComponentTestIDs } from "@/shared/testing";
 import { ChatInput } from "@/widgets/ChatInput";
@@ -48,6 +60,7 @@ import {
   type BranchPosition,
 } from "@/widgets/ChatThread";
 import { estimateTokens, InferenceStats } from "@/widgets/InferenceStats";
+import { PersonaSelector } from "@/widgets/PersonaSelector";
 import { SnippetPicker } from "@/widgets/SnippetPicker";
 import { VoiceRecordButton } from "@/widgets/VoiceRecordButton";
 import { toSourceChips, type SourceChip } from "@/widgets/MessageSources";
@@ -180,8 +193,18 @@ export default function ChatScreen() {
   const [draftInsertKey, setDraftInsertKey] = useState(0);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
+  // The persona this chat answers as. Re-read on focus (below) so a rename
+  // or delete on the Personas screen shows up on return.
+  const [persona, setPersona] = useState<Persona | null>(() =>
+    id ? getConversationPersona(db, id) : null,
+  );
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [showPersonaPicker, setShowPersonaPicker] = useState(false);
 
-  const refresh = useCallback(() => setMessages(readPath()), [readPath]);
+  const refresh = useCallback(() => {
+    setMessages(readPath());
+    if (id) setPersona(getConversationPersona(db, id));
+  }, [readPath, db, id]);
 
   // Re-read on every return to this screen: the chat tab stays mounted while
   // the user is elsewhere (e.g. after tapping a capsule chip), so anything
@@ -206,7 +229,22 @@ export default function ChatScreen() {
 
   const handleOpenSnippetPicker = () => {
     setSnippets(getAllSnippets(db));
+    setShowPersonaPicker(false);
     setShowSnippetPicker(true);
+  };
+
+  const handleOpenPersonaPicker = () => {
+    setPersonas(getAllPersonas(db));
+    setShowSnippetPicker(false);
+    setShowPersonaPicker(true);
+  };
+
+  // Applies from the next message on; replies already written keep theirs.
+  const handleSelectPersona = (next: Persona | null) => {
+    if (!id) return;
+    setConversationPersona(db, id, next?.id ?? null);
+    setPersona(next);
+    setShowPersonaPicker(false);
   };
 
   const handleInsertSnippet = (snippet: Snippet) => {
@@ -638,6 +676,34 @@ export default function ChatScreen() {
           {showSnippetPicker && (
             <SnippetPicker snippets={snippets} onSelect={handleInsertSnippet} />
           )}
+          {showPersonaPicker && (
+            <ScrollView
+              testID={testIDs.containers.personaPicker}
+              style={styles.personaPicker}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.personaPickerHint}>
+                Applies from your next message.
+              </Text>
+              <PersonaSelector
+                personas={personas}
+                selectedId={persona?.id ?? null}
+                onSelect={handleSelectPersona}
+                allowNone
+              />
+              <Pressable
+                testID={testIDs.buttons.managePersonas}
+                style={styles.snippetsButton}
+                onPress={() => {
+                  setShowPersonaPicker(false);
+                  router.push("/personas");
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.snippetsLabel}>Manage personas</Text>
+              </Pressable>
+            </ScrollView>
+          )}
           <View style={styles.toolbar}>
             <Pressable
               testID={testIDs.buttons.snippets}
@@ -652,6 +718,24 @@ export default function ChatScreen() {
             >
               <Text style={styles.snippetsLabel}>
                 {showSnippetPicker ? "Close" : "Snippets"}
+              </Text>
+            </Pressable>
+            <Pressable
+              testID={testIDs.buttons.persona}
+              style={[styles.snippetsButton, styles.personaButton]}
+              onPress={() =>
+                showPersonaPicker
+                  ? setShowPersonaPicker(false)
+                  : handleOpenPersonaPicker()
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Persona: ${persona?.name ?? "none"}. Change persona`}
+              accessibilityState={{ expanded: showPersonaPicker }}
+            >
+              <Text style={styles.snippetsLabel} numberOfLines={1}>
+                {/* Same label open or closed, so the buttons beside it don't
+                    shift under the finger. */}
+                {`Persona: ${persona?.name ?? "none"}`}
               </Text>
             </Pressable>
             <Pressable
@@ -813,6 +897,21 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 12,
   },
+  // A long persona name truncates instead of pushing Capsules off the row.
+  personaButton: {
+    maxWidth: 180,
+  },
+  personaPicker: {
+    maxHeight: 280,
+    paddingHorizontal: theme.spacing.three,
+    paddingTop: theme.spacing.two,
+  },
+  personaPickerHint: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginBottom: theme.spacing.two,
+  },
   capsulesOff: {
     color: theme.colors.textSecondary,
   },
@@ -844,9 +943,11 @@ const testIDs = createComponentTestIDs("ChatScreen", {
     "dismissVoiceError",
     "manageModels",
     "getCapsuleModel",
+    "persona",
+    "managePersonas",
   ] as const,
   texts: ["capsuleNotice"] as const,
-  containers: ["pendingImage"] as const,
+  containers: ["pendingImage", "personaPicker"] as const,
 });
 
 ChatScreen.testIDs = testIDs;

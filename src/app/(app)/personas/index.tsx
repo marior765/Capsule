@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb } from "@/app/providers";
@@ -19,6 +19,7 @@ export default function PersonasScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
   const refresh = useCallback(() => setPersonas(getAllPersonas(db)), [db]);
   useFocusEffect(
@@ -62,6 +63,9 @@ export default function PersonasScreen() {
     setEditingId(persona.id);
     setName(persona.name);
     setSystemPrompt(persona.systemPrompt);
+    // The form sits above the list — bring it into view, or a tap far down
+    // the list looks like it did nothing.
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleDelete = (persona: Persona) => {
@@ -75,6 +79,7 @@ export default function PersonasScreen() {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
+      ref={scrollRef}
       style={styles.root}
       contentContainerStyle={styles.content}
     >
@@ -134,7 +139,8 @@ export default function PersonasScreen() {
             style={styles.rowMain}
             onPress={() => handleEdit(persona)}
             accessibilityRole="button"
-            accessibilityLabel={`Edit ${persona.name}`}
+            accessibilityLabel={persona.name}
+            accessibilityHint="Opens it for editing"
           >
             <Text style={styles.name}>{persona.name}</Text>
             <Text style={styles.meta} numberOfLines={2}>
@@ -142,7 +148,17 @@ export default function PersonasScreen() {
             </Text>
           </Pressable>
           <Pressable
+            testID={`${testIDs.buttons.edit}_${persona.id}`}
+            onPress={() => handleEdit(persona)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${persona.name}`}
+          >
+            <Text style={styles.edit}>Edit</Text>
+          </Pressable>
+          <Pressable
             testID={`${testIDs.buttons.delete}_${persona.id}`}
+            hitSlop={8}
             onPress={() => handleDelete(persona)}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${persona.name}`}
@@ -222,6 +238,11 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 12,
   },
+  edit: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.rounded,
+    paddingLeft: theme.spacing.three,
+  },
   delete: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.rounded,
@@ -231,7 +252,7 @@ const styles = StyleSheet.create((theme) => ({
 
 const testIDs = createComponentTestIDs("PersonasScreen", {
   inputs: ["name", "systemPrompt"] as const,
-  buttons: ["save", "cancel", "delete"] as const,
+  buttons: ["save", "cancel", "edit", "delete"] as const,
   pressables: ["persona"] as const,
 });
 

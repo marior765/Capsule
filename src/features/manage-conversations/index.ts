@@ -3,6 +3,7 @@ import {
   deleteConversation as deleteConversationRecord,
   getAllConversations,
   insertConversation,
+  getConversationById,
   updateConversation,
   type Conversation,
   DEFAULT_CONVERSATION_TITLE,
@@ -12,6 +13,7 @@ import {
   deleteMessagesByConversation,
   deleteSourcesByConversation,
 } from "@/entities/message";
+import { getPersonaById, type Persona } from "@/entities/persona";
 import { deleteAppDirectoryIfExists, isSafeSegment } from "@/shared/fs";
 import { generateId } from "@/shared/lib";
 
@@ -45,6 +47,31 @@ export function renameConversation(
   title: string,
 ): void {
   updateConversation(db, id, { title, updatedAt: Date.now() });
+}
+
+/**
+ * Switches the persona an existing conversation uses — `null` for none.
+ * Takes effect from the next message: earlier replies keep the voice they
+ * were written in.
+ */
+export function setConversationPersona(
+  db: SQLiteDatabase,
+  id: string,
+  personaId: string | null,
+): void {
+  updateConversation(db, id, { personaId, updatedAt: Date.now() });
+}
+
+/**
+ * The persona a conversation currently uses, or `null` for none — also when
+ * the persona has since been deleted, the same way sending treats it.
+ */
+export function getConversationPersona(
+  db: SQLiteDatabase,
+  id: string,
+): Persona | null {
+  const personaId = getConversationById(db, id)?.personaId;
+  return personaId ? getPersonaById(db, personaId) : null;
 }
 
 /**
