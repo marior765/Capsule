@@ -187,7 +187,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.22 Date fields use a date picker instead of free-text YYYY-MM-DD
 - [x] 10.23 Tag input: autocorrect/autocapitalize off
 - [x] 10.24 Capsule list cards show tags and key field values; list view differs meaningfully from card view
-- [ ] 10.25 View toggle label is consistent (always names the current view or always the next); board view with "All" types doesn't hide every capsule behind a hint
+- [x] 10.25 View toggle label is consistent (always names the current view or always the next); board view with "All" types doesn't hide every capsule behind a hint
 - [ ] 10.26 Selected filter/sort chips are clearly distinguishable
 - [ ] 10.27 Reminder screen: "notifications are off" shown once, with an "Open Settings" link
 - [ ] 10.28 Capsule history entries say what changed

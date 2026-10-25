@@ -12,7 +12,9 @@ import type { BulkOperationResult } from "@/shared/lib";
 import { getAllCapsuleTypes, type CapsuleType } from "@/entities/capsule-type";
 import { getFieldsByCapsuleType, parseSelectOptions } from "@/entities/field";
 import {
+  boardableTypeIds,
   filterCapsulesByType,
+  findBoardField,
   groupCapsulesBySelectField,
   sortCapsules,
   type CapsuleSortKey,
@@ -81,10 +83,23 @@ export default function CapsuleListScreen() {
   // all, has nothing to group by (handled in the render below, not here).
   const boardField =
     viewMode === "board" && selectedTypeId
-      ? (getFieldsByCapsuleType(db, selectedTypeId).find(
-          (field) => field.fieldType === "single_select",
-        ) ?? null)
+      ? findBoardField(getFieldsByCapsuleType(db, selectedTypeId))
       : null;
+  const boardReady = boardField !== null;
+  // Types the board can show, offered right in the hint when it can't show
+  // the current choice — one tap instead of a trip to Filter & sort.
+  const boardTypes =
+    viewMode === "board" && !boardReady
+      ? boardableTypeIds(
+          capsuleTypes.map((type) => type.id),
+          Object.fromEntries(
+            capsuleTypes.map((type) => [
+              type.id,
+              getFieldsByCapsuleType(db, type.id),
+            ]),
+          ),
+        ).map((id) => capsuleTypesById[id])
+      : [];
   const boardColumns = boardField
     ? groupCapsulesBySelectField(
         visibleCapsules,
@@ -187,16 +202,37 @@ export default function CapsuleListScreen() {
             </Text>
           </Pressable>
         )}
-        <Pressable
-          testID={testIDs.pressables.toggleViewMode}
-          style={styles.filterToggle}
-          onPress={() => setViewMode((mode) => NEXT_VIEW_MODE[mode])}
-          accessibilityRole="button"
-        >
-          <Text style={styles.filterToggleLabel}>
-            {VIEW_MODE_LABEL[viewMode]}
-          </Text>
-        </Pressable>
+      </View>
+      {/* All three views named at once, the current one marked — a single
+          cycling button left it unclear whether its label was the view you
+          were in or the one you'd get. */}
+      <View
+        testID={testIDs.containers.viewModes}
+        style={styles.viewModes}
+        accessibilityRole="tablist"
+      >
+        {VIEW_MODES.map((mode) => {
+          const selected = viewMode === mode;
+          return (
+            <Pressable
+              key={mode}
+              testID={`${testIDs.pressables.viewMode}_${mode}`}
+              style={[styles.viewMode, selected && styles.viewModeSelected]}
+              onPress={() => setViewMode(mode)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: viewMode === mode }}
+            >
+              <Text
+                style={[
+                  styles.viewModeLabel,
+                  selected && styles.viewModeLabelSelected,
+                ]}
+              >
+                {VIEW_MODE_LABEL[mode]}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
       {captureVisible && (
         <QuickCapture capsuleTypes={capsuleTypes} onCapture={handleCapture} />
@@ -221,49 +257,72 @@ export default function CapsuleListScreen() {
           onDeleted={handleDeleted}
         />
       )}
-      {viewMode === "board" ? (
-        !selectedTypeId ? (
-          <Text testID={testIDs.texts.boardHint} style={styles.boardHint}>
-            Select a capsule type above (Filter & sort) to use board view.
-          </Text>
-        ) : !boardField ? (
-          <Text testID={testIDs.texts.boardHint} style={styles.boardHint}>
-            {capsuleTypesById[selectedTypeId]?.name ?? "This type"} has no
-            single-select field to group by.
-          </Text>
-        ) : (
-          <CapsuleBoard
-            columns={boardColumns}
-            capsuleTypeName={capsuleTypesById[selectedTypeId]?.name ?? null}
-            onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
-          />
-        )
-      ) : (
-        <CapsuleList
-          capsules={visibleCapsules}
-          capsuleTypesById={capsuleTypesById}
+      {viewMode === "board" && boardReady ? (
+        <CapsuleBoard
+          columns={boardColumns}
+          capsuleTypeName={
+            selectedTypeId
+              ? (capsuleTypesById[selectedTypeId]?.name ?? null)
+              : null
+          }
           onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
-          selectionMode={selectionMode}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          viewMode={viewMode}
-          previewsById={previews}
         />
+      ) : (
+        <>
+          {viewMode === "board" && (
+            <View
+              testID={testIDs.containers.boardHint}
+              style={styles.boardHint}
+            >
+              <Text style={styles.boardHintText}>
+                {selectedTypeId
+                  ? `${capsuleTypesById[selectedTypeId]?.name ?? "This type"} has no single-select field to group by.`
+                  : "A board groups one type by its single-select field."}
+                {boardTypes.length > 0
+                  ? " Show a board for:"
+                  : " Add a single-select field to a type to use it."}
+              </Text>
+              {boardTypes.length > 0 && (
+                <View style={styles.boardTypes}>
+                  {boardTypes.map((type) => (
+                    <Pressable
+                      key={type.id}
+                      testID={`${testIDs.pressables.boardType}_${type.id}`}
+                      style={styles.boardType}
+                      onPress={() => setSelectedTypeId(type.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Show a board for ${type.name}`}
+                    >
+                      <Text style={styles.boardTypeLabel}>{type.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+          <CapsuleList
+            capsules={visibleCapsules}
+            capsuleTypesById={capsuleTypesById}
+            onPressCapsule={(capsule) => router.push(`/capsules/${capsule.id}`)}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            // Under the board hint the capsules stay visible, as cards.
+            viewMode={viewMode === "board" ? "card" : viewMode}
+            previewsById={previews}
+          />
+        </>
       )}
     </View>
   );
 }
 
-const NEXT_VIEW_MODE = {
-  list: "card",
-  card: "board",
-  board: "list",
-} as const;
+const VIEW_MODES = ["list", "card", "board"] as const;
 
 const VIEW_MODE_LABEL = {
-  list: "List view",
-  card: "Card view",
-  board: "Board view",
+  list: "List",
+  card: "Cards",
+  board: "Board",
 } as const;
 
 const styles = StyleSheet.create((theme) => ({
@@ -300,12 +359,57 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 13,
   },
-  boardHint: {
+  viewModes: {
+    flexDirection: "row",
+    marginHorizontal: theme.spacing.three,
+    marginTop: theme.spacing.two,
+    padding: 2,
+    borderRadius: theme.spacing.two,
+    backgroundColor: theme.colors.backgroundElement,
+  },
+  viewMode: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: theme.spacing.one,
+    borderRadius: theme.spacing.two,
+  },
+  viewModeSelected: {
+    backgroundColor: theme.colors.background,
+  },
+  viewModeLabel: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
     fontSize: 13,
-    textAlign: "center",
-    padding: theme.spacing.four,
+  },
+  viewModeLabelSelected: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.rounded,
+  },
+  boardHintText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+  },
+  boardTypes: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.one,
+    marginTop: theme.spacing.two,
+  },
+  boardType: {
+    paddingVertical: theme.spacing.one,
+    paddingHorizontal: theme.spacing.two,
+    borderRadius: theme.spacing.four,
+    backgroundColor: theme.colors.backgroundSelected,
+  },
+  boardTypeLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+  },
+  boardHint: {
+    marginHorizontal: theme.spacing.three,
+    marginTop: theme.spacing.two,
   },
 }));
 
@@ -315,9 +419,10 @@ const testIDs = createComponentTestIDs("CapsuleListScreen", {
     "toggleFilter",
     "toggleSelectionMode",
     "toggleCapture",
-    "toggleViewMode",
+    "viewMode",
+    "boardType",
   ] as const,
-  texts: ["boardHint"] as const,
+  containers: ["viewModes", "boardHint"] as const,
 });
 
 CapsuleListScreen.testIDs = testIDs;

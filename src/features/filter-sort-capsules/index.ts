@@ -1,4 +1,5 @@
 import type { Capsule } from "@/entities/capsule";
+import type { CapsuleField } from "@/entities/field";
 
 /** Pure — operates on an already-fetched list, does no db work of its own. */
 export function filterCapsulesByType(
@@ -78,4 +79,28 @@ export function groupCapsulesBySelectField(
   }
 
   return [...columns, { key: "unset", label: "No status", capsules: unset }];
+}
+
+/**
+ * The field a type's board groups by (8.7): its first single-select field in
+ * field order, or null when it has none — board view can't group that type.
+ */
+export function findBoardField(
+  fields: readonly CapsuleField[],
+): CapsuleField | null {
+  return (
+    [...fields]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .find((field) => field.fieldType === "single_select") ?? null
+  );
+}
+
+/** Of `typeIds`, the ones board view can show (they have a board field), order kept. */
+export function boardableTypeIds(
+  typeIds: readonly string[],
+  fieldsByType: Readonly<Record<string, readonly CapsuleField[]>>,
+): string[] {
+  return typeIds.filter(
+    (id) => findBoardField(fieldsByType[id] ?? []) !== null,
+  );
 }
