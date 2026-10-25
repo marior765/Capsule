@@ -55,7 +55,11 @@ export function TagPicker({ tags, onAddTag, onRemoveTag }: TagPickerProps) {
           onChangeText={setDraftName}
           placeholder="Add a tag"
           accessibilityLabel="New tag name"
+          // A tag is a name the user picks, not prose — the keyboard must
+          // not correct or capitalise it on the way to Add.
           autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
           returnKeyType="done"
           onSubmitEditing={handleAdd}
         />
