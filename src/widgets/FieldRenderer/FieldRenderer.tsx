@@ -1,6 +1,10 @@
 import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { buildTestID, createComponentTestIDs } from "@/shared/testing";
+import {
+  buildTestID,
+  createComponentTestIDs,
+  extendIDs,
+} from "@/shared/testing";
 import {
   parseBooleanValue,
   parseMultiSelectValue,
@@ -9,6 +13,7 @@ import {
   serializeMultiSelectValue,
   type CapsuleField,
 } from "@/entities/field";
+import { FieldDateInput } from "./FieldDateInput";
 
 type FieldRendererProps = {
   field: CapsuleField;
@@ -85,17 +90,8 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
       );
 
     case "date":
-      // A plain text field for now — a real native date picker (@expo/ui
-      // ships one) is a follow-on UI polish pass, not blocking this step.
       return (
-        <TextInput
-          testID={testIDs.inputs.date}
-          style={styles.input}
-          value={value ?? ""}
-          onChangeText={(text) => onChange(text || null)}
-          placeholder="YYYY-MM-DD"
-          accessibilityLabel={`${field.name} (YYYY-MM-DD)`}
-        />
+        <FieldDateInput label={field.name} value={value} onChange={onChange} />
       );
 
     case "single_select": {
@@ -234,7 +230,8 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("FieldRenderer", {
-  inputs: ["text", "longText", "number", "boolean", "date"] as const,
+  inputs: ["text", "longText", "number", "boolean"] as const,
+  buttons: extendIDs(FieldDateInput.testIDs.buttons),
   containers: ["options"] as const,
   texts: ["unsupported"] as const,
 });

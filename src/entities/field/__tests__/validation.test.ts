@@ -123,7 +123,7 @@ describe("validateFieldValue — date", () => {
     const field = makeField({ fieldType: "date", name: "Published" });
     expect(validateFieldValue(field, "not-a-date")).toEqual({
       valid: false,
-      error: "Published must be a valid date (YYYY-MM-DD)",
+      error: "Published must be a real date — pick one, or clear it",
     });
   });
 });
@@ -136,7 +136,7 @@ describe("validateFieldValue — date is a real calendar date (10.2)", () => {
   const field = makeField({ fieldType: "date", name: "Finished" });
   const invalid = {
     valid: false,
-    error: "Finished must be a valid date (YYYY-MM-DD)",
+    error: "Finished must be a real date — pick one, or clear it",
   };
 
   it.each([

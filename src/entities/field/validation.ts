@@ -75,7 +75,7 @@ export function validateFieldValue(
       if (!isCalendarDate(value)) {
         return {
           valid: false,
-          error: `${field.name} must be a valid date (YYYY-MM-DD)`,
+          error: `${field.name} must be a real date — pick one, or clear it`,
         };
       }
       return VALID;
