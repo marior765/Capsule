@@ -44,6 +44,7 @@ export const RECOMMENDED_MODELS = [
     url: "https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
     parameters: "1B",
     quantization: "Q4_K_M",
+    sizeLabel: "0.8 GB",
   },
   {
     id: "llama-3-2-3b",
@@ -51,6 +52,7 @@ export const RECOMMENDED_MODELS = [
     url: "https://huggingface.co/unsloth/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
     parameters: "3B",
     quantization: "Q4_K_M",
+    sizeLabel: "2.0 GB",
   },
   {
     // Vision (8.4): a small image-understanding model plus its multimodal
@@ -65,6 +67,7 @@ export const RECOMMENDED_MODELS = [
       "https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf",
     parameters: "0.5B",
     quantization: "Q8_0",
+    sizeLabel: "0.55 GB",
   },
 ] as const satisfies readonly {
   id: string;
@@ -73,6 +76,8 @@ export const RECOMMENDED_MODELS = [
   parameters: ParameterSize;
   quantization: Quantization;
   mmprojUrl?: string;
+  /** Approximate download size (model + projector), shown before downloading. */
+  sizeLabel: string;
 }[];
 
 /**

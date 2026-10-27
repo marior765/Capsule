@@ -12,6 +12,10 @@ type EmbeddingModelCardProps = {
   error: string | null;
   onDownload: () => void;
   onDelete: () => void;
+  /** What the model is for (10.31: the same card shows the voice model). */
+  description?: string;
+  /** Keeps testIDs distinct when several cards share a screen. */
+  testIDSuffix?: string;
 };
 
 /**
@@ -28,12 +32,17 @@ export function EmbeddingModelCard({
   error,
   onDownload,
   onDelete,
+  description = "Lets Capsule find your capsules by meaning, not just exact words.",
+  testIDSuffix = "",
 }: EmbeddingModelCardProps) {
   return (
-    <View testID={testIDs.containers.root} style={styles.root}>
+    <View
+      testID={`${testIDs.containers.root}${testIDSuffix}`}
+      style={styles.root}
+    >
       <Text style={styles.name}>{modelName}</Text>
       <Text style={styles.meta}>
-        Lets Capsule find your capsules by meaning, not just exact words.
+        {description}
         {state === "ready"
           ? " Downloaded — runs entirely on this device."
           : ` One-time ${sizeLabel} download; after that it runs entirely on this device.`}
@@ -41,7 +50,7 @@ export function EmbeddingModelCard({
 
       {error !== null && (
         <Text
-          testID={testIDs.texts.error}
+          testID={`${testIDs.texts.error}${testIDSuffix}`}
           style={styles.error}
           accessibilityLiveRegion="polite"
         >
@@ -51,7 +60,7 @@ export function EmbeddingModelCard({
 
       {state === "ready" ? (
         <Pressable
-          testID={testIDs.buttons.delete}
+          testID={`${testIDs.buttons.delete}${testIDSuffix}`}
           style={styles.button}
           onPress={onDelete}
           accessibilityRole="button"
@@ -61,7 +70,7 @@ export function EmbeddingModelCard({
         </Pressable>
       ) : (
         <Pressable
-          testID={testIDs.buttons.download}
+          testID={`${testIDs.buttons.download}${testIDSuffix}`}
           style={styles.button}
           onPress={onDownload}
           disabled={state === "downloading"}

@@ -2,7 +2,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb, useEmbeddings, useLlm } from "@/app/providers";
+import { useDb, useEmbeddings, useLlm, useStt } from "@/app/providers";
 import { RECOMMENDED_MODELS } from "@/shared/config";
 import { getActiveModel, type Model } from "@/entities/model";
 import {
@@ -19,6 +19,14 @@ import {
   isEmbeddingModelDownloading,
   waitForEmbeddingDownload,
 } from "@/features/manage-embedding-model";
+import {
+  DEFAULT_STT_MODEL,
+  deleteSttModel,
+  ensureSttModelDownloaded,
+  getSttModelPath,
+  isSttModelDownloading,
+  waitForSttDownload,
+} from "@/features/manage-stt-model";
 import {
   EmbeddingModelCard,
   type EmbeddingModelState,
@@ -43,6 +51,43 @@ export default function ModelsScreen() {
   const [embeddingState, setEmbeddingState] =
     useState<EmbeddingModelState>(readEmbeddingState);
   const [embeddingError, setEmbeddingError] = useState<string | null>(null);
+
+  // The voice-input (Whisper) model (10.31): listed here so its size can be
+  // seen and freed. Downloading it here is the same user-initiated action as
+  // the first press of the mic.
+  const stt = useStt();
+  const readSttState = (): EmbeddingModelState =>
+    isSttModelDownloading()
+      ? "downloading"
+      : getSttModelPath()
+        ? "ready"
+        : "missing";
+  const [sttState, setSttState] = useState<EmbeddingModelState>(readSttState);
+  const [sttError, setSttError] = useState<string | null>(null);
+
+  const handleDownloadSttModel = async () => {
+    setSttError(null);
+    setSttState("downloading");
+    try {
+      await ensureSttModelDownloaded(db);
+    } catch (e) {
+      setSttError(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setSttState(readSttState());
+    }
+  };
+
+  const handleDeleteSttModel = async () => {
+    setSttError(null);
+    try {
+      await stt.release(); // a loaded model must be let go first
+      deleteSttModel();
+    } catch (e) {
+      setSttError(e instanceof Error ? e.message : "Couldn't delete it");
+    } finally {
+      setSttState(readSttState());
+    }
+  };
 
   // User-initiated: the only path that downloads the embedding model.
   const handleDownloadEmbeddingModel = async () => {
@@ -70,12 +115,19 @@ export default function ModelsScreen() {
     useCallback(() => {
       refresh();
       setEmbeddingState(readEmbeddingState());
+      setSttState(readSttState());
       // A download started from an earlier visit to this screen: only that
       // visit's handler learned when it ended, so wait for it here too.
       let active = true;
       if (isEmbeddingModelDownloading()) {
         void waitForEmbeddingDownload().then(() => {
           if (active) setEmbeddingState(readEmbeddingState());
+        });
+      }
+      // Same for the voice model, whose download may have begun at the mic.
+      if (isSttModelDownloading()) {
+        void waitForSttDownload().then(() => {
+          if (active) setSttState(readSttState());
         });
       }
       return () => {
@@ -174,6 +226,18 @@ export default function ModelsScreen() {
         onDelete={handleDeleteEmbeddingModel}
       />
 
+      <Text style={styles.heading}>Voice input</Text>
+      <EmbeddingModelCard
+        modelName={DEFAULT_STT_MODEL.name}
+        sizeLabel={DEFAULT_STT_MODEL.sizeLabel}
+        state={sttState}
+        error={sttError}
+        onDownload={() => void handleDownloadSttModel()}
+        onDelete={() => void handleDeleteSttModel()}
+        description="Turns what you say into text for the chat box."
+        testIDSuffix="_stt"
+      />
+
       <Text style={styles.heading}>Download</Text>
       {error && (
         <Text style={styles.error} accessibilityLiveRegion="polite">
@@ -183,27 +247,40 @@ export default function ModelsScreen() {
       {available.length === 0 && (
         <Text style={styles.muted}>All recommended models downloaded.</Text>
       )}
-      {available.map((spec) => (
-        <Pressable
-          testID={`${testIDs.buttons.download}_${spec.id}`}
-          key={spec.url}
-          style={styles.row}
-          disabled={downloadingUrl !== null}
-          onPress={() => handleDownload(spec)}
-          accessibilityRole="button"
-          accessibilityLabel={`${downloadingUrl === spec.url ? "Downloading" : "Download"} ${spec.name}, ${spec.parameters}, ${spec.quantization}`}
-          accessibilityState={{ disabled: downloadingUrl !== null }}
-        >
-          <View style={styles.rowMain}>
-            <Text style={styles.name}>
-              {downloadingUrl === spec.url ? "Downloading…" : spec.name}
-            </Text>
-            <Text style={styles.meta}>
-              {spec.parameters} · {spec.quantization}
-            </Text>
+      {available.map((spec) => {
+        const isDownloading = downloadingUrl === spec.url;
+        return (
+          <View key={spec.url} style={styles.row}>
+            <View style={styles.rowMain}>
+              <Text style={styles.name}>{spec.name}</Text>
+              <Text style={styles.meta}>
+                {spec.parameters} · {spec.quantization} · {spec.sizeLabel}
+              </Text>
+            </View>
+            <Pressable
+              testID={`${testIDs.buttons.download}_${spec.id}`}
+              style={[
+                styles.downloadButton,
+                downloadingUrl !== null && styles.disabled,
+              ]}
+              disabled={downloadingUrl !== null}
+              onPress={() => handleDownload(spec)}
+              accessibilityRole="button"
+              accessibilityLabel={`${isDownloading ? "Downloading" : "Download"} ${spec.name}, ${spec.sizeLabel}`}
+              accessibilityState={{
+                disabled: downloadingUrl !== null,
+                busy: isDownloading,
+              }}
+            >
+              <Text style={styles.downloadLabel}>
+                {isDownloading
+                  ? "Downloading…"
+                  : `Download (${spec.sizeLabel})`}
+              </Text>
+            </Pressable>
           </View>
-        </Pressable>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }
@@ -254,6 +331,21 @@ const styles = StyleSheet.create((theme) => ({
   meta: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
+  },
+  downloadButton: {
+    marginLeft: theme.spacing.two,
+    paddingHorizontal: theme.spacing.three,
+    paddingVertical: theme.spacing.two,
+    borderRadius: theme.spacing.two,
+    backgroundColor: theme.colors.backgroundSelected,
+  },
+  downloadLabel: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   delete: {
     color: theme.colors.textSecondary,

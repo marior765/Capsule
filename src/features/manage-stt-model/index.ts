@@ -2,13 +2,14 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import { beginEgress } from "@/shared/egress";
 import {
   appFileExists,
+  deleteAppFileIfExists,
   downloadFileInto,
   resolveAppPath,
   safeDecode,
 } from "@/shared/fs";
 import { insertAuditEntry } from "@/entities/audit";
 import { generateId } from "@/shared/lib";
-import { getString, setString } from "@/shared/storage";
+import { getString, remove, setString } from "@/shared/storage";
 
 const STT_MODELS_DIRECTORY = "stt-models";
 
@@ -25,6 +26,8 @@ export const STT_MODEL_PATH_KEY = "sttModelPath";
 export const DEFAULT_STT_MODEL = {
   name: "Whisper base (English)",
   url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
+  /** Approximate download size, shown before downloading. */
+  sizeLabel: "148 MB",
 };
 
 /**
@@ -86,6 +89,40 @@ export async function ensureSttModelDownloaded(
   const uri = await inFlight;
   onProgress?.(1);
   return uri;
+}
+
+/** True while the voice model is downloading (from any screen). */
+export function isSttModelDownloading(): boolean {
+  return inFlight !== null;
+}
+
+/**
+ * Resolves once a download in flight (started from the mic or another
+ * screen) has finished, either way; right away if there is none.
+ */
+export async function waitForSttDownload(): Promise<void> {
+  try {
+    await inFlight;
+  } catch {
+    // The caller re-reads the state; a failed download just shows "missing".
+  }
+}
+
+/**
+ * Deletes the downloaded voice model and forgets it (10.31) — the next
+ * voice input downloads it again. The caller must release a loaded whisper
+ * context first (`SttProvider`'s `release`).
+ */
+export function deleteSttModel(): void {
+  const path = storedPath();
+  if (path !== undefined) {
+    try {
+      deleteAppFileIfExists(path);
+    } catch {
+      // An unsafe stored value is simply forgotten, never acted on.
+    }
+  }
+  remove(STT_MODEL_PATH_KEY);
 }
 
 async function download(db: SQLiteDatabase): Promise<string> {

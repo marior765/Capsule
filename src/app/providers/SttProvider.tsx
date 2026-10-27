@@ -35,6 +35,11 @@ type SttState = {
    * — mounting this provider must not.
    */
   ensureReady: () => Promise<WhisperContext>;
+  /**
+   * Lets go of the loaded model (10.31) — before its file is deleted. The
+   * next `ensureReady` loads (or downloads) it again.
+   */
+  release: () => Promise<void>;
 };
 
 const SttContext = createContext<SttState | null>(null);
@@ -102,6 +107,23 @@ export function SttProvider({ children }: PropsWithChildren) {
     return load;
   }, []);
 
+  const release = useCallback(async () => {
+    // A model still loading would otherwise land after this and be held
+    // for a file that's about to be deleted — wait for it, then let go.
+    if (pending.current) {
+      try {
+        await pending.current;
+      } catch {
+        // It failed to load: nothing to release.
+      }
+    }
+    const current = ctxRef.current;
+    ctxRef.current = null;
+    setCtx(null);
+    setStatus("idle");
+    if (current) await releaseStt(current);
+  }, []);
+
   // Release the native whisper context on unmount — mirrors LlmProvider's
   // own cleanup for the LLM context, including the case a load was still in
   // flight: `cancelled` is checked once it resolves, above, so the context
@@ -115,7 +137,13 @@ export function SttProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const value: SttState = { ctx, status, downloadProgress, ensureReady };
+  const value: SttState = {
+    ctx,
+    status,
+    downloadProgress,
+    ensureReady,
+    release,
+  };
 
   return <SttContext.Provider value={value}>{children}</SttContext.Provider>;
 }
