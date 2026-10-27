@@ -5220,3 +5220,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Attempt 2 added a permission check that never prompts + scheduling on focus / AppState "active". Reviewer found a race: the iOS permission alert itself fires "active", so a sync could run mid-add and schedule a second notification for the same reminder (orphaned, uncancellable).
 - Attempt 3: re-read the row after every await on the OS (in both the sync loop and addReminder) and cancel the extra notification; route-level syncInFlight/reminderInFlight guards. Deterministic test holds the add's schedule call open until a sync completes; verified it fails without the guard.
 - Lesson: "add a link to fix it" turned into a concurrency problem two steps deep. Async OS calls between a read and a write need a re-check after the await.
+
+## Beat 120 — 10.28 history says what changed (done, 70efe51, 2 attempts)
+- A version is the snapshot just before an edit, so each entry's edit = diff to the next newer state (or the current capsule). Confirmed every snapshot site follows that (edit route, restore's safety snapshot).
+- Reviewer fail #1: I compared readable values, so a long text edited past line 1 (or a spacing-only edit) read "No changes" — the very complaint, worse. Rule: decide equality on stored data, format only for display.
+- Also: versions ordered by created_at only — ties now broken by rowid.
