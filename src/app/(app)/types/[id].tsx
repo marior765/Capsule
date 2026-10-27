@@ -134,9 +134,11 @@ export default function TypeDetailScreen() {
       />
       <Pressable
         testID={testIDs.buttons.saveMeta}
-        style={styles.primary}
+        style={[styles.primary, !name.trim() && styles.primaryDisabled]}
         onPress={handleSaveMeta}
+        disabled={!name.trim()}
         accessibilityRole="button"
+        accessibilityState={{ disabled: !name.trim() }}
       >
         <Text style={styles.primaryLabel}>Save name & description</Text>
       </Pressable>
@@ -165,6 +167,9 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.sans,
     fontSize: 12,
     padding: theme.spacing.three,
+  },
+  primaryDisabled: {
+    opacity: 0.5,
   },
   primary: {
     alignItems: "center",

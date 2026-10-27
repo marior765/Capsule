@@ -19,6 +19,9 @@ export default function PersonasScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+  // Like "Create type": greyed out until the required fields have text,
+  // rather than looking tappable and silently doing nothing.
+  const canSave = name.trim() !== "" && systemPrompt.trim() !== "";
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
   const refresh = useCallback(() => setPersonas(getAllPersonas(db)), [db]);
@@ -108,9 +111,11 @@ export default function PersonasScreen() {
       <View style={styles.formActions}>
         <Pressable
           testID={testIDs.buttons.save}
-          style={styles.primary}
+          style={[styles.primary, !canSave && styles.primaryDisabled]}
           onPress={handleSave}
+          disabled={!canSave}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !canSave }}
         >
           <Text style={styles.primaryLabel}>
             {editingId ? "Save changes" : "Create persona"}
@@ -208,6 +213,9 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.spacing.three,
     borderRadius: theme.spacing.two,
     backgroundColor: theme.colors.backgroundSelected,
+  },
+  primaryDisabled: {
+    opacity: 0.5,
   },
   primaryLabel: {
     color: theme.colors.text,

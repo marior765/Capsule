@@ -192,7 +192,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.27 Reminder screen: "notifications are off" shown once, with an "Open Settings" link
 - [x] 10.28 Capsule history entries say what changed
 - [x] 10.29 Inference settings: invalid numbers show an inline error
-- [ ] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
+- [x] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
 - [ ] 10.31 Models screen lists the voice (Whisper) model with delete, and shows size + a download button for downloadable models
 - [ ] 10.32 Settings screen: drop the redundant "Settings" label under the header
 - [ ] 10.34 Tab stacks (chat, capsules, settings) anchor to their index screen (`unstable_settings.initialRouteName`), so a screen opened directly into an unvisited tab — e.g. the palette's "Ephemeral chat", a notification's capsule — gets a back button to that tab's list (found 2026-10-16 verifying 10.5)

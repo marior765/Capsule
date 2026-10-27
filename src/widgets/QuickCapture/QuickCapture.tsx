@@ -88,10 +88,12 @@ export function QuickCapture({ capsuleTypes, onCapture }: QuickCaptureProps) {
         />
         <Pressable
           testID={testIDs.buttons.capture}
-          style={styles.captureButton}
+          style={[styles.captureButton, !title.trim() && styles.disabled]}
           onPress={handleCapture}
+          disabled={!title.trim()}
           accessibilityRole="button"
           accessibilityLabel="Capture"
+          accessibilityState={{ disabled: !title.trim() }}
         >
           <Text style={styles.captureLabel}>Add</Text>
         </Pressable>
@@ -101,6 +103,9 @@ export function QuickCapture({ capsuleTypes, onCapture }: QuickCaptureProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
+  disabled: {
+    opacity: 0.5,
+  },
   root: {
     padding: theme.spacing.three,
     backgroundColor: theme.colors.backgroundElement,

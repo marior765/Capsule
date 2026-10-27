@@ -65,9 +65,11 @@ export function TagPicker({ tags, onAddTag, onRemoveTag }: TagPickerProps) {
         />
         <Pressable
           testID={testIDs.buttons.add}
-          style={styles.addButton}
+          style={[styles.addButton, !draftName.trim() && styles.disabled]}
           onPress={handleAdd}
+          disabled={!draftName.trim()}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !draftName.trim() }}
         >
           <Text style={styles.addLabel}>Add</Text>
         </Pressable>
@@ -77,6 +79,9 @@ export function TagPicker({ tags, onAddTag, onRemoveTag }: TagPickerProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
+  disabled: {
+    opacity: 0.5,
+  },
   root: {
     marginTop: theme.spacing.three,
   },

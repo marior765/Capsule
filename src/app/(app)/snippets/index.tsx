@@ -19,6 +19,9 @@ export default function SnippetsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  // Like "Create type": greyed out until the required fields have text,
+  // rather than looking tappable and silently doing nothing.
+  const canSave = title.trim() !== "" && content.trim() !== "";
 
   const refresh = useCallback(() => setSnippets(getAllSnippets(db)), [db]);
   useFocusEffect(
@@ -102,9 +105,11 @@ export default function SnippetsScreen() {
       <View style={styles.formActions}>
         <Pressable
           testID={testIDs.buttons.save}
-          style={styles.primary}
+          style={[styles.primary, !canSave && styles.primaryDisabled]}
           onPress={handleSave}
+          disabled={!canSave}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !canSave }}
         >
           <Text style={styles.primaryLabel}>
             {editingId ? "Save changes" : "Create snippet"}
@@ -193,6 +198,9 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.spacing.three,
     borderRadius: theme.spacing.two,
     backgroundColor: theme.colors.backgroundSelected,
+  },
+  primaryDisabled: {
+    opacity: 0.5,
   },
   primaryLabel: {
     color: theme.colors.text,
