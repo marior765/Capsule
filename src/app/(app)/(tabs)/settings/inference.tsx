@@ -113,7 +113,6 @@ export default function InferenceScreen() {
       style={styles.root}
       contentContainerStyle={styles.content}
     >
-      <Text style={styles.heading}>Inference</Text>
       <Text style={styles.meta}>
         Applies to every new reply. A change is saved when you leave its field.
       </Text>
@@ -174,11 +173,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   content: {
     padding: theme.spacing.three,
-  },
-  heading: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.rounded,
-    marginBottom: theme.spacing.two,
   },
   field: {
     marginTop: theme.spacing.three,

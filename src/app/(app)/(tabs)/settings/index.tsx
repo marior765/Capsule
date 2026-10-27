@@ -60,7 +60,6 @@ export default function SettingsScreen() {
       style={styles.root}
       contentContainerStyle={styles.content}
     >
-      <Text style={styles.heading}>Settings</Text>
       {ENTRIES.map((entry) => (
         <Pressable
           testID={`${testIDs.pressables.entry}_${entry.id}`}
@@ -85,11 +84,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   content: {
     padding: theme.spacing.three,
-  },
-  heading: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.rounded,
-    marginBottom: theme.spacing.three,
   },
   row: {
     backgroundColor: theme.colors.backgroundElement,

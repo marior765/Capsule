@@ -194,7 +194,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.29 Inference settings: invalid numbers show an inline error
 - [x] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
 - [x] 10.31 Models screen lists the voice (Whisper) model with delete, and shows size + a download button for downloadable models
-- [ ] 10.32 Settings screen: drop the redundant "Settings" label under the header
+- [x] 10.32 Settings screen: drop the redundant "Settings" label under the header
 - [ ] 10.34 Tab stacks (chat, capsules, settings) anchor to their index screen (`unstable_settings.initialRouteName`), so a screen opened directly into an unvisited tab — e.g. the palette's "Ephemeral chat", a notification's capsule — gets a back button to that tab's list (found 2026-10-16 verifying 10.5)
 - [ ] 10.35 Branch switcher counts only the conversation's own first messages (found 2026-10-18: a new chat's first message showed "‹ 3/3" — root messages from other conversations were counted as its alternative branches, so ‹ could jump into another conversation)
 - [ ] 10.33 Version restore clears fields that were empty in the snapshot (found 2026-10-16: snapshots only record fields that have a value row, so restoring a version taken before a field was filled leaves the newer value in place)
