@@ -5237,3 +5237,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Reused EmbeddingModelCard for the Whisper model (description + testIDSuffix props) rather than a near-copy widget.
 - Reviewer fail #1 (valid, both): release() ignored an in-flight load (Delete during "loading" → 148 MB context kept for a deleted file), and the voice card never left "Downloading…" for a download begun at the mic. Fixed: release awaits the pending load; waitForSttDownload mirrors the embedding waiter.
 - Not exercised in sim: tapping Delete (would remove the user's downloaded model). Sizes are approximate published file sizes.
+
+## Beat 124 — 10.32 duplicate Settings title (done, adbb8cd)
+- Also removed the same duplicate on Inference; guard test pairs each settings Stack.Screen title with its screen.
+- Observed twice in sim: Models/Personas briefly rendered "No models/personas yet" while navigating — lists start as [] and fill on focus; data was intact (checked the DB). Cosmetic flash, candidate follow-up: initialise list state synchronously.
