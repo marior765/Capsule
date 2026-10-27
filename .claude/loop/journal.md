@@ -5232,3 +5232,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 
 ## Beat 122 — 10.30 empty-input buttons disabled (done, 872bdd6)
 - Persona/snippet save follow the Create type pattern. Reviewer (pass) spotted the same silent no-op on types/[id] "Save name & description", QuickCapture "Add", TagPicker "Add" — fixed in the same commit. TDD slip: the test for those three was written after the change (never seen failing).
+
+## Beat 123 — 10.31 voice model on Models + download sizes (done, 67f90db, 2 attempts)
+- Reused EmbeddingModelCard for the Whisper model (description + testIDSuffix props) rather than a near-copy widget.
+- Reviewer fail #1 (valid, both): release() ignored an in-flight load (Delete during "loading" → 148 MB context kept for a deleted file), and the voice card never left "Downloading…" for a download begun at the mic. Fixed: release awaits the pending load; waitForSttDownload mirrors the embedding waiter.
+- Not exercised in sim: tapping Delete (would remove the user's downloaded model). Sizes are approximate published file sizes.

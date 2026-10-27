@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 122,
+    "beat": 123,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.31",
+    "step": "10.32",
     "phase": 10
   },
   "steps": {
@@ -832,6 +832,17 @@
       ],
       "checkpoint": "872bdd6",
       "notes": "canSave + disabled/accessibilityState/opacity on persona & snippet; reviewer pass, then same fix for types/[id] Save name, QuickCapture Add, TagPicker Add (test for those written after the fix)."
+    },
+    "10.31": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 2,
+      "failureSignatures": [
+        "deleteSttModel/isSttModelDownloading missing",
+        "review: release() ignores in-flight load; voice card stuck on Downloading"
+      ],
+      "checkpoint": "67f90db",
+      "notes": "Voice input card (download via ensureSttModelDownloaded \u2014 egress+audit; delete = stt.release() awaiting any pending load, then deleteSttModel); waitForSttDownload on focus; sizeLabel on all downloads + explicit Download (size) buttons. Reviewer pass on attempt 2. Delete not tapped in sim (user's model)."
     }
   },
   "quarantinedThisRun": [
@@ -839,8 +850,8 @@
   ],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1671)",
+    "jest": "pass (1679)",
     "eslint": "pass",
-    "at": "2026-10-27T22:20:00"
+    "at": "2026-10-27T22:35:00"
   }
 }
