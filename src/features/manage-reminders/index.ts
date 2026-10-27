@@ -12,6 +12,7 @@ import { generateId } from "@/shared/lib";
 import {
   cancelLocalNotification,
   ensureNotificationPermission,
+  hasNotificationPermission,
   scheduleLocalNotification,
 } from "@/shared/notifications";
 
@@ -122,6 +123,13 @@ export async function addReminder(
     deleteReminder(db, reminder.id);
     throw error;
   }
+  // A foreground sync (scheduleRemindersIfAllowed) may have scheduled this
+  // reminder while we waited on the OS — keep its notification, drop ours.
+  const current = getReminderById(db, reminder.id);
+  if (current !== null && current.notificationId !== null) {
+    await cancelLocalNotification(notificationId);
+    return { reminder: current, scheduled: true };
+  }
   updateReminder(db, reminder.id, { notificationId });
   return { reminder: { ...reminder, notificationId }, scheduled: true };
 }
@@ -190,6 +198,14 @@ export async function scheduleUnscheduledReminders(
   for (const reminder of pending) {
     try {
       const notificationId = await scheduleFor(db, reminder);
+      // Scheduling waits on the OS; meanwhile another call (an add, a
+      // second foreground sync) may have scheduled this reminder, or the
+      // user cancelled it. Keep only one notification per live reminder.
+      const current = getReminderById(db, reminder.id);
+      if (current === null || current.notificationId !== null) {
+        await cancelLocalNotification(notificationId);
+        continue;
+      }
       try {
         updateReminder(db, reminder.id, { notificationId });
       } catch {
@@ -203,6 +219,19 @@ export async function scheduleUnscheduledReminders(
     }
   }
   return scheduled;
+}
+
+/**
+ * `scheduleUnscheduledReminders`, but only if notifications are already
+ * allowed — it never prompts. For coming back to the app (e.g. from
+ * Settings, where the user may have just turned notifications on), so
+ * reminders saved while they were off start firing without being re-added.
+ */
+export async function scheduleRemindersIfAllowed(
+  db: SQLiteDatabase,
+): Promise<number> {
+  if (!(await hasNotificationPermission())) return 0;
+  return scheduleUnscheduledReminders(db);
 }
 
 /**

@@ -34,6 +34,11 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
+/** True if the app may show notifications right now. Never asks. */
+export async function hasNotificationPermission(): Promise<boolean> {
+  return (await getPermissionsAsync()).granted;
+}
+
 /** Schedules a one-off local notification at `at` (epoch ms). Returns its id. */
 export async function scheduleLocalNotification(params: {
   at: number;

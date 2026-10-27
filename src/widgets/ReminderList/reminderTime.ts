@@ -132,3 +132,14 @@ export function withLocalTime(base: Date, picked: Date): Date {
     picked.getMinutes(),
   );
 }
+
+/**
+ * Whether any upcoming reminder has no scheduled notification — i.e. it is
+ * saved but won't pop up, because notifications are off for the app.
+ */
+export function hasUnscheduledReminders(
+  reminders: readonly { remindAt: number; notificationId: string | null }[],
+  now: number,
+): boolean {
+  return reminders.some((r) => r.notificationId === null && r.remindAt > now);
+}

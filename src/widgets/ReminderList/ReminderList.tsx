@@ -5,6 +5,7 @@ import type { Reminder } from "@/entities/reminder";
 import { createComponentTestIDs } from "@/shared/testing";
 import {
   formatReminderTime,
+  hasUnscheduledReminders,
   type ReminderPreset,
   type ReminderPresetKey,
 } from "./reminderTime";
@@ -24,8 +25,13 @@ type ReminderListProps = {
   /** True while a reminder is being set or cancelled — every button is disabled. */
   busy: boolean;
   error: string | null;
-  /** Something worth knowing that isn't a failure (e.g. notifications are off). */
-  notice: string | null;
+  /**
+   * Whether the app may notify (null = not checked yet). The "notifications
+   * are off" banner shows only when this is false and a reminder is waiting.
+   */
+  notificationsAllowed: boolean | null;
+  /** Opens this app's page in the system Settings, to allow notifications. */
+  onOpenSettings: () => void;
 };
 
 /**
@@ -43,7 +49,8 @@ export function ReminderList({
   onAddAt,
   busy,
   error,
-  notice,
+  notificationsAllowed,
+  onOpenSettings,
 }: ReminderListProps) {
   // When the picker was opened (its starting point), or null when closed.
   const [pickingFrom, setPickingFrom] = useState<number | null>(null);
@@ -62,9 +69,7 @@ export function ReminderList({
             <View style={styles.rowText}>
               <Text style={styles.name}>{when}</Text>
               {reminder.notificationId === null && reminder.remindAt > now && (
-                <Text style={styles.meta}>
-                  Not scheduled — notifications are off for Capsule.
-                </Text>
+                <Text style={styles.meta}>Not scheduled</Text>
               )}
             </View>
             <Pressable
@@ -81,15 +86,30 @@ export function ReminderList({
         );
       })}
 
-      {notice !== null && (
-        <Text
-          testID={testIDs.texts.notice}
-          style={styles.notice}
-          accessibilityLiveRegion="polite"
-        >
-          {notice}
-        </Text>
-      )}
+      {/* Said once for the whole list, not under every reminder, with the
+          way to fix it right there. */}
+      {notificationsAllowed === false &&
+        hasUnscheduledReminders(reminders, now) && (
+          <View
+            testID={testIDs.containers.notificationsOff}
+            style={styles.notificationsOff}
+          >
+            <Text style={styles.notice} accessibilityLiveRegion="polite">
+              Notifications are off for Capsule, so these reminders won&apos;t
+              pop up.
+            </Text>
+            <Pressable
+              testID={testIDs.buttons.openSettings}
+              style={styles.settingsButton}
+              onPress={onOpenSettings}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityHint="Opens Capsule in the Settings app"
+            >
+              <Text style={styles.settingsLink}>Open Settings</Text>
+            </Pressable>
+          </View>
+        )}
 
       {error !== null && (
         <Text
@@ -173,6 +193,20 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
     marginTop: theme.spacing.one,
   },
+  notificationsOff: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    gap: theme.spacing.two,
+  },
+  settingsButton: {
+    paddingVertical: theme.spacing.one,
+  },
+  settingsLink: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+  },
   error: {
     color: theme.colors.danger,
     fontFamily: theme.fonts.sans,
@@ -199,9 +233,9 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("ReminderList", {
-  containers: ["root"] as const,
-  texts: ["empty", "error", "notice"] as const,
-  buttons: ["preset", "cancel", "pickDateTime"] as const,
+  containers: ["root", "notificationsOff"] as const,
+  texts: ["empty", "error"] as const,
+  buttons: ["preset", "cancel", "pickDateTime", "openSettings"] as const,
 });
 
 ReminderList.testIDs = testIDs;

@@ -1,6 +1,14 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  AppState,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useDb, useEmbeddings } from "@/app/providers";
 import {
@@ -29,7 +37,12 @@ import {
   shareAttachment,
 } from "@/features/manage-attachments";
 import { pickDocument, pickImage, type PickedSource } from "@/shared/picker";
-import { addReminder, cancelReminder } from "@/features/manage-reminders";
+import {
+  addReminder,
+  cancelReminder,
+  scheduleRemindersIfAllowed,
+} from "@/features/manage-reminders";
+import { hasNotificationPermission } from "@/shared/notifications";
 import {
   getCapsuleHistory,
   restoreCapsuleVersion,
@@ -71,8 +84,12 @@ export default function CapsuleDetailScreen() {
   const [now, setNow] = useState(() => Date.now());
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
-  // Informational (e.g. "saved, but notifications are off") — not an error.
-  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
+  // Whether the app may notify — null until first checked. Re-checked on
+  // focus and whenever the app comes back to the foreground (e.g. from
+  // Settings), so ReminderList's banner about them follows reality.
+  const [notificationsAllowed, setNotificationsAllowed] = useState<
+    boolean | null
+  >(null);
   const [attachmentsByFieldId, setAttachmentsByFieldId] = useState<
     Record<string, AttachmentEntry[]>
   >({});
@@ -113,6 +130,45 @@ export default function CapsuleDetailScreen() {
       }));
     },
     [db, id],
+  );
+
+  // One reminder change at a time; a ref so a double tap can't schedule
+  // two notifications before the busy re-render lands.
+  const reminderInFlight = useRef(false);
+  // One sync at a time, and none during a reminder change (the permission
+  // prompt of a first add itself brings the app back to "active"). The
+  // feature also guards against a reminder getting two notifications.
+  const syncInFlight = useRef(false);
+
+  // Reminders saved while notifications were off get scheduled as soon as
+  // they're allowed — the user shouldn't have to re-add them.
+  const syncReminderNotifications = useCallback(async () => {
+    if (syncInFlight.current || reminderInFlight.current) return;
+    syncInFlight.current = true;
+    try {
+      const allowed = await hasNotificationPermission();
+      setNotificationsAllowed(allowed);
+      if (allowed && (await scheduleRemindersIfAllowed(db)) > 0) {
+        setReminders(getRemindersByCapsule(db, id));
+      }
+    } catch {
+      // Best effort: the next focus or return to the app tries again.
+    } finally {
+      syncInFlight.current = false;
+    }
+  }, [db, id]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void syncReminderNotifications();
+    });
+    return () => subscription.remove();
+  }, [syncReminderNotifications]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void syncReminderNotifications();
+    }, [syncReminderNotifications]),
   );
 
   useFocusEffect(
@@ -239,21 +295,16 @@ export default function CapsuleDetailScreen() {
     refreshAttachmentField(fieldId);
   };
 
-  // One reminder change at a time; a ref so a double tap can't schedule
-  // two notifications before the busy re-render lands.
-  const reminderInFlight = useRef(false);
-
   const runReminderChange = async (
-    change: () => Promise<string | null>,
+    change: () => Promise<void>,
     fallback: string,
   ) => {
     if (reminderInFlight.current) return;
     reminderInFlight.current = true;
     setReminderError(null);
-    setReminderNotice(null);
     setReminderBusy(true);
     try {
-      setReminderNotice(await change());
+      await change();
     } catch (e) {
       setReminderError(e instanceof Error ? e.message : fallback);
     } finally {
@@ -261,6 +312,9 @@ export default function CapsuleDetailScreen() {
       setReminderBusy(false);
       setReminders(getRemindersByCapsule(db, id));
       setNow(Date.now());
+      // The first reminder may have just asked for permission — if it was
+      // granted, older reminders saved while it was off get scheduled too.
+      void syncReminderNotifications();
     }
   };
 
@@ -273,32 +327,23 @@ export default function CapsuleDetailScreen() {
     runReminderChange(async () => {
       const at = resolvePreset(presetKey, Date.now());
       if (at === null) throw new Error("That time has already passed.");
-      const { scheduled } = await addReminder(db, {
-        capsuleId: id,
-        remindAt: at,
-      });
-      return scheduled
-        ? null
-        : "Saved, but notifications are off for Capsule — allow them in Settings to be reminded.";
+      // If it couldn't be scheduled (notifications off), ReminderList says
+      // so once, with an Open Settings link.
+      await addReminder(db, { capsuleId: id, remindAt: at });
     }, "Couldn't set the reminder.");
 
   // A time chosen in the date & time picker (8.11); addReminder refuses one
   // in the past with a plain message.
   const handleAddReminderAt = (at: number) =>
     runReminderChange(async () => {
-      const { scheduled } = await addReminder(db, {
-        capsuleId: id,
-        remindAt: at,
-      });
-      return scheduled
-        ? null
-        : "Saved, but notifications are off for Capsule — allow them in Settings to be reminded.";
+      // If it couldn't be scheduled (notifications off), ReminderList says
+      // so once, with an Open Settings link.
+      await addReminder(db, { capsuleId: id, remindAt: at });
     }, "Couldn't set the reminder.");
 
   const handleCancelReminder = (reminderId: string) =>
     runReminderChange(async () => {
       await cancelReminder(db, reminderId);
-      return null;
     }, "Couldn't cancel the reminder.");
 
   const handleDelete = () => {
@@ -469,7 +514,12 @@ export default function CapsuleDetailScreen() {
           onAddAt={(at) => void handleAddReminderAt(at)}
           busy={reminderBusy}
           error={reminderError}
-          notice={reminderNotice}
+          notificationsAllowed={notificationsAllowed}
+          onOpenSettings={() => {
+            Linking.openSettings().catch(() => {
+              // Nothing to recover: the link simply doesn't open.
+            });
+          }}
         />
       </View>
 
