@@ -45,6 +45,7 @@ import {
 import { hasNotificationPermission } from "@/shared/notifications";
 import {
   getCapsuleHistory,
+  getVersionChanges,
   restoreCapsuleVersion,
 } from "@/features/capsule-versioning";
 import { leaveScreen } from "@/shared/navigation";
@@ -440,6 +441,11 @@ export default function CapsuleDetailScreen() {
     values.map((v) => [v.fieldId, v.value]),
   );
 
+  // What each past edit changed, against the capsule as it is now (a few
+  // local reads, so simply recomputed on render).
+  const historyChanges =
+    history.length > 0 ? getVersionChanges(db, id, history) : {};
+
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -529,7 +535,11 @@ export default function CapsuleDetailScreen() {
         onRemoveTag={handleRemoveTag}
       />
 
-      <VersionHistory versions={history} onRestore={handleRestore} />
+      <VersionHistory
+        versions={history}
+        onRestore={handleRestore}
+        changesById={historyChanges}
+      />
 
       <ParentPicker
         parent={parent}

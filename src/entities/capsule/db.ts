@@ -377,7 +377,9 @@ export function getVersionsByCapsule(
   capsuleId: string,
 ): CapsuleVersion[] {
   const rows = db.getAllSync(
-    `SELECT * FROM capsule_versions WHERE capsule_id = ? ORDER BY created_at DESC;`,
+    // rowid breaks ties (same-millisecond saves, imported history) so the
+    // order — and which version follows which — is stable.
+    `SELECT * FROM capsule_versions WHERE capsule_id = ? ORDER BY created_at DESC, rowid DESC;`,
     capsuleId,
   ) as CapsuleVersionRow[];
   return rows.map(rowToCapsuleVersion);

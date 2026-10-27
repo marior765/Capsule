@@ -190,7 +190,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.25 View toggle label is consistent (always names the current view or always the next); board view with "All" types doesn't hide every capsule behind a hint
 - [x] 10.26 Selected filter/sort chips are clearly distinguishable
 - [x] 10.27 Reminder screen: "notifications are off" shown once, with an "Open Settings" link
-- [ ] 10.28 Capsule history entries say what changed
+- [x] 10.28 Capsule history entries say what changed
 - [ ] 10.29 Inference settings: invalid numbers show an inline error
 - [ ] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
 - [ ] 10.31 Models screen lists the voice (Whisper) model with delete, and shows size + a download button for downloadable models

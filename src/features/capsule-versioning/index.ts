@@ -10,6 +10,7 @@ import {
   upsertCapsuleValue,
   type CapsuleVersion,
 } from "@/entities/capsule";
+import { formatFieldValue, getFieldsByCapsuleType } from "@/entities/field";
 import { generateId } from "@/shared/lib";
 
 /**
@@ -97,4 +98,92 @@ export function restoreCapsuleVersion(
   }
 
   return true;
+}
+
+/** One difference between a version and the state that followed it. */
+export type VersionChange = {
+  /** "Title", a field's name, or "A removed field". */
+  label: string;
+  /** Readable values (see `formatFieldValue`); null = empty. */
+  before: string | null;
+  after: string | null;
+};
+
+/**
+ * What each edit changed (10.28). A version is the state just BEFORE an
+ * edit, so the edit is the difference between it and the next newer state —
+ * the next version, or the capsule as it is now for the newest one.
+ * `versions` most recent first, as `getCapsuleHistory` returns them. Keyed
+ * by version id; title first, then fields in the type's order. A field
+ * missing from a snapshot counts as empty.
+ */
+export function getVersionChanges(
+  db: SQLiteDatabase,
+  capsuleId: string,
+  versions: readonly CapsuleVersion[],
+): Record<string, VersionChange[]> {
+  const capsule = getCapsuleById(db, capsuleId);
+  if (!capsule) return {};
+  const fields = [...getFieldsByCapsuleType(db, capsule.capsuleTypeId)].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+  const fieldsById = new Map(fields.map((f) => [f.id, f]));
+
+  const current: { title: string; values: Record<string, string | null> } = {
+    title: capsule.title,
+    values: Object.fromEntries(
+      getValuesByCapsule(db, capsuleId).map((v) => [v.fieldId, v.value]),
+    ),
+  };
+
+  // Whether something changed is decided on the stored values (empty and
+  // missing alike count as empty); the readable form is only for display —
+  // it can hide a real edit (a long text's later lines, spacing).
+  const stored = (value: string | null | undefined) =>
+    value === undefined || value === null || value === "" ? null : value;
+  const show = (fieldId: string, value: string | null): string | null => {
+    if (value === null) return null;
+    const field = fieldsById.get(fieldId);
+    if (!field) return value.trim() || null;
+    // The whole long text on one line, not just its first line.
+    if (field.fieldType === "long_text") {
+      return value.replace(/\s+/g, " ").trim() || null;
+    }
+    return formatFieldValue(field, value);
+  };
+
+  const result: Record<string, VersionChange[]> = {};
+  let newer = current;
+  for (const version of versions) {
+    const changes: VersionChange[] = [];
+    if (version.title !== newer.title) {
+      changes.push({
+        label: "Title",
+        before: version.title,
+        after: newer.title,
+      });
+    }
+    const ids = new Set([
+      ...Object.keys(version.values),
+      ...Object.keys(newer.values),
+    ]);
+    const ordered = [
+      ...fields.map((f) => f.id).filter((id) => ids.has(id)),
+      ...[...ids].filter((id) => !fieldsById.has(id)),
+    ];
+    for (const fieldId of ordered) {
+      const before = stored(version.values[fieldId]);
+      const after = stored(newer.values[fieldId]);
+      if (before !== after) {
+        changes.push({
+          label: fieldsById.get(fieldId)?.name ?? "A removed field",
+          before: show(fieldId, before),
+          after: show(fieldId, after),
+        });
+      }
+    }
+    result[version.id] = changes;
+    newer = { title: version.title, values: version.values };
+  }
+  return result;
 }
