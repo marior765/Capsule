@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 118,
+    "beat": 119,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
@@ -10,7 +10,7 @@
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.27",
+    "step": "10.28",
     "phase": 10
   },
   "steps": {
@@ -788,6 +788,18 @@
       ],
       "checkpoint": "1bca58f",
       "notes": "Accent fill + background label, matching SchemaBuilder/FieldRenderer chips. Reviewer pass; light-mode white-on-accent is 3.65:1 (app-wide token)."
+    },
+    "10.27": {
+      "status": "done",
+      "class": "ui",
+      "attempts": 3,
+      "failureSignatures": [
+        "notificationsOff static tests",
+        "review: banner stale after allowing notifications (no reschedule outside import)",
+        "review: sync races add/sync \u2192 two notifications for one reminder"
+      ],
+      "checkpoint": "599a7bd",
+      "notes": "Single banner (only when permission denied + unscheduled upcoming reminder) + Open Settings; hasNotificationPermission (no prompt); scheduleRemindersIfAllowed on focus/foreground/after change; re-read guards against duplicate notifications. Reviewer pass on attempt 3."
     }
   },
   "quarantinedThisRun": [
@@ -795,8 +807,8 @@
   ],
   "lastGate": {
     "tsc": "pass",
-    "jest": "pass (1633)",
+    "jest": "pass (1642)",
     "eslint": "pass",
-    "at": "2026-10-25T14:58:00"
+    "at": "2026-10-27T21:40:00"
   }
 }

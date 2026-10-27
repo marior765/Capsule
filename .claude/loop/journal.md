@@ -5214,3 +5214,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ## Beat 118 — 10.26 selected chips distinguishable (done, 1bca58f)
 - Old selected vs unselected greys were ~1.1:1; now accent fill (3.2:1 against unselected), same pair as SchemaBuilder/FieldRenderer chips.
 - Note: light-mode white on #0A84FF text is 3.65:1 (below 4.5:1 AA for 13pt). App-wide accent token, used by all chips; not changed here.
+
+## Beat 119 — 10.27 notifications-off once + Open Settings (done, 599a7bd, 3 attempts)
+- Attempt 1 removed the duplicate text but the reviewer found the real gap: an "Open Settings" link that leads nowhere — reminders saved while notifications were off were only ever rescheduled on import, so after allowing them the banner (now false) stayed and nothing fired.
+- Attempt 2 added a permission check that never prompts + scheduling on focus / AppState "active". Reviewer found a race: the iOS permission alert itself fires "active", so a sync could run mid-add and schedule a second notification for the same reminder (orphaned, uncancellable).
+- Attempt 3: re-read the row after every await on the OS (in both the sync loop and addReminder) and cancel the extra notification; route-level syncInFlight/reminderInFlight guards. Deterministic test holds the add's schedule call open until a sync completes; verified it fails without the guard.
+- Lesson: "add a link to fix it" turned into a concurrency problem two steps deep. Async OS calls between a read and a write need a re-check after the await.
