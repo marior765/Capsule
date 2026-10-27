@@ -2761,4 +2761,36 @@ couldn't show.
 
 ---
 
+## 2026-10-27 — A one-line UI fix that turned out to be a race
+
+Step 10.27 looked trivial: "notifications are off" was printed under every
+reminder and again after saving, so say it once and add an "Open Settings"
+link. The first attempt did exactly that, and the independent reviewer
+failed it. Following the link and allowing notifications fixed nothing:
+reminders saved while notifications were off were only ever rescheduled
+during an import, so the banner stayed up (now untrue) and nothing fired.
+
+The second attempt rescheduled pending reminders whenever the screen
+regained focus or the app returned to the foreground. The reviewer failed
+that too, with a sharper finding. On iOS the permission alert shown during
+the *first* add sends the app to "inactive", and closing it fires "active".
+A sync could therefore start while that add was still waiting on the OS,
+and both would schedule a notification for the same reminder. One of the
+two ids would be overwritten, leaving a duplicate pop-up that could never
+be cancelled.
+
+The third attempt re-checks the reminder after every await on the OS (in
+the sync loop and in the add itself) and cancels the extra notification.
+The screen also stops syncs overlapping each other or a reminder change.
+The regression test holds the add's scheduling call open until a full sync
+has run, and it fails without the guard.
+
+**Article angle:** the bug wasn't in the line the ticket pointed at. "Add a
+link to fix it" quietly promised that the fix would *work*, and keeping
+that promise crossed an async OS boundary. A reviewer told to "try to
+refute" followed the user's path one step further than the ticket did,
+twice.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
