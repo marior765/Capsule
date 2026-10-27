@@ -191,7 +191,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.26 Selected filter/sort chips are clearly distinguishable
 - [x] 10.27 Reminder screen: "notifications are off" shown once, with an "Open Settings" link
 - [x] 10.28 Capsule history entries say what changed
-- [ ] 10.29 Inference settings: invalid numbers show an inline error
+- [x] 10.29 Inference settings: invalid numbers show an inline error
 - [ ] 10.30 Create persona / Create snippet disabled until required fields are filled (consistent with Create type)
 - [ ] 10.31 Models screen lists the voice (Whisper) model with delete, and shows size + a download button for downloadable models
 - [ ] 10.32 Settings screen: drop the redundant "Settings" label under the header

@@ -15,8 +15,20 @@ export function getInferenceSettings(): InferenceSettings {
   if (!raw) return { ...DEFAULT_INFERENCE };
 
   try {
-    const stored = JSON.parse(raw) as Partial<InferenceSettings>;
-    return { ...DEFAULT_INFERENCE, ...stored };
+    const stored = JSON.parse(raw) as Record<string, unknown>;
+    // Each value is checked like a typed one (10.29): settings saved before
+    // validation existed (temperature 50, a 100000-token context) or edited
+    // by hand fall back to that field's default instead of reaching the model.
+    const settings = { ...DEFAULT_INFERENCE };
+    for (const key of Object.keys(
+      DEFAULT_INFERENCE,
+    ) as (keyof InferenceSettings)[]) {
+      const value = stored[key];
+      if (typeof value === "number" && isAllowed(key, value)) {
+        settings[key] = value;
+      }
+    }
+    return settings;
   } catch {
     return { ...DEFAULT_INFERENCE };
   }
@@ -55,4 +67,56 @@ export function selectPersona(
   personaId: string | null,
 ): void {
   updateConversation(db, conversationId, { personaId });
+}
+
+type Rule = { min: number; max: number; integer: boolean; message?: string };
+
+function isAllowed(key: keyof InferenceSettings, value: number): boolean {
+  const rule = RULES[key];
+  return (
+    Number.isFinite(value) &&
+    (!rule.integer || Number.isInteger(value)) &&
+    value >= rule.min &&
+    value <= rule.max
+  );
+}
+
+const RULES: Record<keyof InferenceSettings, Rule> = {
+  temperature: { min: 0, max: 2, integer: false },
+  topP: { min: 0, max: 1, integer: false },
+  topK: { min: 0, max: 1000, integer: true },
+  repeatPenalty: { min: 0.5, max: 2, integer: false },
+  contextLength: { min: 256, max: 32768, integer: true },
+  seed: {
+    min: -1,
+    max: 2_147_483_647,
+    integer: true,
+    message: "Use -1 for a random seed, or 0 or more.",
+  },
+};
+
+const PLAIN_NUMBER = /^-?(\d+(\.\d*)?|\.\d+)$/;
+
+/**
+ * Checks one typed inference setting (10.29): a plain number ("1.2abc" is
+ * not), whole where it must be, inside a range the model can use. Returns
+ * the number, or a short message to show next to the field.
+ */
+export function validateInferenceValue(
+  key: keyof InferenceSettings,
+  raw: string,
+): { value: number } | { error: string } {
+  const text = raw.trim();
+  if (!PLAIN_NUMBER.test(text)) return { error: "Enter a number." };
+  const value = Number(text);
+  const rule = RULES[key];
+  if (rule.integer && !Number.isInteger(value)) {
+    return { error: "Enter a whole number." };
+  }
+  if (value < rule.min || value > rule.max) {
+    return {
+      error: rule.message ?? `Must be between ${rule.min} and ${rule.max}.`,
+    };
+  }
+  return { value };
 }

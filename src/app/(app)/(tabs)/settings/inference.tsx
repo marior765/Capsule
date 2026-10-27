@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  AccessibilityInfo,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useLlm } from "@/app/providers";
 import {
@@ -7,6 +15,7 @@ import {
   requiresModelReload,
   resetInferenceSettings,
   updateInferenceSettings,
+  validateInferenceValue,
 } from "@/features/configure-inference";
 import type { InferenceSettings } from "@/shared/config";
 import { createComponentTestIDs } from "@/shared/testing";
@@ -15,7 +24,6 @@ type Field = {
   key: keyof InferenceSettings;
   label: string;
   hint: string;
-  integer?: boolean;
 };
 
 const FIELDS: Field[] = [
@@ -29,7 +37,6 @@ const FIELDS: Field[] = [
     key: "topK",
     label: "Top-k",
     hint: "Consider only the k most likely tokens.",
-    integer: true,
   },
   {
     key: "repeatPenalty",
@@ -40,13 +47,11 @@ const FIELDS: Field[] = [
     key: "contextLength",
     label: "Context length",
     hint: "Tokens the model can see. Changing this reloads the model.",
-    integer: true,
   },
   {
     key: "seed",
     label: "Seed",
     hint: "-1 picks a random seed each time.",
-    integer: true,
   },
 ];
 
@@ -56,19 +61,26 @@ export default function InferenceScreen() {
     useState<InferenceSettings>(getInferenceSettings);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [reloaded, setReloaded] = useState(false);
+  // Per-field message for a value that can't be used; what was typed stays
+  // in the box so it can be fixed, and nothing is saved until it's valid.
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof InferenceSettings, string>>
+  >({});
 
-  const commit = (
-    key: keyof InferenceSettings,
-    raw: string,
-    integer = false,
-  ) => {
-    const parsed = integer ? parseInt(raw, 10) : parseFloat(raw);
-
-    // Discard unparseable input rather than persisting NaN.
-    if (Number.isNaN(parsed)) {
-      setDrafts((d) => ({ ...d, [key]: String(settings[key]) }));
+  const commit = (key: keyof InferenceSettings, raw: string) => {
+    const result = validateInferenceValue(key, raw);
+    if ("error" in result) {
+      setErrors((e) => ({ ...e, [key]: result.error }));
+      // Live regions are Android-only; VoiceOver needs an announcement
+      // (Android already reads the error's live region — don't say it twice).
+      if (Platform.OS === "ios")
+        AccessibilityInfo.announceForAccessibility(
+          `${FIELDS.find((f) => f.key === key)?.label ?? key}: ${result.error} Not saved.`,
+        );
       return;
     }
+    setErrors((e) => ({ ...e, [key]: undefined }));
+    const parsed = result.value;
 
     const patch = { [key]: parsed } as Partial<InferenceSettings>;
     // Must be asked *before* the update — it compares against the stored value.
@@ -90,6 +102,7 @@ export default function InferenceScreen() {
     resetInferenceSettings();
     setSettings(getInferenceSettings());
     setDrafts({});
+    setErrors({});
     reload();
     setReloaded(needsReload);
   };
@@ -102,7 +115,7 @@ export default function InferenceScreen() {
     >
       <Text style={styles.heading}>Inference</Text>
       <Text style={styles.meta}>
-        Applies to every new reply. Changes are saved as you type.
+        Applies to every new reply. A change is saved when you leave its field.
       </Text>
 
       {FIELDS.map((field) => (
@@ -110,19 +123,29 @@ export default function InferenceScreen() {
           <Text style={styles.label}>{field.label}</Text>
           <TextInput
             testID={`${testIDs.inputs.field}_${field.key}`}
-            style={styles.input}
             value={drafts[field.key] ?? String(settings[field.key])}
             onChangeText={(text) =>
               setDrafts((d) => ({ ...d, [field.key]: text }))
             }
-            onEndEditing={(e) =>
-              commit(field.key, e.nativeEvent.text, field.integer)
-            }
+            onEndEditing={(e) => commit(field.key, e.nativeEvent.text)}
+            // Has "-" and "." (seed -1, temperature 0.7); a decimal pad has
+            // no minus key.
             keyboardType="numbers-and-punctuation"
-            inputMode="numeric"
             accessibilityLabel={field.label}
+            accessibilityHint={errors[field.key]}
+            style={[styles.input, errors[field.key] && styles.inputInvalid]}
           />
-          <Text style={styles.meta}>{field.hint}</Text>
+          {errors[field.key] ? (
+            <Text
+              testID={`${testIDs.texts.error}_${field.key}`}
+              style={styles.error}
+              accessibilityLiveRegion="polite"
+            >
+              {errors[field.key]} Not saved.
+            </Text>
+          ) : (
+            <Text style={styles.meta}>{field.hint}</Text>
+          )}
         </View>
       ))}
 
@@ -172,6 +195,16 @@ const styles = StyleSheet.create((theme) => ({
     padding: theme.spacing.three,
     borderRadius: theme.spacing.two,
   },
+  inputInvalid: {
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+  },
+  error: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    marginTop: theme.spacing.one,
+  },
   meta: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.sans,
@@ -202,6 +235,7 @@ const styles = StyleSheet.create((theme) => ({
 
 const testIDs = createComponentTestIDs("InferenceScreen", {
   inputs: ["field"] as const,
+  texts: ["error"] as const,
   buttons: ["reset"] as const,
 });
 
