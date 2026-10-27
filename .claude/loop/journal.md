@@ -5225,3 +5225,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - A version is the snapshot just before an edit, so each entry's edit = diff to the next newer state (or the current capsule). Confirmed every snapshot site follows that (edit route, restore's safety snapshot).
 - Reviewer fail #1: I compared readable values, so a long text edited past line 1 (or a spacing-only edit) read "No changes" — the very complaint, worse. Rule: decide equality on stored data, format only for display.
 - Also: versions ordered by created_at only — ties now broken by rowid.
+
+## Beat 121 — 10.29 inference settings inline errors (done, 6508b11, 2 attempts)
+- Validation at the input is half the job: reviewer fail #1 found values saved before validation existed (temperature 50, n_ctx 100000) still flowed to initLlm. Now getInferenceSettings validates each stored field with the same rules, defaulting per field.
+- inputMode="decimal" silently overrides keyboardType → decimal pad with no minus, so the hint "-1 for random seed" asked for the untypeable. My sim test used the hardware keyboard and couldn't show it.
