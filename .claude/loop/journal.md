@@ -5229,3 +5229,6 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ## Beat 121 — 10.29 inference settings inline errors (done, 6508b11, 2 attempts)
 - Validation at the input is half the job: reviewer fail #1 found values saved before validation existed (temperature 50, n_ctx 100000) still flowed to initLlm. Now getInferenceSettings validates each stored field with the same rules, defaulting per field.
 - inputMode="decimal" silently overrides keyboardType → decimal pad with no minus, so the hint "-1 for random seed" asked for the untypeable. My sim test used the hardware keyboard and couldn't show it.
+
+## Beat 122 — 10.30 empty-input buttons disabled (done, 872bdd6)
+- Persona/snippet save follow the Create type pattern. Reviewer (pass) spotted the same silent no-op on types/[id] "Save name & description", QuickCapture "Add", TagPicker "Add" — fixed in the same commit. TDD slip: the test for those three was written after the change (never seen failing).
