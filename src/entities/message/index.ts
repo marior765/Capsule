@@ -11,6 +11,7 @@ export {
   getMessagesByConversation,
   getMessagePath,
   getChildren,
+  getSiblings,
   insertMessage,
   deleteMessagesByConversation,
   insertMessageSources,

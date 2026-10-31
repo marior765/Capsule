@@ -5246,3 +5246,15 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Plan text said initialRouteName; versioned Expo docs (context7) say anchor + navigation option withAnchor. The anchor alone fixes deep links (linking builds the state); imperative cross-tab navigation also needs withAnchor.
 - Reviewer fail #1: I covered palette + notification but missed the commonest path — Home's recent rows and the chat source chip. Fixed and guarded.
 - Loop paused here by the user to move remaining steps (10.35, 10.33) to a cloud session (no iOS simulator there → sim checks go to BLOCKED.md).
+
+## Beat 126 — 10.35 branch switcher scoped to the conversation (done, 7dff533, cloud session)
+- Root cause: `getChildren(db, null)` matched `parent_id IS NULL` across all conversations — every chat's first message is a root, so N chats → "‹ N/N" on a new chat's first message, and ‹ switched the active leaf to another chat's message.
+- Fix at the entity: `getSiblings(db, message)` filters by conversation_id; `getChildren` now takes a non-null parent so the trap can't come back. Sibling counting + leaf walk moved from the route into branch-conversation (testable without rendering).
+- Reviewer (pass, attempt 1) re-ran the new tests with the filter removed: 6 of 11 fail. No simulator in the cloud → check in BLOCKED.md.
+
+## Beat 127 — 10.33 restore clears fields empty in the snapshot (done, f0f8609, cloud session)
+- Bug: snapshots store only fields that have a value row, and restore only wrote what the snapshot had — so a field filled after the snapshot survived "restore".
+- **Decision: fields added to the type after the snapshot are cleared too.** A snapshot can't tell "existed but blank" from "didn't exist yet" (both are simply absent); either way the field had no value then, and "restore" means "the capsule as it was". getVersionChanges already reads a missing field as empty, so this keeps the two consistent — a test asserts that the diff after a restore is empty. Nothing is lost: the safety snapshot taken first holds the cleared values. The alternative (comparing field.createdAt with the snapshot time) would trust timestamps that import/sync can carry over, and the diff and the restore would disagree.
+- Cleared to null (as the editor does), not deleted, so the portable format is unaffected. Orphan values of removed fields are nulled by the same rule.
+- This reversed a deliberate 8.5 choice ("the version has no opinion about a later field"); that test was replaced, not deleted silently.
+- Reviewer: pass, attempt 1. Two minor notes fixed before the commit (the later-added-field test now really adds the field to the type; the orphan case is documented).

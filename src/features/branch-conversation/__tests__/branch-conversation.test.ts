@@ -10,6 +10,7 @@ import {
 } from "@/entities/conversation";
 import {
   getChildren,
+  getSiblings,
   getMessagePath,
   getMessagesByConversation,
   getImageByMessage,
@@ -24,7 +25,12 @@ import {
 } from "@/entities/message";
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import type { ChatMessage, LlamaContext } from "@/shared/llm";
-import { branchFromMessage, switchBranch } from "../index";
+import {
+  branchFromMessage,
+  findSiblingBranchLeaf,
+  getBranchPosition,
+  switchBranch,
+} from "../index";
 import { runCompletion } from "@/shared/llm";
 
 jest.mock("@/shared/llm");
@@ -213,7 +219,7 @@ describe("branchFromMessage — edge cases", () => {
       "Different start",
     );
     expect(userMessage.parentId).toBeNull();
-    expect(getChildren(db, null)).toHaveLength(2);
+    expect(getSiblings(db, userMessage)).toHaveLength(2);
   });
 });
 
@@ -394,5 +400,91 @@ describe("branchFromMessage — context in use (10.16)", () => {
     });
     const { contextTokens } = await branchFromMessage(db, ctx, "u2", "Edited");
     expect(contextTokens).toBe(320);
+  });
+});
+
+describe("branch positions only count the conversation's own messages (10.35)", () => {
+  const addOtherConversationRoots = () => {
+    for (const [n, id] of ["conv-2", "conv-3"].entries()) {
+      insertConversation(db, {
+        id,
+        title: id,
+        modelId: "model-1",
+        personaId: null,
+        activeLeafId: null,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      insertMessage(
+        db,
+        makeMessage({
+          id: `${id}-root`,
+          conversationId: id,
+          createdAt: 10 + n,
+        }),
+      );
+      insertMessage(
+        db,
+        makeMessage({
+          id: `${id}-reply`,
+          conversationId: id,
+          parentId: `${id}-root`,
+          role: "assistant",
+          createdAt: 20 + n,
+        }),
+      );
+    }
+  };
+  const message = (id: string): Message => {
+    const found = getMessagesByConversation(db, "conv-1").find(
+      (m) => m.id === id,
+    );
+    if (!found) throw new Error(`no ${id}`);
+    return found;
+  };
+
+  it("a lone first message has no branch position even when other chats exist", () => {
+    addOtherConversationRoots();
+    expect(getBranchPosition(db, message("u1"))).toBeNull();
+  });
+
+  it("an edited first message counts only its own conversation's roots", async () => {
+    addOtherConversationRoots();
+    const { userMessage } = await branchFromMessage(db, ctx, "u1", "Again");
+    expect(getBranchPosition(db, message("u1"))).toEqual({
+      index: 1,
+      total: 2,
+    });
+    expect(getBranchPosition(db, userMessage)).toEqual({ index: 2, total: 2 });
+  });
+
+  it("‹ on a first message never jumps into another conversation", () => {
+    addOtherConversationRoots();
+    expect(findSiblingBranchLeaf(db, message("u1"), -1)).toBeNull();
+    expect(findSiblingBranchLeaf(db, message("u1"), 1)).toBeNull();
+  });
+
+  it("moving between first-message branches lands on that branch's deepest reply", async () => {
+    addOtherConversationRoots();
+    const { userMessage, assistantMessage } = await branchFromMessage(
+      db,
+      ctx,
+      "u1",
+      "Again",
+    );
+    expect(findSiblingBranchLeaf(db, message("u1"), 1)).toBe(
+      assistantMessage.id,
+    );
+    expect(findSiblingBranchLeaf(db, userMessage, -1)).toBe("a2");
+  });
+
+  it("non-root siblings keep working", async () => {
+    const { userMessage } = await branchFromMessage(db, ctx, "u2", "Edited");
+    expect(getBranchPosition(db, message("u2"))).toEqual({
+      index: 1,
+      total: 2,
+    });
+    expect(getBranchPosition(db, message("a1"))).toBeNull();
+    expect(findSiblingBranchLeaf(db, userMessage, -1)).toBe("a2");
   });
 });

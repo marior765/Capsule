@@ -72,24 +72,44 @@ export function getMessagePath(db: SQLiteDatabase, leafId: string): Message[] {
   return path.reverse();
 }
 
-/** Direct children of `parentId`. Pass null for the conversation's roots. */
-export function getChildren(
-  db: SQLiteDatabase,
-  parentId: string | null,
-): Message[] {
+/**
+ * Direct children of `parentId`. Message ids are unique, so this never
+ * crosses conversations. Root messages (parentId null) have no parent to
+ * key on — use `getSiblings`, which scopes them to their conversation.
+ */
+export function getChildren(db: SQLiteDatabase, parentId: string): Message[] {
+  const rows = db.getAllSync(
+    `SELECT * FROM messages
+     WHERE parent_id = ?
+     ORDER BY created_at ASC, rowid ASC;`,
+    parentId,
+  ) as MessageRow[];
+  return rows.map(rowToMessage);
+}
+
+/**
+ * `message` and its alternative branches — every message of the same
+ * conversation with the same parent, oldest first. Roots (parentId null) are
+ * filtered by conversation (10.35): every conversation's first message is a
+ * root, so an unscoped `parent_id IS NULL` would count other chats' first
+ * messages as branches of this one.
+ */
+export function getSiblings(db: SQLiteDatabase, message: Message): Message[] {
   // SQLite compares NULL with IS NULL, never with `= ?`.
   const rows = (
-    parentId === null
+    message.parentId === null
       ? db.getAllSync(
           `SELECT * FROM messages
-           WHERE parent_id IS NULL
+           WHERE parent_id IS NULL AND conversation_id = ?
            ORDER BY created_at ASC, rowid ASC;`,
+          message.conversationId,
         )
       : db.getAllSync(
           `SELECT * FROM messages
-           WHERE parent_id = ?
+           WHERE parent_id = ? AND conversation_id = ?
            ORDER BY created_at ASC, rowid ASC;`,
-          parentId,
+          message.parentId,
+          message.conversationId,
         )
   ) as MessageRow[];
   return rows.map(rowToMessage);

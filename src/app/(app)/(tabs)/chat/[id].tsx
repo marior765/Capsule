@@ -20,7 +20,6 @@ import { getEmbeddingModelUri } from "@/features/manage-embedding-model";
 import { getBoolean, setBoolean } from "@/shared/storage";
 import { getConversationById } from "@/entities/conversation";
 import {
-  getChildren,
   getImageByMessage,
   getMessagePath,
   getSourcesByMessage,
@@ -31,6 +30,8 @@ import { deleteCacheFileIfExists, resolveAppPath } from "@/shared/fs";
 import { pickImage, type PickedSource } from "@/shared/picker";
 import {
   branchFromMessage,
+  findSiblingBranchLeaf,
+  getBranchPosition,
   switchBranch,
 } from "@/features/branch-conversation";
 import { getInferenceSettings } from "@/features/configure-inference";
@@ -305,13 +306,8 @@ export default function ChatScreen() {
   // offer `‹ 2/3 ›` wherever an edit created alternatives.
   const branches: Record<string, BranchPosition> = {};
   for (const message of messages) {
-    const siblings = getChildren(db, message.parentId);
-    if (siblings.length > 1) {
-      branches[message.id] = {
-        index: siblings.findIndex((s) => s.id === message.id) + 1,
-        total: siblings.length,
-      };
-    }
+    const position = getBranchPosition(db, message);
+    if (position) branches[message.id] = position;
   }
 
   // Attached images for the visible messages (8.4), resolved against the
@@ -471,24 +467,11 @@ export default function ChatScreen() {
   };
 
   const handleSwitchBranch = (message: Message, direction: -1 | 1) => {
-    const siblings = getChildren(db, message.parentId);
-    const currentIndex = siblings.findIndex((s) => s.id === message.id);
-    const next = siblings[currentIndex + direction];
-    if (!next || !id) return;
-
-    // Follow the chosen sibling down to its deepest reply, then show it.
-    // The visited set stops the walk if stored data ever contains a parent
-    // cycle (importers now refuse to write one, but older data might).
-    let leafId = next.id;
-    const visited = new Set<string>([leafId]);
-    for (;;) {
-      const children = getChildren(db, leafId);
-      if (children.length === 0) break;
-      const child = children[children.length - 1].id;
-      if (visited.has(child)) break;
-      visited.add(child);
-      leafId = child;
-    }
+    if (!id) return;
+    // Siblings are scoped to this conversation (10.35), so ‹ › on a first
+    // message never lands in another chat.
+    const leafId = findSiblingBranchLeaf(db, message, direction);
+    if (!leafId) return;
 
     switchBranch(db, id, leafId);
     // The model's count belonged to the branch it was reported for.
