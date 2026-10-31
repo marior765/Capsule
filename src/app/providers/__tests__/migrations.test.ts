@@ -5,11 +5,12 @@
 // missing entirely. Every capsule test up to now passed anyway because each
 // one calls `runMigrations` with its own explicit list, never this one.
 //
-// Imports from `../migrations`, not `../index` — `../index.tsx` pulls in
-// `react-native-unistyles`, which requires a real native NitroModules
-// binary and crashes under jest. That's *why* this gap was untestable and
-// slipped through; the fix pulled the migrations list into its own module
-// specifically so this can be tested at all.
+// Imports from `../migrations`, not `../index`. When this was written,
+// `../index.tsx` pulled in `react-native-unistyles`, which crashed under
+// jest without its native module. That's *why* this gap slipped through;
+// the fix pulled the migrations list into its own module so it could be
+// tested at all. (Since 10.38 unistyles is mocked globally, but the
+// separate module is still the cleaner seam.)
 import { openDb, runMigrations, _resetDbForTesting } from "@/shared/db";
 import { migrations } from "../migrations";
 import {

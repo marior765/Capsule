@@ -2853,4 +2853,32 @@ into "fix the one that's already there".
 
 ---
 
+## 2026-10-31 — The newest version was the wrong one
+
+The user approved a test library for rendering components. The agent
+installed the latest release, the gate went green, and 1718 tests passed.
+The independent reviewer still failed the step: the library's helper
+package comes in "lines" matched to React's minor version, and the latest
+line targets a React release newer than the one this app uses. Nothing
+broke today, but the dependency tree was officially invalid, and the
+library's own bundled migration guide had a table saying which line to
+pick.
+
+Two smaller lessons came out of the same step. The library's major
+version had made its API async, so the first draft (written from memory
+of the older API) failed every test with a confusing error. The answer was
+in the docs shipped inside `node_modules`. And a different npm version had
+silently stripped platform fields from the lockfile, so the diff was
+regenerated with the npm that had originally written it.
+
+**Article angle:** "green tests" and "correct install" are different
+claims. A reviewer that is told to refute, and that reads the
+dependency's own docs instead of trusting the gate, catches the class of
+mistake that never shows up as a red test: right package, wrong version
+line. Also: when the usual docs tool isn't available, the docs bundled in
+`node_modules` match the installed version exactly, which is better than
+memory.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

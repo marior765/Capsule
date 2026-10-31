@@ -21,8 +21,8 @@ describe("CommandPalette layout (10.4)", () => {
   });
 
   it("has a close control with a testID from the testIDs object", () => {
-    // Importing the component isn't possible under Jest here (unistyles
-    // needs its native module), so the testIDs declaration is read as text.
+    // Written before render tests existed (10.38), so the testIDs
+    // declaration is read as text; a render test could now check this too.
     expect(source).toMatch(/buttons:\s*\[[^\]]*"close"[^\]]*\]/);
     expect(source).toMatch(/testID=\{testIDs\.buttons\.close\}/);
   });

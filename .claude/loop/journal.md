@@ -5275,3 +5275,10 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Reviewer fail #1 (valid): the test passed on a workflow that ran `push` on the wrong branch, or had `continue-on-error` / `if: false` on gate steps. Fixed: the branch is read from inside the `push:` block, and skip / soft-fail keys and tabs are rejected. Also dropped `cancel-in-progress`, because "every push" should mean every push gets a result. 7 mutations, all caught.
 - Pass on re-review. Its minor notes (setup-node pinned under its own `with:`, ubuntu runner, `set +e` / `exit 0`) were folded in before the commit.
 - Known cost: llama.rn's postinstall downloads its native libs (~680 MB) on every `npm ci`. Documented in the workflow; cache it if runs get slow or flaky.
+
+## Beat 131 — 10.38 render tests (done, 2 attempts)
+- Added `@testing-library/react-native` 14.1 and its peer `test-renderer` (dev-only, no install scripts). Unistyles uses its own shipped Jest mock (`react-native-unistyles/mocks`) plus `src/__mocks__/unistyles.setup.ts`, which registers the app's real themes, so themed styles resolve to real tokens.
+- First render test: `src/widgets/ChatInput/__tests__/ChatInput.render.test.tsx` (5 tests, userEvent type/press). It failed before the install ("Cannot find module"). 14 mutations of ChatInput, all caught.
+- RNTL 14 made `render` and events async; the first draft used the v13 sync API and every test failed with "render has not been called".
+- Reviewer fail #1 (valid): `test-renderer@^1.3` pulls react-reconciler 0.34, which is built for React 19.3; this app is on 19.2 and `npm ls --all` went red. RNTL's own migration guide maps React 19.2 to test-renderer 1.2. Fixed with `~1.2.0`, reinstalled with npm 11 (npm 10 had dropped 14 `libc` fields from the lockfile). The lockfile diff is now additions plus dev→devOptional flags.
+- Stale "can't render under Jest" comments updated in two older tests; `create-tests.md` now explains how to write render tests.

@@ -25,6 +25,12 @@ Coverage depth definitions:
 - Test file name mirrors the source file: `db.ts` → `db.test.ts`
 - Tests must be **failing or skipped** when written — do not implement the feature to make them pass
 - Add a comment at the top of each test file: `// Tests for step X.Y — written before implementation (TDD)`
+- **Widgets and routes can be rendered** (since 10.38): use `@testing-library/react-native` 14
+  (`await render(...)`, `userEvent.setup()` + `await user.press/type(...)`), name the file
+  `<Component>.render.test.tsx`, and query by the component's `testIDs` object or by role/label.
+  Unistyles is mocked globally (its official mock plus `src/__mocks__/unistyles.setup.ts`, which
+  registers the app's real themes), so no per-test unistyles mock is needed.
+  Example: `src/widgets/ChatInput/__tests__/ChatInput.render.test.tsx`.
 
 ## Output
 - Write the test files

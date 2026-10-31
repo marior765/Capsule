@@ -50,6 +50,7 @@
     "whisper.rn": "^0.6.0"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^14.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
@@ -63,6 +64,7 @@
     "expo-mcp": "~0.2.1",
     "jest-expo": "^56.0.5",
     "prettier": "^3.8.3",
+    "test-renderer": "~1.2.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -78,7 +80,9 @@
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [
-      "llama.rn/jest/mock"
+      "llama.rn/jest/mock",
+      "react-native-unistyles/mocks",
+      "<rootDir>/src/__mocks__/unistyles.setup.ts"
     ],
     "moduleNameMapper": {
       "^react-native-mmkv$": "<rootDir>/src/__mocks__/react-native-mmkv.ts",
