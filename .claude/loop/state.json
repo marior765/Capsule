@@ -2,15 +2,15 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 126,
-    "status": "running",
+    "beat": 127,
+    "status": "complete",
     "completedAt": "2026-10-11T23:34:28",
-    "completionNote": "Third completion (round-2 decisions 2026-10-11). All new steps done: 4.6 app lock + 6.9 open attachments + 8.11 picker/tap (native, boxes unchecked, device checks in BLOCKED.md); 4.7, 5.5, 5.6, 8.12 ticked. Remaining unchecked steps are all native awaiting device checks, or deferred (8.1, Phase 9).",
+    "completionNote": "Phase 10 closed in a cloud session (2026-10-31): 10.35 + 10.33 done; 10.14 still quarantined. Simulator checks for both in BLOCKED.md.",
     "resumedAt": "2026-10-16",
     "resumeNote": "Reopened for Phase 10: 32 steps from the 2026-10-12 simulator QA pass (39 issues). Priority order 10.1-10.8 first (matches user priorities 1,2,3,4,5,7,8)."
   },
   "cursor": {
-    "step": "10.33",
+    "step": null,
     "phase": 10
   },
   "steps": {
@@ -542,12 +542,12 @@
       "notes": "shared/navigation leaveScreen = canDismiss ? dismiss : replace(fallback). Used by capsule edit save, capsule delete, type delete, new type. dismissTo rejected: pushes when target not in stack. Not simulator-verified (bad stored date blocked the save path); covered by unit + static guard (mutation-checked) + reviewer source tracing."
     },
     "10.33": {
-      "status": "pending",
+      "status": "done",
       "class": "logic",
-      "attempts": 0,
+      "attempts": 1,
       "failureSignatures": [],
-      "checkpoint": null,
-      "notes": "Found 2026-10-16 during 10.3 verification."
+      "checkpoint": "f0f8609",
+      "notes": "restoreCapsuleVersion nulls every current non-empty value the version didn't record (fields filled later, fields added to the type later, orphan values of removed fields), then writes the recorded ones. Decision documented in the doc comment: later-added fields ARE cleared \u2014 a snapshot can't tell blank from not-yet-existing, and the safety snapshot keeps the value. Replaces the 8.5 test that pinned 'leave untouched'. 3 new tests fail with the change reverted (checker verified); consistency test: getVersionChanges shows no diff after restore. Reviewer pass on attempt 1; its two minor notes (later-added test didn't insert a field row; orphan clearing undocumented) fixed before commit."
     },
     "10.4": {
       "status": "done",

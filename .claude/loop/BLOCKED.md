@@ -1195,3 +1195,6 @@ iOS verified in the simulator. On an Android device/emulator: open a capsule wit
 
 ## 10.35 branch switcher — simulator check (cloud session, 2026-10-31)
 Implemented without a simulator. With at least two existing conversations: start a **new chat** and send one message → the first message must show **no** `‹ 1/N ›` switcher. Long-press the first message → Edit → send different text → it now shows `‹ 2/2`; tap ‹ → back to the original first message and its reply (`1/2 ›`), still in the same chat (title and other messages unchanged); tap › → the edited branch. Also edit a later message and check its `‹ 1/2 ›` still works.
+
+## 10.33 version restore clears later values — simulator check (cloud session, 2026-10-31)
+Implemented without a simulator. Open a capsule with an **empty** field (e.g. Notes) → Edit → change only the title → Save (creates a version where Notes was empty). Edit again → fill Notes → Save. Open History → restore the **older** version (the one from before Notes was filled) → the title goes back AND Notes is **empty**. History now has a new safety entry; restoring it brings Notes back. Then: in Settings → Capsule types, add a new field to that type, fill it on the capsule, restore a version from before → the new field is empty (deliberate, see journal beat 127), and restoring the safety entry brings its value back.
