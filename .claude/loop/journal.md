@@ -5289,3 +5289,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Reviewer fail #1, both points valid: (B1) the deferred frame didn't re-check `following`, so a scroll queued just before a grab pulled the reader down mid-drag, an old bug on main too. Also, my extra "coasting" phase plus a 250 ms Date.now() fling window guarded an event order that RN 0.85's native code never emits (the reviewer read ReactScrollView.java and RCTScrollViewComponentView.mm), and it failed toward yanking the reader under JS lag. Fixed B1 and dropped the window, back to the plan's design.
 - Pass on re-review. Its follow-up (iOS status-bar tap to top doesn't stop following) went to BLOCKED.md.
 - 10.14's box stays unticked: the five-step Android check is in BLOCKED.md.
+
+## Beat 133 — 10.40 double send (already done by 8.12; reconciled + regression test)
+- Reconcile found the behaviour already in both chat screens since 8.12 (44f752a): a `sendInFlight` ref claimed before the first await, `sending` released only in `finally`, and `ChatInput disabled={sending}` across capsule search + streaming. The BLOCKED.md entry that prompted the user question was stale (never marked resolved after 8.12). My mistake: I asked the user to decide something already fixed.
+- Not re-implemented. Added `src/features/send-message/__tests__/sendGuard.routes.test.ts`, a static guard over both routes (comments stripped). It catches 4 mutations: guard removed, claim after an await, early release, input left enabled. The stale BLOCKED entry is now marked resolved.

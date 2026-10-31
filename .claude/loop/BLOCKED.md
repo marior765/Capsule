@@ -21,7 +21,7 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 - **CI** → yes, GitHub Actions gate on push to main (10.37).
 - **Render test library** → yes, `@testing-library/react-native` + unistyles Jest mock (10.38). Supersedes "Decision: a component-render test library" below.
 - **10.14** → finish it (saved patch + idle/dragging/settling), then the user checks on Android (10.39).
-- **Double send** → disable input for the whole send (10.40). Supersedes "Chat: a message can be sent twice…" below.
+- **Double send** → disable input for the whole send (10.40). Turned out to be already done by 8.12 (2026-10-11); the entry below was stale. 10.40 added a regression test instead.
 - **Vault reset** → route through the full wipe (10.41). Supersedes "Vault reset leaves attachment and chat-image files on disk" below.
 - **10.1 Android voice** → option (a): PCM stream + our own WAV header (10.42).
 - **Quick capture parsing** → simple deterministic patterns ("X by Y"), no model (10.43).
@@ -1077,7 +1077,7 @@ them (restore removes the replaced conversations' images; an imported
 conversation simply has no images). The same base64-vs-folder decision
 covers both.
 
-### Chat: a message can be sent twice while the first is still in progress (found during 7.3)
+### RESOLVED by 8.12 (stale until 2026-10-31) — Chat: a message can be sent twice while the first is still in progress (found during 7.3)
 `ChatInput` is never disabled while a reply is generating — and, with "My
 capsules" on, during the up-to-4-second capsule search before it, when the
 user's message isn't shown yet and the input is already cleared. A second

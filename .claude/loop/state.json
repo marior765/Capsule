@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 132,
+    "beat": 133,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Phase 10 closed in a cloud session (2026-10-31): 10.35 + 10.33 done; 10.14 still quarantined. Simulator checks for both in BLOCKED.md.",
@@ -11,7 +11,7 @@
     "lastBeatNote": "Beat 128 (2026-10-31): /loop /safe-loop all re-entered after PR #1 merge; no selectable step (remaining: 10.14 quarantined, 3.1 blocked, 8.1 + Phase 9 deferred, native steps awaiting device checks). Run stays complete."
   },
   "cursor": {
-    "step": "10.40",
+    "step": "10.41",
     "phase": 10
   },
   "steps": {
@@ -893,16 +893,16 @@
       "failureSignatures": [
         "reviewer fail #1: rAF callback calls scrollToEnd without re-checking following (pull-down mid-drag); 250ms Date.now fling window guards a sequence RN 0.85 never emits and errs toward yanking under JS lag"
       ],
-      "checkpoint": "d486057",
+      "checkpoint": "9b5d04a",
       "notes": "3-phase follow machine + frame re-check + render tests; reviewer pass on attempt 2."
     },
     "10.40": {
-      "status": "pending",
+      "status": "done",
       "class": "ui",
       "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "",
-      "notes": ""
+      "checkpoint": "9b5d04a",
+      "notes": "Already done by 8.12; reconciled. Added static regression test over both chat routes."
     },
     "10.41": {
       "status": "pending",
@@ -934,6 +934,6 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-10-31T09:56:19Z"
+    "at": "2026-10-31T10:00:26Z"
   }
 }
