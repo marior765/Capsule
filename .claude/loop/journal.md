@@ -5269,3 +5269,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - The user answered every open question through the in-app question dialog. The answers are recorded in BLOCKED.md ("Resolved (2026-10-31)") and as plan steps, in the order the user chose (infra first).
 - 10.36 done now: `.claude/audit.log` untracked and added to `.gitignore`. The file stays on disk.
 - 10.14 stays quarantined; its finish is 10.39, and the box waits for the user's Android check. 8.1 stays deferred.
+
+## Beat 130 — 10.37 CI workflow (done, 2 attempts)
+- `.github/workflows/ci.yml` re-runs the gate (npm ci → tsc → jest → eslint) on every push to main and on manual dispatch. Read-only token, no secrets, Node 22, ubuntu-latest. Guard test: `src/shared/config/__tests__/ciWorkflow.test.ts` (8 tests, all failed before the file existed).
+- Reviewer fail #1 (valid): the test passed on a workflow that ran `push` on the wrong branch, or had `continue-on-error` / `if: false` on gate steps. Fixed: the branch is read from inside the `push:` block, and skip / soft-fail keys and tabs are rejected. Also dropped `cancel-in-progress`, because "every push" should mean every push gets a result. 7 mutations, all caught.
+- Pass on re-review. Its minor notes (setup-node pinned under its own `with:`, ubuntu runner, `set +e` / `exit 0`) were folded in before the commit.
+- Known cost: llama.rn's postinstall downloads its native libs (~680 MB) on every `npm ci`. Documented in the workflow; cache it if runs get slow or flaky.

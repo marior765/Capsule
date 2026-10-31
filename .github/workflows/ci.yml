@@ -1,0 +1,32 @@
+# The gate (tsc, jest, eslint), re-run on GitHub for every push to main.
+# Claude commits straight to main with no pull requests, so this is the
+# independent check that main stays green. It only reads the repo: the
+# token is read-only and no secrets are used. Nothing here touches the app.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      # npm ci also runs llama.rn's postinstall, which downloads its prebuilt
+      # native libraries (several hundred MB). The gate doesn't use them, but
+      # --ignore-scripts would also skip better-sqlite3's build, which the
+      # tests need. If that download makes runs slow or flaky, cache it.
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx jest --passWithNoTests
+      - run: npx eslint src
