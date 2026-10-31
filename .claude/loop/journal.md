@@ -5241,3 +5241,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ## Beat 124 — 10.32 duplicate Settings title (done, adbb8cd)
 - Also removed the same duplicate on Inference; guard test pairs each settings Stack.Screen title with its screen.
 - Observed twice in sim: Models/Personas briefly rendered "No models/personas yet" while navigating — lists start as [] and fill on focus; data was intact (checked the DB). Cosmetic flash, candidate follow-up: initialise list state synchronously.
+
+## Beat 125 — 10.34 tab stacks anchored (done, 0f0fcdd, 2 attempts)
+- Plan text said initialRouteName; versioned Expo docs (context7) say anchor + navigation option withAnchor. The anchor alone fixes deep links (linking builds the state); imperative cross-tab navigation also needs withAnchor.
+- Reviewer fail #1: I covered palette + notification but missed the commonest path — Home's recent rows and the chat source chip. Fixed and guarded.
+- Loop paused here by the user to move remaining steps (10.35, 10.33) to a cloud session (no iOS simulator there → sim checks go to BLOCKED.md).
