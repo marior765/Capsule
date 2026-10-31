@@ -5246,3 +5246,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Plan text said initialRouteName; versioned Expo docs (context7) say anchor + navigation option withAnchor. The anchor alone fixes deep links (linking builds the state); imperative cross-tab navigation also needs withAnchor.
 - Reviewer fail #1: I covered palette + notification but missed the commonest path — Home's recent rows and the chat source chip. Fixed and guarded.
 - Loop paused here by the user to move remaining steps (10.35, 10.33) to a cloud session (no iOS simulator there → sim checks go to BLOCKED.md).
+
+## Beat 126 — 10.35 branch switcher scoped to the conversation (done, 7dff533, cloud session)
+- Root cause: `getChildren(db, null)` matched `parent_id IS NULL` across all conversations — every chat's first message is a root, so N chats → "‹ N/N" on a new chat's first message, and ‹ switched the active leaf to another chat's message.
+- Fix at the entity: `getSiblings(db, message)` filters by conversation_id; `getChildren` now takes a non-null parent so the trap can't come back. Sibling counting + leaf walk moved from the route into branch-conversation (testable without rendering).
+- Reviewer (pass, attempt 1) re-ran the new tests with the filter removed: 6 of 11 fail. No simulator in the cloud → check in BLOCKED.md.

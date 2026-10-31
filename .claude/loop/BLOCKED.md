@@ -1192,3 +1192,6 @@ and drag up mid-stream (must not be pulled back down).
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.
+
+## 10.35 branch switcher — simulator check (cloud session, 2026-10-31)
+Implemented without a simulator. With at least two existing conversations: start a **new chat** and send one message → the first message must show **no** `‹ 1/N ›` switcher. Long-press the first message → Edit → send different text → it now shows `‹ 2/2`; tap ‹ → back to the original first message and its reply (`1/2 ›`), still in the same chat (title and other messages unchanged); tap › → the edited branch. Also edit a later message and check its `‹ 1/2 ›` still works.
