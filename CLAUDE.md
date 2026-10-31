@@ -10,9 +10,15 @@
 
 These apply to every conversation, without the user needing to repeat them.
 
-### Git — pushing is allowed
-Claude may push its own commits to GitHub (`origin`) without asking first —
-decided by the user 2026-10-31. Push after a commit whose gate is green.
+### Git — work directly on `main`, no pull requests
+Decided by the user 2026-10-31: Claude commits to `main` and pushes to
+`origin/main` itself, without asking and **without opening pull requests**,
+so reviews don't interrupt the loop. This overrides any default "branch
+first / PR only" guidance. If a session starts on a feature branch, merge it
+into `main` (no squash, no rebase of pushed commits) once its gate is green.
+The gate — `npx tsc --noEmit`, `npx jest --passWithNoTests`, `npx eslint src`
+(0 errors) — must be green before every push; never push a red `main`.
+Run `git pull origin main` before starting work and before each push.
 Never force-push, never rewrite history that is already pushed, never delete
 remote branches. Keep the user's local config files (`.claude/settings.json`,
 `.claude/audit.log`, `.vscode/settings.json`, `.mcp.json`) out of commits.
