@@ -42,7 +42,9 @@ describe.each(Object.entries(routes))("%s: one send at a time", (_, source) => {
   });
 
   it("marks the send as running before any await, and releases it only in finally", () => {
-    expect(body.indexOf("setSending(true)")).toBeLessThan(body.indexOf("await "));
+    expect(body.indexOf("setSending(true)")).toBeLessThan(
+      body.indexOf("await "),
+    );
     const finallyBlock = body.slice(body.lastIndexOf("} finally {"));
     expect(finallyBlock).toMatch(/setSending\(false\)/);
     expect(finallyBlock).toMatch(/sendInFlight\.current = false/);
@@ -52,6 +54,8 @@ describe.each(Object.entries(routes))("%s: one send at a time", (_, source) => {
 
   it("disables the message input for the whole send", () => {
     // Within the <ChatInput … /> element (its props contain "=>").
-    expect(source).toMatch(/<ChatInput\b(?:(?!\/>)[\s\S])*disabled=\{sending\}/);
+    expect(source).toMatch(
+      /<ChatInput\b(?:(?!\/>)[\s\S])*disabled=\{sending\}/,
+    );
   });
 });
