@@ -44,7 +44,8 @@
   },
   "allowedMcpServers": [
     {"serverUrl": "https://mcp.expo.dev/mcp"},
-    {"serverCommand": "/Users/denysbohatyrchuk/.local/bin/codebase-memory-mcp"}
+    {"serverCommand": "/Users/denysbohatyrchuk/.local/bin/codebase-memory-mcp"},
+    {"serverCommand": ["npx", "-y", "@upstash/context7-mcp"]}
   ],
   "enabledPlugins": {
     "expo@claude-plugins-official": true
