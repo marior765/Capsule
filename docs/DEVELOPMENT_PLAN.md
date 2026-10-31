@@ -205,7 +205,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.38 Component render tests: add `@testing-library/react-native` (devDependency) plus a Jest mock for `react-native-unistyles`; prove it with one real render test of an existing widget
 - [x] 10.39 Finish 10.14 (Android follow-scroll): apply `.claude/loop/patches/10.14-follow-state-machine.patch`, then split follow state into `idle | dragging | settling` (ignore momentum while dragging; dragEnd → following = nearBottom, phase settling; act on momentum only while settling) with tests incl. dragBegin → momentumEnd(nearBottom) leaving following off. 10.14's box waits for the Android check
 - [x] 10.40 Chat: disable the input and send button for the whole send (capsule search + streaming) until the reply finishes or is stopped, so a second send can't start a second completion
-- [ ] 10.41 Vault reset goes through the full wipe (one "erase everything" path): also deletes `attachments/` and `chat-images/` and cancels scheduled reminders
+- [x] 10.41 Vault reset goes through the full wipe (one "erase everything" path): also deletes `attachments/` and `chat-images/` and cancels scheduled reminders
 - [ ] 10.42 Android voice input: record 16 kHz mono PCM with `@fugood/react-native-audio-pcm-stream` and write the WAV header ourselves, inside `shared/stt` (needs an Android device check before ticking)
 - [ ] 10.43 Quick capture fills fields from simple patterns, e.g. "X by Y" → Title / Author when the type has those fields; deterministic, offline, no model; anything unmatched stays in the title
 

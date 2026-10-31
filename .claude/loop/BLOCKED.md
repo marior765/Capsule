@@ -22,7 +22,7 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 - **Render test library** → yes, `@testing-library/react-native` + unistyles Jest mock (10.38). Supersedes "Decision: a component-render test library" below.
 - **10.14** → finish it (saved patch + idle/dragging/settling), then the user checks on Android (10.39).
 - **Double send** → disable input for the whole send (10.40). Turned out to be already done by 8.12 (2026-10-11); the entry below was stale. 10.40 added a regression test instead.
-- **Vault reset** → route through the full wipe (10.41). Supersedes "Vault reset leaves attachment and chat-image files on disk" below.
+- **Vault reset** → route through the full wipe (10.41). Turned out to be already done by 4.7 (2026-10-11): `resetVault` was replaced by one `eraseEverything` path; the entry below was stale.
 - **10.1 Android voice** → option (a): PCM stream + our own WAV header (10.42).
 - **Quick capture parsing** → simple deterministic patterns ("X by Y"), no model (10.43).
 - **8.1 cloud backends** → stays deferred.
@@ -62,7 +62,7 @@ Deferred rather than guessed at (2026-09 — see journal beat 45).
 
 ---
 
-### 5.2 — `features/import-export` capsule scope: spine says "done", the code says otherwise
+### RESOLVED (user, 2026-10-31: since ticked) — 5.2 — `features/import-export` capsule scope: spine says "done", the code says otherwise
 Discovered during beat 62's step-selection walk (not something this beat
 was assigned to fix): `.claude/loop/state.json`'s `5.2` entry is marked
 `status: "done"`, but `docs/DEVELOPMENT_PLAN.md` line 124 still reads
@@ -101,7 +101,7 @@ Flagged, not fixed (2026-09-15 — see journal beat 62).
 
 ---
 
-### 5.4 — `features/migrate-import` (portable-format importers): same spine/reality gap as 5.2
+### RESOLVED (user, 2026-10-31: since ticked) — 5.4 — `features/migrate-import` (portable-format importers): same spine/reality gap as 5.2
 Found alongside 5.2 while auditing every `logic`/`ui` step whose
 `state.json` status is `"done"` but plan checkbox is unchecked (a
 bounded, mechanical check — not a full re-verification of every closed
@@ -808,7 +808,7 @@ whenever step selection reaches it.
 
 ## Follow-up (informational — low-risk, not blocking)
 
-### `shared/fs` extraction is now triggered, not yet done
+### RESOLVED (`src/shared/fs` exists and wipe-data uses it) — `shared/fs` extraction is now triggered, not yet done
 **Done (8.12, 2026-10-11):** `features/manage-stt-model` now uses `shared/fs` (relative path, idempotent download, egress-marked); no feature calls expo-file-system directly.
 `docs/ARCHITECTURE.md` names its own condition for extracting a `shared/fs`
 wrapper: "when a second slice needs the filesystem... extract a `shared/fs`
@@ -1061,7 +1061,7 @@ falls under CLAUDE.md's "every persisted entity must round-trip". Candidate
 for a small follow-up step: add personas + snippets to the conversation
 vault, or give them their own kinds. Your call whether that's worth a plan line.
 
-### Attachments aren't part of the portable format (found during 6.8)
+### RESOLVED (user, 2026-10-31) — Attachments aren't part of the portable format (found during 6.8)
 **Resolved by 5.5 (2026-10-11):** the user chose a zip bundle (fflate). Capsule export/import as a bundle now carries attachments; the full backup with chat images follows in 5.5's next part.
 5.2's capsule export (`features/import-export/capsules.ts`) leaves attachments
 out. That was fine while attachments were metadata-only; now that they're
@@ -1091,7 +1091,7 @@ runs later in the serial embedding queue (there's no cancel), so during a
 long start-up backfill each send can leave one cheap abandoned job queued.
 If you see searches timing out one after another, that's why.
 
-### Vault reset leaves attachment and chat-image files on disk (found during 8.4)
+### RESOLVED by 4.7 (stale until 2026-10-31) — Vault reset leaves attachment and chat-image files on disk (found during 8.4)
 `features/encrypt-vault`'s `resetVault` deletes the database (and the vault
 key) but not the files the database pointed at: `attachments/` and
 `chat-images/` stay on disk with nothing referencing them. The full wipe
