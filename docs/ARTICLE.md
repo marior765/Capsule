@@ -2829,4 +2829,28 @@ anything?" failure the loop exists to prevent.
 
 ---
 
+## 2026-10-31 — The auth check said "invalid"; the API said "fine"
+
+Two cloud sessions in a row gave up on opening the pull request, because
+`gh auth status` reported the GitHub token as invalid and the GitHub tool
+integration didn't load. The user pointed out that GitHub worked in another
+project. The next try skipped the status check and made a real read call
+(`gh api repos/<owner>/<repo>`), which succeeded. The session's proxy injects
+credentials per request, so the CLI's local token check fails while real
+API calls go through. GraphQL is blocked (so `gh pr list` fails), but the
+REST endpoints work.
+
+The real call also showed that a PR for the branch already existed: GitHub
+had opened one from the first commit's message. So instead of opening a
+duplicate, the session renamed that PR and replaced its body with the
+prepared description.
+
+**Article angle:** test access by doing the smallest real operation, not by
+asking a status command. A health check measures its own assumptions (here:
+"a token is stored locally"), which may not match how the environment
+actually authenticates. Also, look before you create: "open a PR" turned
+into "fix the one that's already there".
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
