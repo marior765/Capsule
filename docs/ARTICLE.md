@@ -2793,4 +2793,40 @@ twice.
 
 ---
 
+## 2026-10-31 — Handing the loop to a cloud session to close the laptop
+
+The last two Phase 10 steps (10.35, 10.33) moved from the local loop to a
+cloud session so the user could walk away. Two capabilities were missing
+there: the iOS simulator and the local MCP tools (code graph, context7). The
+loop's rules stayed the same: test first, a green gate, an independent
+checker that is told to refute, one commit per step. Every check that needs
+a human with a simulator went into `BLOCKED.md` as a tap-by-tap script
+instead of being claimed as done.
+
+10.35 was a classic SQL `NULL` scoping bug. Every conversation's first
+message is a "root" (`parent_id IS NULL`), so the unscoped sibling query
+counted every chat's first message as an alternative branch of this one.
+The fix went into the entity layer. The query now requires a conversation,
+and the old helper no longer accepts `null`, so the mistake can't be
+reintroduced quietly.
+
+10.33 needed a product decision rather than a code fix. Should restoring an
+old version also clear a field that was added to the type after that
+version was taken? An earlier step had decided "leave it, the version has
+no opinion". The diff view added since then reads a missing field as
+empty, so the two features disagreed. The cloud session picked consistency
+("restore = the capsule as it was then"), relied on the automatic safety
+snapshot to keep it reversible, and pinned it with a test: after a restore,
+the history diff must find nothing left over.
+
+**Article angle:** an unattended agent can safely make a product decision
+if three things hold: the decision is reversible, it is written down where
+the human will see it (code comment, journal, PR), and it is checked by a
+test that encodes the *reason* (two features must agree), not just the
+outcome. The checker also caught a test whose name claimed more than its
+body proved, which is a small version of the "does this test prove
+anything?" failure the loop exists to prevent.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
