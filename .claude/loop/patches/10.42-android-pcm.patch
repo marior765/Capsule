@@ -1,0 +1,884 @@
+diff --git a/package.json b/package.json
+index cce6c7b..05bbe93 100644
+--- a/package.json
++++ b/package.json
+@@ -95,7 +95,8 @@
+       "^react-native-quick-crypto$": "<rootDir>/src/__mocks__/react-native-quick-crypto.ts",
+       "^expo-local-authentication$": "<rootDir>/src/__mocks__/expo-local-authentication.ts",
+       "^expo-notifications$": "<rootDir>/src/__mocks__/expo-notifications.ts",
+-      "^expo-sharing$": "<rootDir>/src/__mocks__/expo-sharing.ts"
++      "^expo-sharing$": "<rootDir>/src/__mocks__/expo-sharing.ts",
++      "^@fugood/react-native-audio-pcm-stream$": "<rootDir>/src/__mocks__/react-native-audio-pcm-stream.ts"
+     },
+     "transformIgnorePatterns": [
+       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|drizzle-orm|react-native-mmkv|llama.rn|whisper.rn|react-native-unistyles|react-native-reanimated|react-native-nitro-modules)"
+diff --git a/src/__mocks__/react-native-audio-pcm-stream.ts b/src/__mocks__/react-native-audio-pcm-stream.ts
+new file mode 100644
+index 0000000..2716f5e
+--- /dev/null
++++ b/src/__mocks__/react-native-audio-pcm-stream.ts
+@@ -0,0 +1,52 @@
++// Mock for @fugood/react-native-audio-pcm-stream (10.42) — tests must never
++// touch a real microphone. Mirrors the native module's JS surface (read from
++// its index.js and Android source): `init` returns a promise, `start` and
++// `stop` return nothing, and `on("data")` delivers base64 chunks of raw PCM.
++// Not modelled automatically: the native side discards its first two buffers
++// after start, and emits the buffer it was reading after stop(). Tests that
++// care call __emitPcm after stop() themselves.
++
++type DataListener = (base64Chunk: string) => void;
++
++let listener: DataListener | null = null;
++let initError: Error | null = null;
++
++export const init = jest.fn(async (_options: Record<string, unknown>) => {
++  if (initError) throw initError;
++});
++export const start = jest.fn(() => {});
++export const stop = jest.fn(() => {});
++export const removeListener = jest.fn(() => {
++  listener = null;
++});
++export const on = jest.fn((event: string, callback: DataListener) => {
++  if (event !== "data") throw new Error("Invalid event");
++  listener = callback;
++  return { remove: removeListener };
++});
++
++/** Delivers raw PCM bytes to the "data" listener, base64-encoded as native does. */
++export function __emitPcm(bytes: Uint8Array): void {
++  let binary = "";
++  bytes.forEach((b) => {
++    binary += String.fromCharCode(b);
++  });
++  listener?.(btoa(binary));
++}
++
++export function __hasListener(): boolean {
++  return listener !== null;
++}
++
++export function __setInitError(error: Error | null): void {
++  initError = error;
++}
++
++export function __resetPcmMock(): void {
++  listener = null;
++  initError = null;
++  [init, start, stop, on, removeListener].forEach((fn) => fn.mockClear());
++}
++
++const AudioPcmStream = { init, start, stop, on };
++export default AudioPcmStream;
+diff --git a/src/features/voice-input/__tests__/voiceError.test.ts b/src/features/voice-input/__tests__/voiceError.test.ts
+index 7084999..1a77fa8 100644
+--- a/src/features/voice-input/__tests__/voiceError.test.ts
++++ b/src/features/voice-input/__tests__/voiceError.test.ts
+@@ -24,6 +24,14 @@ describe("describeVoiceError", () => {
+     expect(message).toMatch(/record/i);
+   });
+ 
++  // 10.42: Android's PCM path reports an empty capture this way. A hold just
++  // past the button's minimum can end before the first buffer arrives.
++  it("says a too-short Android hold recorded nothing", () => {
++    expect(
++      describeVoiceError(new Error("Recording captured no audio")),
++    ).toMatch(/nothing was recorded/i);
++  });
++
+   it("says when a recording came out empty", () => {
+     expect(describeVoiceError(new Error("Recording produced no file"))).toMatch(
+       /nothing was recorded/i,
+diff --git a/src/features/voice-input/index.ts b/src/features/voice-input/index.ts
+index 8258096..0e3366e 100644
+--- a/src/features/voice-input/index.ts
++++ b/src/features/voice-input/index.ts
+@@ -145,7 +145,8 @@ export function describeVoiceError(error: unknown): string {
+   if (/permission/i.test(message)) {
+     return "Capsule needs microphone access for voice input — allow it in Settings.";
+   }
+-  if (/produced no file/i.test(message)) {
++  // iOS: "produced no file"; Android (10.42): "captured no audio".
++  if (/produced no file|captured no audio/i.test(message)) {
+     return "Nothing was recorded. Hold the mic a little longer and try again.";
+   }
+   if (/transcrib/i.test(message)) {
+diff --git a/src/features/wipe-data/__tests__/wipe-data.test.ts b/src/features/wipe-data/__tests__/wipe-data.test.ts
+index 322a0db..8042f6a 100644
+--- a/src/features/wipe-data/__tests__/wipe-data.test.ts
++++ b/src/features/wipe-data/__tests__/wipe-data.test.ts
+@@ -133,6 +133,7 @@ describe("wipeAllData — edge cases", () => {
+     __missingUris.add("file:///cache/DocumentPicker");
+     __missingUris.add("file:///cache/ImagePicker");
+     __missingUris.add("file:///cache/Exports");
++    __missingUris.add("file:///cache/Recordings");
+     await expect(wipeAllData(openDb())).resolves.not.toThrow();
+     expect(__deletedDirectoryUris).toEqual([]);
+   });
+@@ -170,3 +171,9 @@ it("deletes the exports cache folder (unencrypted export copies) too (5.5)", asy
+   await wipeAllData(openDb());
+   expect(__deletedDirectoryUris).toContain("file:///cache/Exports");
+ });
++
++// 10.42: Android voice input writes WAV recordings into the cache.
++it("deletes the voice recordings cache folder too (10.42)", async () => {
++  await wipeAllData(openDb());
++  expect(__deletedDirectoryUris).toContain("file:///cache/Recordings");
++});
+diff --git a/src/features/wipe-data/index.ts b/src/features/wipe-data/index.ts
+index 86036d4..8d43dfa 100644
+--- a/src/features/wipe-data/index.ts
++++ b/src/features/wipe-data/index.ts
+@@ -11,6 +11,7 @@ import {
+ import { PICKER_CACHE_DIRECTORIES } from "@/shared/picker";
+ import { cancelAllLocalNotifications } from "@/shared/notifications";
+ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
++import { RECORDINGS_CACHE_DIRECTORY } from "@/shared/stt";
+ 
+ /**
+  * "features/wipe-data — secure full wipe (models, chats, capsules,
+@@ -21,7 +22,8 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
+  * deletes needed. Files on disk are separate from their rows and need
+  * their own deletion: chat models (`models/`), speech-to-text models
+  * (`stt-models/`), the embedding model (`embedding-models/`), chat images (`chat-images/`), capsule attachments (`attachments/`), and the pickers'
+- * temporary copies in the cache directory, all through `shared/fs`.
++ * temporary copies, exports and Android voice recordings in the cache
++ * directory, all through `shared/fs`.
+  * Scheduled reminder notifications are cancelled too. One
+  * known exception it can't reach: the iOS document picker's own
+  * `tmp/<bundle-id>-Inbox/` copy (see `shared/fs`'s cache-section note).
+@@ -57,6 +59,8 @@ export async function wipeAllData(db: SQLiteDatabase | null): Promise<void> {
+   PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
+   // Exports waiting for (or left after) the share sheet — plaintext copies.
+   deleteCacheDirectoryIfExists(EXPORTS_CACHE_DIRECTORY);
++  // Android voice recordings (10.42), written as WAV before transcription.
++  deleteCacheDirectoryIfExists(RECORDINGS_CACHE_DIRECTORY);
+ 
+   // `db` is null when erasing from the lock screen: nothing is open, and
+   // opening a database just to log would create one.
+diff --git a/src/shared/stt/__tests__/androidRecording.test.ts b/src/shared/stt/__tests__/androidRecording.test.ts
+new file mode 100644
+index 0000000..9f23f7a
+--- /dev/null
++++ b/src/shared/stt/__tests__/androidRecording.test.ts
+@@ -0,0 +1,289 @@
++// Tests for step 10.42 — written before implementation (TDD)
++//
++// Android's MediaRecorder can't write WAV, and whisper.rn reads only 16-bit
++// PCM WAV, so Android voice input recorded AAC and every transcription
++// failed. On Android, startRecording now streams raw PCM with
++// @fugood/react-native-audio-pcm-stream and stop() writes a WAV file itself.
++//
++// Each test loads shared/stt in a fresh module registry, with the mocks taken
++// from that same registry. Platform.OS is set to "android" in both the fresh
++// registry (read at load time) and the main one: react-native's `Platform`
++// export is a lazy getter, so code running after isolateModules returns reads
++// the main registry's Platform. afterEach puts it back to "ios".
++type Stt = typeof import("../index");
++type PcmMock = typeof import("@/__mocks__/react-native-audio-pcm-stream");
++type AudioMock = typeof import("@/__mocks__/expo-audio");
++type FsMock = typeof import("@/__mocks__/expo-file-system");
++
++function loadOnAndroid(): {
++  stt: Stt;
++  pcm: PcmMock;
++  audio: AudioMock;
++  fs: FsMock;
++} {
++  let loaded:
++    | { stt: Stt; pcm: PcmMock; audio: AudioMock; fs: FsMock }
++    | undefined;
++  Object.defineProperty(
++    jest.requireActual<typeof import("react-native")>("react-native").Platform,
++    "OS",
++    { value: "android", configurable: true },
++  );
++  jest.isolateModules(() => {
++    const { Platform } =
++      jest.requireActual<typeof import("react-native")>("react-native");
++    Object.defineProperty(Platform, "OS", {
++      value: "android",
++      configurable: true,
++    });
++    const pcm = jest.requireActual<PcmMock>(
++      "@fugood/react-native-audio-pcm-stream",
++    );
++    const audio = jest.requireActual<AudioMock>("expo-audio");
++    const fs = jest.requireActual<FsMock>("expo-file-system");
++    pcm.__resetPcmMock();
++    audio.__resetAudioMock();
++    fs.__resetFsMock();
++    const stt = jest.requireActual<Stt>("../index");
++    loaded = { stt, pcm, audio, fs };
++  });
++  if (!loaded) throw new Error("not loaded");
++  return loaded;
++}
++
++beforeEach(() => {
++  jest.useFakeTimers();
++});
++
++afterEach(() => {
++  jest.useRealTimers();
++  const { Platform } =
++    jest.requireActual<typeof import("react-native")>("react-native");
++  Object.defineProperty(Platform, "OS", { value: "ios", configurable: true });
++});
++
++/** Stops, lets the native drain window pass, and returns stop()'s result. */
++async function stopAndDrain(
++  stt: Stt,
++  handle: { stop: () => Promise<{ uri: string }> },
++): Promise<{ uri: string }> {
++  const stopped = handle.stop();
++  await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS);
++  return stopped;
++}
++
++const recordedFile = (fs: FsMock, uri: string): Uint8Array => {
++  const bytes = fs.__fileContents.get(uri);
++  if (!bytes) throw new Error(`no file at ${uri}`);
++  return bytes;
++};
++
++describe("startRecording on Android (10.42)", () => {
++  it("captures 16 kHz mono 16-bit PCM from the voice-recognition source", async () => {
++    const { stt, pcm, audio } = loadOnAndroid();
++    await stt.startRecording();
++
++    expect(pcm.init).toHaveBeenCalledWith(
++      expect.objectContaining({
++        sampleRate: 16000,
++        channels: 1,
++        bitsPerSample: 16,
++        audioSource: 6,
++      }),
++    );
++    expect(pcm.start).toHaveBeenCalledTimes(1);
++    expect(pcm.init.mock.invocationCallOrder[0]).toBeLessThan(
++      pcm.start.mock.invocationCallOrder[0],
++    );
++    // Not the AAC MediaRecorder path any more.
++    expect(audio.AudioRecorder).not.toHaveBeenCalled();
++  });
++
++  it("asks for microphone permission first and refuses without it", async () => {
++    const { stt, pcm, audio } = loadOnAndroid();
++    audio.__setNextPermission(false);
++
++    await expect(stt.startRecording()).rejects.toThrow(
++      "Microphone permission was not granted",
++    );
++    expect(pcm.init).not.toHaveBeenCalled();
++    expect(pcm.start).not.toHaveBeenCalled();
++  });
++
++  it("stop() writes the captured PCM as a WAV file and returns its uri", async () => {
++    const { stt, pcm, fs } = loadOnAndroid();
++    const handle = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2, 3, 4]));
++    pcm.__emitPcm(new Uint8Array([5, 6]));
++
++    const { uri } = await stopAndDrain(stt, handle);
++
++    expect(uri).toMatch(/^file:\/\/\/cache\/Recordings\/.+\.wav$/);
++    const wav = recordedFile(fs, uri);
++    expect(String.fromCharCode(...wav.slice(0, 4))).toBe("RIFF");
++    expect(String.fromCharCode(...wav.slice(8, 12))).toBe("WAVE");
++    expect(new DataView(wav.buffer, wav.byteOffset).getUint32(24, true)).toBe(
++      16000,
++    );
++    expect([...wav.slice(44)]).toEqual([1, 2, 3, 4, 5, 6]);
++  });
++
++  it("stops the native stream and its listener on stop()", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    const handle = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2]));
++    await stopAndDrain(stt, handle);
++
++    expect(pcm.stop).toHaveBeenCalledTimes(1);
++    expect(pcm.removeListener).toHaveBeenCalledTimes(1);
++    expect(pcm.__hasListener()).toBe(false);
++  });
++
++  // Reviewer finding (10.42): the native stop() only flags the read thread,
++  // which finishes the buffer it is reading and emits it AFTER stop() — and
++  // events reach JS asynchronously. Removing the listener at once dropped the
++  // end of every recording.
++  it("keeps the last buffer the native side emits after stop()", async () => {
++    const { stt, pcm, fs } = loadOnAndroid();
++    const handle = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2]));
++
++    const stopped = handle.stop();
++    expect(pcm.stop).toHaveBeenCalledTimes(1);
++    pcm.__emitPcm(new Uint8Array([3, 4])); // the in-flight buffer
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS);
++    const { uri } = await stopped;
++
++    expect([...recordedFile(fs, uri).slice(44)]).toEqual([1, 2, 3, 4]);
++  });
++
++  it("ignores audio that arrives after the drain window", async () => {
++    const { stt, pcm, fs } = loadOnAndroid();
++    const handle = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2]));
++    const listener = pcm.on.mock.calls[0][1];
++    const { uri } = await stopAndDrain(stt, handle);
++    listener(btoa("\u0009\u0009"));
++
++    expect([...recordedFile(fs, uri).slice(44)]).toEqual([1, 2]);
++  });
++
++  // Reviewer finding (10.42): the native module keeps one shared recorder,
++  // and its read thread lives on for up to a buffer after stop(). A quick
++  // re-press that called init() meanwhile replaced the open recorder and
++  // could crash the app. The next recording waits for the drain.
++  it("a quick re-press waits for the previous recording to finish draining", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    const first = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2]));
++    const firstStopped = first.stop();
++
++    const secondStarted = stt.startRecording();
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS - 1);
++    expect(pcm.init).toHaveBeenCalledTimes(1);
++
++    await jest.advanceTimersByTimeAsync(1);
++    await firstStopped;
++    await secondStarted;
++    expect(pcm.init).toHaveBeenCalledTimes(2);
++  });
++
++  // Reviewer finding (10.42, round 2): one shared "settled" promise let two
++  // presses queued behind the same drain start together. Each recording
++  // takes its own turn: the third waits for the second's stop and drain.
++  it("recordings queued behind one drain start one at a time", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    const first = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2]));
++    const firstStopped = first.stop();
++    const secondStarted = stt.startRecording();
++    const thirdStarted = stt.startRecording();
++
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS);
++    await firstStopped;
++    const second = await secondStarted;
++    expect(pcm.init).toHaveBeenCalledTimes(2);
++
++    // The third is still waiting for the second recording to finish.
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS * 4);
++    expect(pcm.init).toHaveBeenCalledTimes(2);
++
++    pcm.__emitPcm(new Uint8Array([3, 4]));
++    const secondStopped = second.stop();
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS - 1);
++    expect(pcm.init).toHaveBeenCalledTimes(2);
++    await jest.advanceTimersByTimeAsync(1);
++    await secondStopped;
++    await thirdStarted;
++    expect(pcm.init).toHaveBeenCalledTimes(3);
++  });
++
++  it("a failed start gives the next recording its turn", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    pcm.__setInitError(new Error("AudioRecord initialization failed"));
++    await expect(stt.startRecording()).rejects.toThrow("initialization failed");
++    pcm.__setInitError(null);
++
++    await stt.startRecording();
++    expect(pcm.init).toHaveBeenCalledTimes(2);
++  });
++
++  // A failed stop (nothing captured) still drains before the next init.
++  it("waits for the drain even when the previous recording captured nothing", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    const first = await stt.startRecording();
++    const firstStopped = first.stop().catch((e: Error) => e);
++    const secondStarted = stt.startRecording();
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS - 1);
++    expect(pcm.init).toHaveBeenCalledTimes(1);
++    await jest.advanceTimersByTimeAsync(1);
++    expect(await firstStopped).toEqual(
++      new Error("Recording captured no audio"),
++    );
++    await secondStarted;
++    expect(pcm.init).toHaveBeenCalledTimes(2);
++  });
++
++  // Reviewer finding (10.42): the native side skips its first two buffers,
++  // so a large buffer clipped the first syllable. The device default is used.
++  it("leaves the buffer size to the device default", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    await stt.startRecording();
++    expect(pcm.init.mock.calls[0][0]).not.toHaveProperty("bufferSize");
++  });
++
++  // A tap too short to deliver a single buffer: nothing for whisper to read.
++  it("throws when nothing was captured, and writes no file", async () => {
++    const { stt, pcm, fs } = loadOnAndroid();
++    const handle = await stt.startRecording();
++
++    const stopped = handle.stop().catch((e: Error) => e);
++    await jest.advanceTimersByTimeAsync(stt.PCM_DRAIN_MS);
++    expect(await stopped).toEqual(new Error("Recording captured no audio"));
++    expect(pcm.stop).toHaveBeenCalledTimes(1);
++    expect(fs.__fileContents.size).toBe(0);
++  });
++
++  it("cleans up the listener when the native stream fails to start", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    pcm.__setInitError(new Error("AudioRecord initialization failed"));
++
++    await expect(stt.startRecording()).rejects.toThrow(
++      "AudioRecord initialization failed",
++    );
++    expect(pcm.start).not.toHaveBeenCalled();
++    expect(pcm.__hasListener()).toBe(false);
++  });
++
++  it("gives each recording its own file", async () => {
++    const { stt, pcm } = loadOnAndroid();
++    const first = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([1, 2]));
++    const a = await stopAndDrain(stt, first);
++    const second = await stt.startRecording();
++    pcm.__emitPcm(new Uint8Array([3, 4]));
++    const b = await stopAndDrain(stt, second);
++
++    expect(a.uri).not.toBe(b.uri);
++  });
++});
+diff --git a/src/shared/stt/__tests__/recording.test.ts b/src/shared/stt/__tests__/recording.test.ts
+index 85cbd08..e72d069 100644
+--- a/src/shared/stt/__tests__/recording.test.ts
++++ b/src/shared/stt/__tests__/recording.test.ts
+@@ -56,7 +56,7 @@ describe("startRecording — happy path", () => {
+     expect(uri).toBe("file:///mock/take-1.m4a");
+   });
+ 
+-  // 10.1: whisper.rn only reads 16 kHz mono 16-bit PCM WAV. The old default
++  // 10.1: whisper.rn reads only 16-bit PCM WAV. The old default
+   // (HIGH_QUALITY: 44.1 kHz stereo AAC .m4a) recorded fine and then failed
+   // every transcription — found in the simulator, not by this suite.
+   it("records 16 kHz mono by default — what whisper reads", async () => {
+@@ -104,41 +104,9 @@ describe("startRecording — happy path", () => {
+   });
+ });
+ 
+-describe("startRecording — Android (10.1)", () => {
+-  // Android's MediaRecorder can't write WAV, so it still records AAC — the
+-  // file must then be named .m4a, not inherit the iOS ".wav".
+-  it("names the Android AAC recording .m4a", async () => {
+-    // A fresh module registry so the preset is re-flattened for Android.
+-    // react-native and the expo-audio mock are taken from that same registry:
+-    // Platform.OS is set there before shared/stt loads, and the recorder calls
+-    // read back are the ones this run made.
+-    let isolatedRecorder: jest.Mock | undefined;
+-    let started: Promise<unknown> | undefined;
+-    jest.isolateModules(() => {
+-      const { Platform } =
+-        jest.requireActual<typeof import("react-native")>("react-native");
+-      Object.defineProperty(Platform, "OS", {
+-        value: "android",
+-        configurable: true,
+-      });
+-      isolatedRecorder = jest.requireActual<
+-        typeof import("@/__mocks__/expo-audio")
+-      >("expo-audio").AudioRecorder as unknown as jest.Mock;
+-      const { startRecording: startOnAndroid } =
+-        jest.requireActual<typeof import("../index")>("../index");
+-      started = startOnAndroid();
+-    });
+-    await started;
+-    const calls = isolatedRecorder?.mock.calls ?? [];
+-    const passed = calls[calls.length - 1]?.[0] as
+-      | Record<string, unknown>
+-      | undefined;
+-    expect(passed).toEqual(
+-      expect.objectContaining({ extension: ".m4a", outputFormat: "mpeg4" }),
+-    );
+-    expect(passed).not.toHaveProperty("linearPCMBitDepth");
+-  });
+-});
++// 10.1 recorded AAC (.m4a) on Android, which whisper can't read. 10.42
++// replaced that with a PCM stream written as WAV; its tests are in
++// androidRecording.test.ts.
+ 
+ describe("startRecording — edge cases", () => {
+   it("merges caller options over the default preset rather than replacing it", async () => {
+diff --git a/src/shared/stt/__tests__/wav.test.ts b/src/shared/stt/__tests__/wav.test.ts
+new file mode 100644
+index 0000000..8368c03
+--- /dev/null
++++ b/src/shared/stt/__tests__/wav.test.ts
+@@ -0,0 +1,76 @@
++// Tests for step 10.42 — written before implementation (TDD)
++//
++// Android can't record WAV with MediaRecorder, so it captures raw PCM and
++// shared/stt writes the WAV header itself. whisper.rn's reader needs a 16-bit
++// PCM WAV with exact RIFF/fmt/data chunks (it resamples to 16 kHz mono
++// itself; recording at 16 kHz mono just skips that work).
++import { encodeWav } from "../index";
++
++const text = (bytes: Uint8Array, at: number, length: number) =>
++  String.fromCharCode(...bytes.slice(at, at + length));
++const u32 = (bytes: Uint8Array, at: number) =>
++  new DataView(bytes.buffer, bytes.byteOffset).getUint32(at, true);
++const u16 = (bytes: Uint8Array, at: number) =>
++  new DataView(bytes.buffer, bytes.byteOffset).getUint16(at, true);
++
++describe("encodeWav (10.42)", () => {
++  const pcm = new Uint8Array([1, 2, 3, 4, 5, 6]);
++  const wav = encodeWav(pcm, {
++    sampleRate: 16000,
++    channels: 1,
++    bitsPerSample: 16,
++  });
++
++  it("writes a 44-byte canonical PCM WAV header", () => {
++    expect(wav.length).toBe(44 + pcm.length);
++    expect(text(wav, 0, 4)).toBe("RIFF");
++    expect(u32(wav, 4)).toBe(36 + pcm.length);
++    expect(text(wav, 8, 4)).toBe("WAVE");
++    expect(text(wav, 12, 4)).toBe("fmt ");
++    expect(u32(wav, 16)).toBe(16);
++    expect(u16(wav, 20)).toBe(1); // linear PCM
++    expect(u16(wav, 22)).toBe(1); // mono
++    expect(u32(wav, 24)).toBe(16000);
++    expect(u32(wav, 28)).toBe(32000); // byte rate = 16000 × 1 × 2
++    expect(u16(wav, 32)).toBe(2); // block align
++    expect(u16(wav, 34)).toBe(16);
++    expect(text(wav, 36, 4)).toBe("data");
++    expect(u32(wav, 40)).toBe(pcm.length);
++  });
++
++  it("copies the PCM samples unchanged after the header", () => {
++    expect([...wav.slice(44)]).toEqual([...pcm]);
++  });
++
++  it("derives byte rate and block align from the format", () => {
++    const stereo = encodeWav(new Uint8Array(8), {
++      sampleRate: 44100,
++      channels: 2,
++      bitsPerSample: 16,
++    });
++    expect(u32(stereo, 28)).toBe(44100 * 2 * 2);
++    expect(u16(stereo, 32)).toBe(4);
++  });
++
++  // A frame is channels × bytesPerSample; a partial last frame would
++  // misalign every sample whisper reads after it.
++  it("drops a trailing partial frame", () => {
++    const odd = encodeWav(new Uint8Array([9, 8, 7]), {
++      sampleRate: 16000,
++      channels: 1,
++      bitsPerSample: 16,
++    });
++    expect(u32(odd, 40)).toBe(2);
++    expect([...odd.slice(44)]).toEqual([9, 8]);
++  });
++
++  it("encodes an empty recording as a header with no data", () => {
++    const empty = encodeWav(new Uint8Array(0), {
++      sampleRate: 16000,
++      channels: 1,
++      bitsPerSample: 16,
++    });
++    expect(empty.length).toBe(44);
++    expect(u32(empty, 40)).toBe(0);
++  });
++});
+diff --git a/src/shared/stt/audio-pcm-stream.d.ts b/src/shared/stt/audio-pcm-stream.d.ts
+new file mode 100644
+index 0000000..95e11c5
+--- /dev/null
++++ b/src/shared/stt/audio-pcm-stream.d.ts
+@@ -0,0 +1,35 @@
++/**
++ * Types for @fugood/react-native-audio-pcm-stream (10.42). The package's own
++ * index.d.ts declares a different module name ("react-native-live-audio-stream",
++ * the project it was forked from) and gets the return types wrong, so this
++ * declares the surface shared/stt calls, as read from the package's index.js
++ * and its Android module: `init` returns a promise, `start` and `stop` return
++ * nothing, and `on("data")` delivers base64-encoded raw PCM chunks and returns
++ * a subscription.
++ */
++declare module "@fugood/react-native-audio-pcm-stream" {
++  export type AudioPcmStreamOptions = {
++    sampleRate: number;
++    /** 1 (mono) or 2 (stereo). */
++    channels: number;
++    /** 8 or 16. */
++    bitsPerSample: number;
++    /** Android MediaRecorder.AudioSource; 6 = VOICE_RECOGNITION. */
++    audioSource?: number;
++    bufferSize?: number;
++  };
++
++  export type AudioPcmStreamSubscription = { remove: () => void };
++
++  const AudioPcmStream: {
++    init: (options: AudioPcmStreamOptions) => Promise<void>;
++    start: () => void;
++    stop: () => void;
++    on: (
++      event: "data",
++      callback: (base64Chunk: string) => void,
++    ) => AudioPcmStreamSubscription;
++  };
++
++  export default AudioPcmStream;
++}
+diff --git a/src/shared/stt/index.ts b/src/shared/stt/index.ts
+index cc116a3..1b882da 100644
+--- a/src/shared/stt/index.ts
++++ b/src/shared/stt/index.ts
+@@ -9,6 +9,8 @@ import {
+   setAudioModeAsync,
+   type NativeAudioModule,
+ } from "expo-audio";
++import AudioPcmStream from "@fugood/react-native-audio-pcm-stream";
++import { Directory, File, Paths } from "expo-file-system";
+ 
+ // `AudioModule.AudioRecorder` type-checks fine under plain `tsc` — this
+ // isn't for TypeScript. `eslint-plugin-import`'s `import/namespace` rule
+@@ -186,14 +188,14 @@ export type RecordingOptions = {
+ };
+ 
+ /**
+- * What whisper.rn can actually read: 16 kHz, mono, 16-bit little-endian
+- * linear PCM in a WAV container. Recording anything else (the old default
+- * was HIGH_QUALITY — 44.1 kHz stereo AAC .m4a) succeeds and then fails every
+- * transcription.
++ * What whisper.rn reads: 16-bit little-endian linear PCM in a WAV container
++ * (it resamples to 16 kHz mono itself; recording that already saves work).
++ * Anything else (the old default was HIGH_QUALITY — 44.1 kHz stereo AAC
++ * .m4a) records fine and then fails every transcription.
+  *
+- * iOS writes exactly that. Android's MediaRecorder can't produce WAV at all,
+- * so there this still records the preset's AAC — Android capture needs a
+- * PCM-stream path of its own (see the 10.1 entry in BLOCKED.md).
++ * iOS writes exactly that through expo-audio. Android's MediaRecorder can't
++ * produce WAV at all, so Android captures raw PCM instead and writes the WAV
++ * itself (`startPcmRecording`, 10.42); the preset below is iOS-only in effect.
+  */
+ const WHISPER_SAMPLE_RATE = 16000;
+ const WHISPER_RECORDING_PRESET_BY_PLATFORM = {
+@@ -202,12 +204,6 @@ const WHISPER_RECORDING_PRESET_BY_PLATFORM = {
+   sampleRate: WHISPER_SAMPLE_RATE,
+   numberOfChannels: 1,
+   bitRate: WHISPER_SAMPLE_RATE * 16,
+-  // Android still records the preset's AAC, so its file keeps an honest
+-  // .m4a name rather than inheriting the iOS ".wav".
+-  android: {
+-    ...RecordingPresets.HIGH_QUALITY.android,
+-    extension: ".m4a",
+-  },
+   ios: {
+     ...RecordingPresets.HIGH_QUALITY.ios,
+     extension: ".wav",
+@@ -230,9 +226,8 @@ const WHISPER_RECORDING_PRESET_BY_PLATFORM = {
+ function flattenForPlatform(
+   preset: typeof WHISPER_RECORDING_PRESET_BY_PLATFORM,
+ ): Record<string, unknown> {
+-  const { ios, android, web: _web, ...common } = preset;
++  const { ios, android: _android, web: _web, ...common } = preset;
+   if (Platform.OS === "ios") return { ...common, ...ios };
+-  if (Platform.OS === "android") return { ...common, ...android };
+   return common;
+ }
+ 
+@@ -256,8 +251,9 @@ export type RecordingHandle = {
+  * `requestRecordingPermissionsAsync` only resolves once that's answered, so
+  * the `.granted` check below never sees an in-between "undetermined" state.
+  * Throws rather than letting a denial fail silently deep in the native
+- * layer. Records in the format whisper reads (see
+- * `WHISPER_RECORDING_PRESET`).
++ * layer. Records in the format whisper reads: on iOS through expo-audio
++ * (`WHISPER_RECORDING_PRESET`), on Android as raw PCM wrapped in a WAV
++ * file here (`startPcmRecording`). `options` apply to the iOS recorder only.
+  */
+ export async function startRecording(
+   options: RecordingOptions = {},
+@@ -266,6 +262,7 @@ export async function startRecording(
+   if (!permission.granted) {
+     throw new Error("Microphone permission was not granted");
+   }
++  if (Platform.OS === "android") return startPcmRecording();
+ 
+   // iOS refuses to record ("Recording not allowed on iOS") until the audio
+   // session is in a recording-capable mode. `playsInSilentMode` is what makes
+@@ -317,3 +314,170 @@ async function releaseRecordingMode(): Promise<void> {
+     // Nothing useful to do — the next startRecording sets the mode again.
+   }
+ }
++
++/** The PCM format whisper reads, as `encodeWav` describes it. */
++export type PcmFormat = {
++  sampleRate: number;
++  channels: number;
++  bitsPerSample: number;
++};
++
++const WHISPER_PCM_FORMAT: PcmFormat = {
++  sampleRate: WHISPER_SAMPLE_RATE,
++  channels: 1,
++  bitsPerSample: 16,
++};
++
++const WAV_HEADER_BYTES = 44;
++
++/**
++ * Wraps raw little-endian PCM samples in a canonical 44-byte WAV header
++ * (RIFF/WAVE, one `fmt ` chunk, one `data` chunk). A trailing partial frame
++ * is dropped: it would misalign every sample after it.
++ */
++export function encodeWav(pcm: Uint8Array, format: PcmFormat): Uint8Array {
++  const blockAlign = format.channels * (format.bitsPerSample / 8);
++  const dataLength = pcm.length - (pcm.length % blockAlign);
++  const wav = new Uint8Array(WAV_HEADER_BYTES + dataLength);
++  const view = new DataView(wav.buffer);
++  const ascii = (at: number, text: string) => {
++    for (let i = 0; i < text.length; i++) wav[at + i] = text.charCodeAt(i);
++  };
++
++  ascii(0, "RIFF");
++  view.setUint32(4, 36 + dataLength, true);
++  ascii(8, "WAVE");
++  ascii(12, "fmt ");
++  view.setUint32(16, 16, true); // fmt chunk size
++  view.setUint16(20, 1, true); // linear PCM
++  view.setUint16(22, format.channels, true);
++  view.setUint32(24, format.sampleRate, true);
++  view.setUint32(28, format.sampleRate * blockAlign, true); // byte rate
++  view.setUint16(32, blockAlign, true);
++  view.setUint16(34, format.bitsPerSample, true);
++  ascii(36, "data");
++  view.setUint32(40, dataLength, true);
++  wav.set(pcm.subarray(0, dataLength), WAV_HEADER_BYTES);
++  return wav;
++}
++
++/**
++ * Where Android voice recordings are written (cache, so the OS may reclaim
++ * them). The full wipe deletes this folder too.
++ */
++export const RECORDINGS_CACHE_DIRECTORY = "Recordings";
++
++/**
++ * Writes a finished WAV into the recordings cache folder and returns its
++ * `file://` uri. expo-file-system directly, not shared/fs: shared slices
++ * don't import each other (eslint boundaries).
++ */
++let recordingCounter = 0;
++function writeRecording(wav: Uint8Array): string {
++  const directory = new Directory(Paths.cache, RECORDINGS_CACHE_DIRECTORY);
++  directory.create({ intermediates: true, idempotent: true });
++  recordingCounter += 1;
++  const file = new File(
++    directory,
++    `voice-${Date.now()}-${recordingCounter}.wav`,
++  );
++  file.write(wav);
++  return file.uri;
++}
++
++/** Android MediaRecorder.AudioSource.VOICE_RECOGNITION: tuned for speech. */
++const ANDROID_VOICE_RECOGNITION_SOURCE = 6;
++
++function base64ToBytes(base64: string): Uint8Array {
++  const binary = atob(base64);
++  const bytes = new Uint8Array(binary.length);
++  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
++  return bytes;
++}
++
++function concatBytes(chunks: Uint8Array[]): Uint8Array {
++  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
++  const out = new Uint8Array(total);
++  let offset = 0;
++  for (const chunk of chunks) {
++    out.set(chunk, offset);
++    offset += chunk.length;
++  }
++  return out;
++}
++
++/**
++ * How long `stop()` keeps listening after telling the native stream to stop.
++ * The native stop() only flags its read thread, which finishes the buffer it
++ * is reading and emits it afterwards, and events reach JS asynchronously.
++ * At the device's default buffer (about 40 ms at 16 kHz) this is several
++ * buffers of margin.
++ */
++export const PCM_DRAIN_MS = 250;
++
++/**
++ * One Android recording at a time, in order. The native module has one
++ * shared recorder: an init() while an older read thread is still reading
++ * replaces it under that thread (garbled audio, or a crash in its cleanup).
++ * Each recording takes a turn when it starts and gives it back when its stop
++ * has drained, or when its start failed, so the next waits for exactly that.
++ * Every started recording must be stopped (features/voice-input always stops
++ * it, on commit and on cancel), or the next one waits forever.
++ */
++let pcmTurn: Promise<void> = Promise.resolve();
++
++/**
++ * Android capture (10.42): streams 16 kHz mono 16-bit PCM from the
++ * voice-recognition source and, on stop, writes it as a WAV file whisper can
++ * read. Permission has already been granted by `startRecording`. The buffer
++ * size is left to the device default: the native side discards its first two
++ * buffers, so a larger buffer would clip the first syllable.
++ */
++async function startPcmRecording(): Promise<RecordingHandle> {
++  const previous = pcmTurn;
++  let releaseTurn: () => void = () => {};
++  pcmTurn = new Promise<void>((resolve) => {
++    releaseTurn = resolve;
++  });
++  await previous;
++
++  const chunks: Uint8Array[] = [];
++  let listening = true;
++  const subscription = AudioPcmStream.on("data", (base64Chunk) => {
++    if (listening) chunks.push(base64ToBytes(base64Chunk));
++  });
++
++  try {
++    await AudioPcmStream.init({
++      ...WHISPER_PCM_FORMAT,
++      audioSource: ANDROID_VOICE_RECOGNITION_SOURCE,
++    });
++    AudioPcmStream.start();
++  } catch (e) {
++    listening = false;
++    subscription.remove();
++    releaseTurn();
++    throw e;
++  }
++
++  return {
++    stop: async () => {
++      try {
++        AudioPcmStream.stop();
++        // Keep the buffer the read thread emits after stop().
++        await new Promise<void>((resolve) => {
++          setTimeout(resolve, PCM_DRAIN_MS);
++        });
++      } finally {
++        listening = false;
++        subscription.remove();
++        releaseTurn();
++      }
++      const pcm = concatBytes(chunks);
++      if (pcm.length === 0) {
++        throw new Error("Recording captured no audio");
++      }
++      return { uri: writeRecording(encodeWav(pcm, WHISPER_PCM_FORMAT)) };
++    },
++  };
++}

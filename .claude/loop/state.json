@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 134,
+    "beat": 135,
     "status": "running",
     "completedAt": "2026-10-11T23:34:28",
     "completionNote": "Phase 10 closed in a cloud session (2026-10-31): 10.35 + 10.33 done; 10.14 still quarantined. Simulator checks for both in BLOCKED.md.",
@@ -11,7 +11,7 @@
     "lastBeatNote": "Beat 128 (2026-10-31): /loop /safe-loop all re-entered after PR #1 merge; no selectable step (remaining: 10.14 quarantined, 3.1 blocked, 8.1 + Phase 9 deferred, native steps awaiting device checks). Run stays complete."
   },
   "cursor": {
-    "step": "10.42",
+    "step": "10.43",
     "phase": 10
   },
   "steps": {
@@ -909,16 +909,20 @@
       "class": "logic",
       "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "e26ae56",
+      "checkpoint": "c61bd65",
       "notes": "Already done by 4.7 (eraseEverything); reconciled, no code change."
     },
     "10.42": {
-      "status": "pending",
+      "status": "quarantined",
       "class": "native",
-      "attempts": 0,
-      "failureSignatures": [],
-      "checkpoint": "",
-      "notes": "Option (a) chosen by user."
+      "attempts": 3,
+      "failureSignatures": [
+        "reviewer fail #1: listener removed in same tick as native stop (last in-flight buffer lost); no guard against re-press during native drain (two read threads, NPE crash); 'captured no audio' not mapped by describeVoiceError",
+        "reviewer fail #2: pcmSettled is one shared promise, not a queue; two starts queued behind one drain start together (native overlap/crash)",
+        "reviewer fail #3: commit() never stops the recording when the STT context rejects (VoiceModelError) -> hot mic + permanent pcmTurn deadlock on Android; mid-hold unmount strands it too"
+      ],
+      "checkpoint": "c61bd65",
+      "notes": "Quarantined at the attempt ceiling (3). Work saved in .claude/loop/patches/10.42-android-pcm.patch. Blocked on a pre-existing voice-input bug (recording never stopped on model-load failure / unmount), see BLOCKED.md."
     },
     "10.43": {
       "status": "pending",
@@ -929,7 +933,9 @@
       "notes": ""
     }
   },
-  "quarantinedThisRun": [],
+  "quarantinedThisRun": [
+    "10.42"
+  ],
   "lastGate": {
     "tsc": "pass",
     "jest": "pass",

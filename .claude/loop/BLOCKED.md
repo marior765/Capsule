@@ -1145,7 +1145,7 @@ say a sentence, release → the words appear in the message box. Tap the mic
 briefly → the grey "Hold the mic to talk" hint appears. Deny microphone
 access in iOS Settings, then hold → "Capsule needs microphone access…".
 
-**Android — still broken, needs a decision.** Android's MediaRecorder cannot
+**Android — decided (a) on 2026-10-31; 10.42 attempted it and is quarantined (see "10.42 — QUARANTINED").** Original note: Android's MediaRecorder cannot
 write WAV, so Android still records AAC and transcription will still fail
 there. Options: (a) capture PCM with `@fugood/react-native-audio-pcm-stream`
 (already in package.json, unused) and write a WAV header ourselves; (b) use
@@ -1220,6 +1220,72 @@ Tapping the iOS status bar scrolls the chat to the top and emits only
 next streamed token pulls the reader back to the bottom. Present on main
 before 10.39. Fix options: handle `onScrollToTop` as "stop following", or
 set `scrollsToTop={false}` on the chat list. Not a step yet.
+
+## PRIORITY bug (found reviewing 10.42, 2026-10-31, on main today): the mic stays on when the voice model fails to load
+
+`createVoiceInputController`'s `commit` (`src/features/voice-input/index.ts`,
+around lines 107–110) awaits `Promise.all([session, context])` and only then
+calls `finish`, which is what stops the recording. If the STT context rejects
+(`VoiceModelError`: first hold while offline with no Whisper model yet, or a
+failed download or load), `finish` never runs and **the recording is never
+stopped**. The microphone keeps capturing with no UI showing it. That is on
+iOS today (expo-audio recorder) and on Android with any recorder. The same
+happens if the chat screen unmounts mid-hold: neither `chat/[id].tsx` nor
+`chat/ephemeral.tsx` cancels `voiceControllerRef.current` on unmount, and
+`VoiceRecordButton` only resolves through `onPressOut`.
+
+**Fix (small, logic-only):** in `commit`, await `session`, then
+`try { ctx = await context } catch (e) { await started.cancel().catch(() => {}); throw e; }`;
+add an unmount cleanup in both chat screens that calls
+`voiceControllerRef.current?.cancel().catch(() => {})`. Tests: a rejected
+context still stops the recording; unmounting mid-hold cancels it. This is a
+privacy bug, so it should go before any retry of 10.42. Suggested as its own
+step; not added to the plan unattended.
+
+## 10.42 — QUARANTINED: Android voice input over PCM (2026-10-31)
+
+**Status:** three reviewer rounds; the code is saved in
+`.claude/loop/patches/10.42-android-pcm.patch` (applies cleanly to c61bd65;
+`git apply` it). Main is unchanged: Android still records AAC, which whisper
+can't read.
+
+**What the patch does:** on Android, `startRecording` in `shared/stt` streams
+16 kHz mono 16-bit PCM with `@fugood/react-native-audio-pcm-stream` and
+`stop()` writes a WAV (`encodeWav`, 44-byte header, byte-checked against
+whisper.rn 0.6's reader) into `cache/Recordings/`, which the full wipe
+deletes. `stop()` keeps listening `PCM_DRAIN_MS` (250 ms) after the native
+stop (the native read thread emits its last buffer afterwards), and a
+turn-taking lock (`pcmTurn`) runs recordings strictly one after another (the
+native module has one shared recorder; overlap garbles audio or crashes).
+Also: device-default buffer size (the native side drops the first two
+buffers), "Recording captured no audio" mapped to the "Nothing was recorded"
+message, and a typed module declaration (the package's own .d.ts names a
+different module). 1763 tests green with the patch.
+
+**Why quarantined:** each round found a different real problem: (1) the end
+of every recording was dropped, a quick re-press could crash, a short hold
+showed the wrong message; (2) the re-press guard wasn't a queue; (3) the lock
+turns the PRIORITY bug above (a recording never stopped on model-load
+failure) into a permanent Android voice-input deadlock until restart.
+
+**To finish it:** fix the PRIORITY bug above first, then apply the patch, and
+consider a safety net in `shared/stt` (a new start force-stops a stranded
+previous recording, or the turn is released after a maximum time). Also make
+`stop()` idempotent (a second call after the turn has passed would end the
+*next* recording, since the native `isRecording` flag is shared; no caller
+does this today). Then run the 7-step Android device check that the patch's
+BLOCKED notes describe: first and last word survive, 10+ s sentence, brief tap
+shows the hint, ~0.5 s hold, rapid release-and-re-press and double-tap-then-hold
+without crash or garbled audio, denied permission message, wipe removes
+`cache/Recordings`. Expect two harmless LogBox warnings about
+NativeEventEmitter on Android dev builds.
+
+## Follow-up: voice recordings are never deleted after transcription (found reviewing 10.42, 2026-10-31)
+
+Both platforms keep every recording in the cache after it's transcribed.
+iOS's expo-audio files go to `cache/ExpoAudio`, which the full wipe does
+**not** delete. Fix: delete the file after transcription and on cancel (in
+`features/voice-input`), and add `ExpoAudio` to the wipe. Not a step yet.
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.
