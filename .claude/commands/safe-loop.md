@@ -20,7 +20,7 @@ You do not schedule yourself except via the rules in §8.
 |---|---|
 | Human gate | None mid-run — run the whole scope unattended |
 | Checker | Independent reviewer subagent on every step (§6) |
-| Git | Checkpoint commit per green step, **directly on `main`**, never push |
+| Git | Checkpoint commit per green step, **directly on `main`**, then `git push origin main` (never force-push) |
 | Native-dependent steps | Implement + queue for device check; plan box stays **unchecked** |
 | Attempt ceiling | 3 per step |
 | Stall detector | Same failure signature twice → quarantine the step, move on |
@@ -118,7 +118,10 @@ implementation context and is told to refute. Verdict `fail` → treat findings 
 new failure signature and return to 7 (counts as an attempt). Verdict `pass` → continue.
 
 **10 — Checkpoint.** `git add -A && git commit` on `main` with
-`feat(<step>): <summary>`. Record the sha as the step's `checkpoint`. Never push.
+`feat(<step>): <summary>`. Record the sha as the step's `checkpoint`. Then push
+(`git push origin main`; never `--force`, never rewrite pushed history). If the
+push is rejected because the remote moved, `git pull --rebase` and re-run the gate
+before pushing again; if that conflicts, stop and record it in `BLOCKED.md`.
 
 **11 — Record outcome.**
 - `class: logic|ui` → tick `[x]` in `docs/DEVELOPMENT_PLAN.md`.

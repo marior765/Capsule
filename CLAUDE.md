@@ -10,6 +10,13 @@
 
 These apply to every conversation, without the user needing to repeat them.
 
+### Git — pushing is allowed
+Claude may push its own commits to GitHub (`origin`) without asking first —
+decided by the user 2026-10-31. Push after a commit whose gate is green.
+Never force-push, never rewrite history that is already pushed, never delete
+remote branches. Keep the user's local config files (`.claude/settings.json`,
+`.claude/audit.log`, `.vscode/settings.json`, `.mcp.json`) out of commits.
+
 ### docs/ARTICLE.md — development journal
 After any action worth including in an article about AI-assisted mobile development,
 append a dated entry to `docs/ARTICLE.md`. Think like a journalist: log the *what*,
