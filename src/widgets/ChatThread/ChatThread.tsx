@@ -12,7 +12,12 @@ import type { Message } from "@/entities/message";
 import { ChatBubble } from "@/widgets/ChatBubble";
 import { MessageSources, type SourceChip } from "@/widgets/MessageSources";
 import { createComponentTestIDs } from "@/shared/testing";
-import { isNearBottom } from "./followBottom";
+import {
+  INITIAL_FOLLOW_STATE,
+  isNearBottom,
+  nextFollowState,
+  type FollowEvent,
+} from "./followBottom";
 
 /** Position of a message among its siblings, e.g. `‹ 2/3 ›`. */
 export type BranchPosition = { index: number; total: number };
@@ -60,36 +65,32 @@ export function ChatThread({
 
   // Open at the newest message and follow new content (streamed tokens, new
   // replies) — but only while the reader is at the bottom. Scrolling up to
-  // reread stops following until they scroll back down. Only the reader's own
-  // scrolling (end of drag / momentum) updates this: plain onScroll also
-  // fires on mount at offset 0 and during programmatic scrolls, which would
-  // switch following off before the first scroll to the end.
+  // reread stops following until they scroll back down. Only the reader's
+  // own scrolling changes this (see nextFollowState): React Native also
+  // fires scroll/momentum events for the app's programmatic scrolls.
   const listRef = useRef<FlatList<Message>>(null);
-  const following = useRef(true);
+  const follow = useRef(INITIAL_FOLLOW_STATE);
   const hasScrolledInitially = useRef(false);
 
   // Deferred a frame: a scrollToEnd issued synchronously from the first
   // onContentSizeChange is dropped — the list's viewport isn't laid out yet.
   const scrollToNewest = () => {
-    if (!following.current) return;
+    if (!follow.current.following) return;
     const animated = hasScrolledInitially.current;
     requestAnimationFrame(() => {
+      // Checked again: the reader may have grabbed the list since this frame
+      // was queued, and a late scrollToEnd would pull them back down.
+      if (!follow.current.following) return;
       listRef.current?.scrollToEnd({ animated });
     });
     hasScrolledInitially.current = true;
   };
 
-  // The reader is moving the list: stop following at once, so streamed tokens
-  // don't drag it back down mid-scroll. The end handlers re-check the spot.
-  const handleUserScrollBegin = () => {
-    following.current = false;
+  const onFollowEvent = (event: FollowEvent) => {
+    follow.current = nextFollowState(follow.current, event);
   };
-
-  const handleUserScrollEnd = (
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    following.current = isNearBottom(event.nativeEvent);
-  };
+  const nearBottom = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
+    isNearBottom(event.nativeEvent);
 
   const renderItem = ({ item }: { item: Message }) => {
     const branch = branches?.[item.id];
@@ -155,16 +156,21 @@ export function ChatThread({
   return (
     <View testID={testIDs.containers.root} style={styles.root}>
       <FlatList
+        testID={testIDs.containers.list}
         keyboardShouldPersistTaps="handled"
         ref={listRef}
         onContentSizeChange={scrollToNewest}
         onLayout={() => {
           if (hasScrolledInitially.current) scrollToNewest();
         }}
-        onScrollBeginDrag={handleUserScrollBegin}
-        onMomentumScrollBegin={handleUserScrollBegin}
-        onScrollEndDrag={handleUserScrollEnd}
-        onMomentumScrollEnd={handleUserScrollEnd}
+        onScrollBeginDrag={() => onFollowEvent({ type: "dragBegin" })}
+        onScrollEndDrag={(e) =>
+          onFollowEvent({ type: "dragEnd", nearBottom: nearBottom(e) })
+        }
+        onMomentumScrollBegin={() => onFollowEvent({ type: "momentumBegin" })}
+        onMomentumScrollEnd={(e) =>
+          onFollowEvent({ type: "momentumEnd", nearBottom: nearBottom(e) })
+        }
         data={data}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -206,7 +212,7 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 const testIDs = createComponentTestIDs("ChatThread", {
-  containers: ["root", "branchNav"] as const,
+  containers: ["root", "list", "branchNav"] as const,
   buttons: ["prevBranch", "nextBranch"] as const,
   texts: ["branchCount"] as const,
 });

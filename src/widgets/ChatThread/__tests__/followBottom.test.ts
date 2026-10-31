@@ -73,5 +73,130 @@ describe("ChatThread wiring (static)", () => {
     expect(source).toMatch(/onMomentumScrollEnd=/);
     expect(source).not.toMatch(/\bonScroll=/);
     expect(source).toMatch(/isNearBottom\(/);
+    expect(source).toMatch(/nextFollowState\(/);
+  });
+});
+
+// Reviewer findings (10.14 rounds 2–3) and step 10.39. React Native fires
+// momentum events for the app's OWN scrolls too: Android's animated
+// scrollToEnd emits onMomentumScrollBegin/End, and iOS emits
+// onMomentumScrollEnd after every programmatic scroll. Only momentum right
+// after the reader's drag may change whether the thread follows. While the
+// finger is down momentum never counts: Android can deliver
+// dragBegin → momentumEnd(nearBottom) when a grab interrupts the app's
+// animation, which must not turn following back on mid-drag.
+describe("nextFollowState (idle / dragging / settling)", () => {
+  const { nextFollowState, INITIAL_FOLLOW_STATE } =
+    jest.requireActual<typeof import("../followBottom")>("../followBottom");
+  type State = import("../followBottom").FollowState;
+  type Event = import("../followBottom").FollowEvent;
+  const run = (events: Event[], from: State = INITIAL_FOLLOW_STATE): State =>
+    events.reduce(nextFollowState, from);
+
+  it("starts following, idle", () => {
+    expect(INITIAL_FOLLOW_STATE).toEqual({ following: true, phase: "idle" });
+  });
+
+  it("ignores momentum from the app's own scrolls while idle", () => {
+    const s = run([
+      { type: "momentumBegin" },
+      { type: "momentumEnd", nearBottom: false },
+    ]);
+    expect(s).toEqual({ following: true, phase: "idle" });
+  });
+
+  it("stops following the moment the reader starts dragging", () => {
+    expect(run([{ type: "dragBegin" }])).toEqual({
+      following: false,
+      phase: "dragging",
+    });
+  });
+
+  it("dragBegin → momentumEnd(nearBottom) leaves following off (grab during the app's animation)", () => {
+    const s = run([
+      { type: "dragBegin" },
+      { type: "momentumEnd", nearBottom: true },
+      { type: "momentumBegin" },
+      { type: "momentumEnd", nearBottom: true },
+    ]);
+    expect(s).toEqual({ following: false, phase: "dragging" });
+  });
+
+  it("dragEnd sets following from where the finger lifted, and settles", () => {
+    expect(
+      run([{ type: "dragBegin" }, { type: "dragEnd", nearBottom: false }]),
+    ).toEqual({ following: false, phase: "settling" });
+    expect(
+      run([{ type: "dragBegin" }, { type: "dragEnd", nearBottom: true }]),
+    ).toEqual({ following: true, phase: "settling" });
+  });
+
+  it("a flick up from the bottom isn't followed mid-fling, and stays off where it lands", () => {
+    let s = run([
+      { type: "dragBegin" },
+      { type: "dragEnd", nearBottom: true },
+      { type: "momentumBegin" },
+    ]);
+    expect(s).toEqual({ following: false, phase: "settling" });
+    s = run([{ type: "momentumEnd", nearBottom: false }], s);
+    expect(s).toEqual({ following: false, phase: "idle" });
+  });
+
+  it("a flick down to the bottom resumes following when it lands", () => {
+    const s = run([
+      { type: "dragBegin" },
+      { type: "dragEnd", nearBottom: false },
+      { type: "momentumBegin" },
+      { type: "momentumEnd", nearBottom: true },
+    ]);
+    expect(s).toEqual({ following: true, phase: "idle" });
+  });
+
+  // Android emits momentum after every drag end, fling or not.
+  it("Android: a release at the bottom with no fling keeps following", () => {
+    const s = run([
+      { type: "dragBegin" },
+      { type: "dragEnd", nearBottom: true },
+      { type: "momentumBegin" },
+      { type: "momentumEnd", nearBottom: true },
+    ]);
+    expect(s).toEqual({ following: true, phase: "idle" });
+  });
+
+  // iOS emits no momentum for a release without a fling; the app's next
+  // programmatic scrollToEnd then ends with only momentumEnd, at the bottom.
+  it("iOS: no-fling release at the bottom, then the app's scroll ends at the bottom", () => {
+    const s = run([
+      { type: "dragBegin" },
+      { type: "dragEnd", nearBottom: true },
+      { type: "momentumEnd", nearBottom: true },
+    ]);
+    expect(s).toEqual({ following: true, phase: "idle" });
+  });
+
+  it("grabbing the list mid-fling stops following again", () => {
+    const s = run([
+      { type: "dragBegin" },
+      { type: "dragEnd", nearBottom: true },
+      { type: "momentumBegin" },
+      { type: "dragBegin" },
+      { type: "momentumEnd", nearBottom: true },
+    ]);
+    expect(s).toEqual({ following: false, phase: "dragging" });
+  });
+
+  it("after a drag fully settles, later programmatic momentum is ignored again", () => {
+    let s = run([
+      { type: "dragBegin" },
+      { type: "dragEnd", nearBottom: true },
+      { type: "momentumBegin" },
+      { type: "momentumEnd", nearBottom: true },
+    ]);
+    expect(s).toEqual({ following: true, phase: "idle" });
+    s = run(
+      [{ type: "momentumBegin" }, { type: "momentumEnd", nearBottom: false }],
+      s,
+    );
+    expect(s).toEqual({ following: true, phase: "idle" });
   });
 });

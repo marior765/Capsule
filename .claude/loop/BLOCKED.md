@@ -1173,37 +1173,53 @@ your call.
 
 User accepted the rename without a device check; box ticked.
 
-## 10.14 — QUARANTINED: chat follow-scroll on Android (2026-10-17)
+## 10.14 — chat follow-scroll on Android: fixed in code by 10.39 (2026-10-31), needs an Android check
 
-**What's on main (a8b0143):** the chat opens at the newest message and follows
-replies — verified on the iOS simulator. Deferring `scrollToEnd` a frame was
-the key fix (a synchronous call from the first `onContentSizeChange` is a
-silent no-op). Following stops when the reader starts dragging.
+**History:** quarantined 2026-10-17 after three checker rounds, each finding a
+different React Native event-ordering problem (none reproducible without an
+Android device): (1) following stayed on during a drag (fixed back then);
+(2) RN fires momentum events for the app's OWN scrolls, so on Android a long
+chat could stop following partway through a reply with no touch; (3) an
+Android grab during the app's animation delivers `dragBegin → momentumEnd(nearBottom)`,
+which turned following back on mid-drag.
 
-**Why quarantined:** three checker rounds each found a different, real
-React Native event-ordering problem — all from reading RN's native source,
-none reproducible without an Android device:
-1. following stayed on during a drag → tokens hijacked an upward scroll (fixed on main);
-2. RN fires momentum events for the app's OWN scrolls (Android animated
-   scrollToEnd emits momentum begin/end; iOS emits momentum end after every
-   programmatic scroll) → on Android a long chat can stop following partway
-   through history, no touch needed. **Still on main.**
-3. the improved state machine (saved, not on main) still lets Android's
-   grab-during-animation order `dragBegin → momentumEnd(nearBottom)` turn
-   following back on mid-drag.
+**What 10.39 changed:** `nextFollowState` in `src/widgets/ChatThread/followBottom.ts`
+has three phases, `idle | dragging | settling`. Momentum is ignored while idle
+(the app's own scrolls) and while the finger is down (fixes 3). After the
+finger lifts, the next momentum is the reader's (RN 0.85: Android always
+emits momentumBegin right after a drag ends; iOS only for a real fling), and
+its end decides whether following resumes (fixes 2). Also fixed (reviewer
+finding): the deferred scroll re-checks `following` when its frame runs, so a
+frame queued just before the reader grabs the list can't pull them back down.
 
-**Saved work:** `.claude/loop/patches/10.14-follow-state-machine.patch` —
-a pure, tested `nextFollowState` (drag-gated momentum, 7 tests) that fixes
-(2). Apply with `git apply`. Remaining fix for (3), per the checker: split
-the state into `phase: "idle" | "dragging" | "settling"`; ignore momentum
-while dragging; `dragEnd` → following = nearBottom, phase settling; act on
-momentum only while settling; add a test for dragBegin → momentumEnd(true)
-leaving following off.
+Proof in Jest: the pure state-machine tests, plus a render test
+(`ChatThread.follow.render.test.tsx`) that fires the list's real scroll events,
+runs the deferred frames on demand, and checks whether the thread scrolls
+itself. Against the old code on main, 3 of its 8 tests fail; against the saved
+patch, 2 fail; with 10.39, all pass. The saved patch in `.claude/loop/patches/`
+is now superseded.
 
-**Device check (Android emulator/phone):** open a long conversation (should
-land at the newest message); send a message and let a long reply stream
-without touching (should follow to the end); start a long reply, then grab
-and drag up mid-stream (must not be pulled back down).
+Known limit (low risk): during a fling the thread doesn't follow, and where
+the fling lands is measured against content that may have grown meanwhile;
+fast streaming during a long fling to the bottom could leave following off
+until the reader nudges the list.
+
+**Device check (Android emulator/phone), then tick 10.14:**
+1. Open a long conversation: it should land on the newest message.
+2. Send a message and let a long reply stream without touching: it should follow to the end.
+3. Start a long reply, then grab and drag up mid-stream: it must not be pulled back down.
+4. Drag back to the bottom and let go (no flick): it should follow again as tokens arrive.
+5. Flick up hard mid-stream: it should stop following and stay where the fling ends.
+
+The same five checks on iOS should behave identically (iOS worked before; this is a regression check).
+
+## Follow-up: iOS status-bar tap doesn't stop chat follow-scroll (found reviewing 10.39, 2026-10-31)
+
+Tapping the iOS status bar scrolls the chat to the top and emits only
+`onScrollToTop`, with no drag or momentum events. Following stays on, so the
+next streamed token pulls the reader back to the bottom. Present on main
+before 10.39. Fix options: handle `onScrollToTop` as "stop following", or
+set `scrollsToTop={false}` on the chat list. Not a step yet.
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.

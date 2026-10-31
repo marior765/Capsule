@@ -2881,4 +2881,34 @@ memory.
 
 ---
 
+## 2026-10-31 — The reviewer read the native source, and deleted my clever fix
+
+The Android chat-scroll bug had beaten three earlier attempts, because
+React Native reports the app's own scrolling with the same events as the
+reader's. This time the agent rebuilt the state machine and wrote a render
+test, now possible thanks to the previous step, that fires the list's real
+scroll events. The test failed on the old code and on the saved patch,
+which was strong evidence.
+
+The agent also added something the plan hadn't asked for: a 250 ms
+"fling window" to handle a drag that ends without a fling. The reviewer
+went to the React Native sources in `node_modules` (the Java scroll view
+for Android, the Objective-C++ one for iOS) and showed that sequence never
+happens. Android always sends momentum right after a drag ends; iOS never
+sends momentum-begin for the app's own scrolls. Worse, the window used the
+JavaScript clock, so a busy JS thread could make it pull the reader back
+down, the exact bug being fixed. The same review found a real bug that had
+been on main all along: a scroll queued one frame before the reader
+grabbed the list still ran.
+
+**Article angle:** an agent fixing a bug it can't reproduce tends to add
+defensive cleverness for situations it imagines. The cure is a reviewer
+that checks those imagined situations against the platform's actual
+source code. Here that removed code and found a real bug, which is the
+best outcome a review can have. The device test still decides: the step
+is done in code, and its box stays unticked until someone checks it on a
+real Android phone.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

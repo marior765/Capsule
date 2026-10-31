@@ -5282,3 +5282,10 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - RNTL 14 made `render` and events async; the first draft used the v13 sync API and every test failed with "render has not been called".
 - Reviewer fail #1 (valid): `test-renderer@^1.3` pulls react-reconciler 0.34, which is built for React 19.3; this app is on 19.2 and `npm ls --all` went red. RNTL's own migration guide maps React 19.2 to test-renderer 1.2. Fixed with `~1.2.0`, reinstalled with npm 11 (npm 10 had dropped 14 `libc` fields from the lockfile). The lockfile diff is now additions plus dev→devOptional flags.
 - Stale "can't render under Jest" comments updated in two older tests; `create-tests.md` now explains how to write render tests.
+
+## Beat 132 — 10.39 finish 10.14 follow-scroll (done in code, 2 attempts; 10.14 waits for Android)
+- Applied the saved patch, then rebuilt `nextFollowState` with phases `idle | dragging | settling`: momentum is ignored while idle (the app's own scrolls) and while dragging (Android grab during the app's animation); after a drag, the next momentum is the reader's.
+- New render test `ChatThread.follow.render.test.tsx` (uses 10.38's RNTL): it fires the list's real scroll events, runs deferred frames on demand, and spies on `scrollToEnd`. On the old main code 3 of 8 fail, on the saved patch 2, with 10.39 none.
+- Reviewer fail #1, both points valid: (B1) the deferred frame didn't re-check `following`, so a scroll queued just before a grab pulled the reader down mid-drag, an old bug on main too. Also, my extra "coasting" phase plus a 250 ms Date.now() fling window guarded an event order that RN 0.85's native code never emits (the reviewer read ReactScrollView.java and RCTScrollViewComponentView.mm), and it failed toward yanking the reader under JS lag. Fixed B1 and dropped the window, back to the plan's design.
+- Pass on re-review. Its follow-up (iOS status-bar tap to top doesn't stop following) went to BLOCKED.md.
+- 10.14's box stays unticked: the five-step Android check is in BLOCKED.md.
