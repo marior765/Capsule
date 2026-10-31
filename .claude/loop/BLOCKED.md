@@ -15,6 +15,21 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ---
 
+## Resolved (2026-10-31) — user decisions, round 3 (now plan steps 10.36–10.43)
+
+- **audit.log** → untracked + `.gitignore` (10.36, done).
+- **CI** → yes, GitHub Actions gate on push to main (10.37).
+- **Render test library** → yes, `@testing-library/react-native` + unistyles Jest mock (10.38). Supersedes "Decision: a component-render test library" below.
+- **10.14** → finish it (saved patch + idle/dragging/settling), then the user checks on Android (10.39).
+- **Double send** → disable input for the whole send (10.40). Supersedes "Chat: a message can be sent twice…" below.
+- **Vault reset** → route through the full wipe (10.41). Supersedes "Vault reset leaves attachment and chat-image files on disk" below.
+- **10.1 Android voice** → option (a): PCM stream + our own WAV header (10.42).
+- **Quick capture parsing** → simple deterministic patterns ("X by Y"), no model (10.43).
+- **8.1 cloud backends** → stays deferred.
+- **Tap latency** → still needs on-device profiling; no step yet.
+
+---
+
 ## Needs a decision (not started)
 
 ### 8.1 — Multiple backends toggle (optional cloud APIs behind consent gate)

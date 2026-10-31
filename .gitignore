@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Claude Code hook log (local only)
+.claude/audit.log

@@ -199,6 +199,16 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.35 Branch switcher counts only the conversation's own first messages (found 2026-10-18: a new chat's first message showed "‹ 3/3" — root messages from other conversations were counted as its alternative branches, so ‹ could jump into another conversation)
 - [x] 10.33 Version restore clears fields that were empty in the snapshot (found 2026-10-16: snapshots only record fields that have a value row, so restoring a version taken before a field was filled leaves the newer value in place)
 
+**Decided 2026-10-31 (user, cloud session) — run in this order:**
+- [x] 10.36 Untrack `.claude/audit.log` (hook log) and add it to `.gitignore`, so the stop hook stops flagging it
+- [ ] 10.37 CI: GitHub Actions workflow running the gate (`tsc --noEmit`, `jest`, `eslint src`) on every push to `main` — GitHub-side only, nothing in the app
+- [ ] 10.38 Component render tests: add `@testing-library/react-native` (devDependency) plus a Jest mock for `react-native-unistyles`; prove it with one real render test of an existing widget
+- [ ] 10.39 Finish 10.14 (Android follow-scroll): apply `.claude/loop/patches/10.14-follow-state-machine.patch`, then split follow state into `idle | dragging | settling` (ignore momentum while dragging; dragEnd → following = nearBottom, phase settling; act on momentum only while settling) with tests incl. dragBegin → momentumEnd(nearBottom) leaving following off. 10.14's box waits for the Android check
+- [ ] 10.40 Chat: disable the input and send button for the whole send (capsule search + streaming) until the reply finishes or is stopped, so a second send can't start a second completion
+- [ ] 10.41 Vault reset goes through the full wipe (one "erase everything" path): also deletes `attachments/` and `chat-images/` and cancels scheduled reminders
+- [ ] 10.42 Android voice input: record 16 kHz mono PCM with `@fugood/react-native-audio-pcm-stream` and write the WAV header ourselves, inside `shared/stt` (needs an Android device check before ticking)
+- [ ] 10.43 Quick capture fills fields from simple patterns, e.g. "X by Y" → Title / Author when the type has those fields; deterministic, offline, no model; anything unmatched stays in the title
+
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format
 - [ ] 9.2 LAN device discovery + E2E-encrypted transport, fully isolated behind a flag

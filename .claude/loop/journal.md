@@ -5264,3 +5264,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Gate: tsc clean, jest 1705/1705, eslint 0 errors (run on 175c21e; HEAD differs only in .md files).
 - Selection found nothing: 10.14 quarantined (needs a human look at the Android follow-scroll patch), 3.1 blocked, 8.1 + Phase 9 deferred, and every other unchecked box is a native step whose code is done and is waiting for a device check in BLOCKED.md.
 - Next work needs a decision from the user, not another beat.
+
+## Beat 129 — user decisions round 3 → plan steps 10.36–10.43 (2026-10-31)
+- The user answered every open question through the in-app question dialog. The answers are recorded in BLOCKED.md ("Resolved (2026-10-31)") and as plan steps, in the order the user chose (infra first).
+- 10.36 done now: `.claude/audit.log` untracked and added to `.gitignore`. The file stays on disk.
+- 10.14 stays quarantined; its finish is 10.39, and the box waits for the user's Android check. 8.1 stays deferred.
