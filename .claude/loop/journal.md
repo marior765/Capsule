@@ -5258,3 +5258,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Cleared to null (as the editor does), not deleted, so the portable format is unaffected. Orphan values of removed fields are nulled by the same rule.
 - This reversed a deliberate 8.5 choice ("the version has no opinion about a later field"); that test was replaced, not deleted silently.
 - Reviewer: pass, attempt 1. Two minor notes fixed before the commit (the later-added-field test now really adds the field to the type; the orphan case is documented).
+
+## Beat 128 — re-entry after PR #1 merge (no work available, run stays complete)
+- `/loop /safe-loop all` started in the cloud after PR #1 (10.35 + 10.33) merged into main. The user has since switched the loop to commit directly on main with no PRs (CLAUDE.md).
+- Gate: tsc clean, jest 1705/1705, eslint 0 errors (run on 175c21e; HEAD differs only in .md files).
+- Selection found nothing: 10.14 quarantined (needs a human look at the Android follow-scroll patch), 3.1 blocked, 8.1 + Phase 9 deferred, and every other unchecked box is a native step whose code is done and is waiting for a device check in BLOCKED.md.
+- Next work needs a decision from the user, not another beat.
