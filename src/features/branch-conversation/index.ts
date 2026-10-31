@@ -3,8 +3,10 @@ import {
   updateConversation,
 } from "@/entities/conversation";
 import {
+  getChildren,
   getImageByMessage,
   getMessagePath,
+  getSiblings,
   insertMessage,
   insertMessageImage,
   insertMessageSources,
@@ -172,4 +174,58 @@ export function switchBranch(
   leafId: string,
 ): void {
   updateConversation(db, conversationId, { activeLeafId: leafId });
+}
+
+/** Where a message sits among its alternatives, e.g. `‹ 2/3 ›` (1-based). */
+interface SiblingPosition {
+  index: number;
+  total: number;
+}
+
+/**
+ * `message`'s position among its siblings in its own conversation, or null
+ * when it has no alternatives (10.35: first messages of other conversations
+ * are not alternatives).
+ */
+export function getBranchPosition(
+  db: SQLiteDatabase,
+  message: Message,
+): SiblingPosition | null {
+  const siblings = getSiblings(db, message);
+  if (siblings.length < 2) return null;
+  return {
+    index: siblings.findIndex((s) => s.id === message.id) + 1,
+    total: siblings.length,
+  };
+}
+
+/**
+ * The leaf to show when stepping from `message` to its previous (-1) or next
+ * (+1) sibling: that sibling followed down its newest replies. Null when
+ * there is no sibling in that direction.
+ */
+export function findSiblingBranchLeaf(
+  db: SQLiteDatabase,
+  message: Message,
+  direction: -1 | 1,
+): string | null {
+  const siblings = getSiblings(db, message);
+  const currentIndex = siblings.findIndex((s) => s.id === message.id);
+  if (currentIndex < 0) return null;
+  const next = siblings[currentIndex + direction];
+  if (!next) return null;
+
+  // The visited set stops the walk if stored data ever contains a parent
+  // cycle (importers now refuse to write one, but older data might).
+  let leafId = next.id;
+  const visited = new Set<string>([leafId]);
+  for (;;) {
+    const children = getChildren(db, leafId);
+    if (children.length === 0) break;
+    const child = children[children.length - 1].id;
+    if (visited.has(child)) break;
+    visited.add(child);
+    leafId = child;
+  }
+  return leafId;
 }
