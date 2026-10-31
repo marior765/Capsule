@@ -63,10 +63,21 @@ export function getCapsuleHistory(
  * itself just one more entry in the same history, not a destructive jump
  * with no way back to what was there a moment ago.
  *
- * Only sets values the version actually recorded; a field added to the
- * capsule's type after that version was taken (and so absent from
- * `version.values`) is left untouched rather than cleared, since the
- * version genuinely has no opinion about it.
+ * The capsule's values end up exactly as the version recorded them (10.33).
+ * A snapshot holds only the fields that had a value row, so a field missing
+ * from it was empty at that moment and is cleared — the same rule
+ * `getVersionChanges` uses ("a field missing from a snapshot counts as
+ * empty"), so after a restore the history shows no leftover difference.
+ *
+ * Decision: this includes fields added to the capsule's type AFTER the
+ * version was taken. A snapshot can't tell "existed but blank" from "didn't
+ * exist yet" (both are absent), and either way the field had no value at
+ * that point — "restore" means "make the capsule look like it did then".
+ * Nothing is lost: the safety snapshot above holds the cleared values, and
+ * restoring it brings them back. Values are cleared to null (as the editor
+ * clears a field), not deleted. The same goes for a leftover value of a
+ * field since removed from the type: if the version didn't record it, it is
+ * nulled (getVersionChanges reports it as "A removed field" otherwise).
  *
  * Returns `false` for an unknown version id rather than throwing.
  */
@@ -84,6 +95,14 @@ export function restoreCapsuleVersion(
     title: version.title,
     updatedAt: now,
   });
+
+  // Clear what the version didn't record (see above). Already-empty values
+  // are left alone so their rows aren't rewritten for nothing.
+  for (const current of getValuesByCapsule(db, version.capsuleId)) {
+    if (Object.hasOwn(version.values, current.fieldId)) continue;
+    if (current.value === null || current.value === "") continue;
+    upsertCapsuleValue(db, { ...current, value: null, updatedAt: now });
+  }
 
   for (const [fieldId, value] of Object.entries(version.values)) {
     const existing = getValueByCapsuleAndField(db, version.capsuleId, fieldId);

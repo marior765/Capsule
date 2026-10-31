@@ -10,10 +10,12 @@ import {
   getValueByCapsuleAndField,
   getVersionsByCapsule,
 } from "@/entities/capsule";
+import { capsuleFieldsMigration, insertCapsuleField } from "@/entities/field";
 import { createCapsule } from "@/features/create-capsule";
 import { renameCapsule, setCapsuleFieldValue } from "@/features/edit-capsule";
 import {
   getCapsuleHistory,
+  getVersionChanges,
   restoreCapsuleVersion,
   snapshotCapsule,
 } from "../index";
@@ -28,6 +30,7 @@ beforeEach(() => {
     capsuleValuesMigration,
     capsuleVersionsMigration,
     capsuleParentIdMigration,
+    capsuleFieldsMigration,
   ]);
 });
 
@@ -114,7 +117,24 @@ describe("restoreCapsuleVersion", () => {
     expect(restoreCapsuleVersion(db, version.id)).toBe(true);
   });
 
-  it("leaves a field's current value untouched when that field is absent from the restored version's snapshot", () => {
+  // 10.33: a snapshot records only fields that had a value row, so a field
+  // missing from it was empty then — whether the field existed and was left
+  // blank, or was added to the type later. Restore clears it, the same way
+  // getVersionChanges reads a missing field as empty.
+  it("clears a field that was filled after the snapshot was taken", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1", title: "Dune" });
+    const version = snapshotCapsule(db, capsule.id)!;
+    expect(version.values).toEqual({});
+
+    setCapsuleFieldValue(db, capsule.id, "f-author", "Frank Herbert");
+    restoreCapsuleVersion(db, version.id);
+
+    expect(
+      getValueByCapsuleAndField(db, capsule.id, "f-author")?.value ?? null,
+    ).toBeNull();
+  });
+
+  it("also clears a field added to the type after the snapshot (it had no value then)", () => {
     const capsule = createCapsule(db, {
       capsuleTypeId: "ct-1",
       title: "Dune",
@@ -122,15 +142,62 @@ describe("restoreCapsuleVersion", () => {
     });
     const version = snapshotCapsule(db, capsule.id)!;
 
-    // A field added to the capsule's type AFTER this snapshot was taken —
-    // the version genuinely has no opinion about it.
+    // The type gains "Genre" only now, after the snapshot.
+    insertCapsuleField(db, {
+      id: "f-genre",
+      capsuleTypeId: "ct-1",
+      name: "Genre",
+      fieldType: "text",
+      config: null,
+      sortOrder: 1,
+      required: false,
+      createdAt: version.createdAt + 1,
+      updatedAt: version.createdAt + 1,
+    });
+    setCapsuleFieldValue(db, capsule.id, "f-genre", "Sci-Fi");
+    restoreCapsuleVersion(db, version.id);
+
+    expect(
+      getValueByCapsuleAndField(db, capsule.id, "f-genre")?.value ?? null,
+    ).toBeNull();
+    expect(getValueByCapsuleAndField(db, capsule.id, "f-author")?.value).toBe(
+      "Frank Herbert",
+    );
+  });
+
+  it("a cleared value is kept in the safety snapshot, so restoring that brings it back", () => {
+    const capsule = createCapsule(db, { capsuleTypeId: "ct-1", title: "Dune" });
+    const version = snapshotCapsule(db, capsule.id)!;
+    setCapsuleFieldValue(db, capsule.id, "f-genre", "Sci-Fi");
+
+    restoreCapsuleVersion(db, version.id);
+    const safety = getCapsuleHistory(db, capsule.id).find(
+      (v) => v.id !== version.id,
+    )!;
+    expect(safety.values).toEqual({ "f-genre": "Sci-Fi" });
+
+    restoreCapsuleVersion(db, safety.id);
+    expect(getValueByCapsuleAndField(db, capsule.id, "f-genre")?.value).toBe(
+      "Sci-Fi",
+    );
+  });
+
+  it("after a restore the capsule matches the version the way getVersionChanges compares them", () => {
+    const capsule = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      title: "Dune",
+      values: { "f-author": "Frank Herbert", "f-notes": "" },
+    });
+    const version = snapshotCapsule(db, capsule.id)!;
+    renameCapsule(db, capsule.id, "Dune Messiah");
+    setCapsuleFieldValue(db, capsule.id, "f-notes", "Reread");
     setCapsuleFieldValue(db, capsule.id, "f-genre", "Sci-Fi");
 
     restoreCapsuleVersion(db, version.id);
 
-    expect(getValueByCapsuleAndField(db, capsule.id, "f-genre")?.value).toBe(
-      "Sci-Fi",
-    );
+    // Diffing the restored version against "now" must find nothing left over.
+    const changes = getVersionChanges(db, capsule.id, [version]);
+    expect(changes[version.id]).toEqual([]);
   });
 
   it("takes a safety snapshot of the CURRENT state before restoring, so the restore itself is undoable", () => {
