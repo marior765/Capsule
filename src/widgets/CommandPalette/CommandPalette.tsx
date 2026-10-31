@@ -117,9 +117,9 @@ export function CommandPalette({ db, onClose }: CommandPaletteProps) {
   // target (Back then returns to where the palette was opened from).
   const handleSelect = (item: ResultItem) => {
     if (item.kind === "capsule") {
-      router.dismissTo(`/capsules/${item.capsule.id}`);
+      router.dismissTo(`/capsules/${item.capsule.id}`, { withAnchor: true });
     } else {
-      router.dismissTo(item.command.path);
+      router.dismissTo(item.command.path, { withAnchor: true });
     }
     setQuery("");
     setCapsuleResults([]);

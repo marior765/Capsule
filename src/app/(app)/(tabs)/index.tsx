@@ -62,7 +62,9 @@ export default function HomeScreen() {
               key={capsule.id}
               testID={`${testIDs.pressables.capsule}_${capsule.id}`}
               style={styles.row}
-              onPress={() => router.push(`/capsules/${capsule.id}`)}
+              onPress={() =>
+                router.push(`/capsules/${capsule.id}`, { withAnchor: true })
+              }
               accessibilityRole="button"
               accessibilityLabel={`${capsule.title}, capsule`}
             >
@@ -84,7 +86,9 @@ export default function HomeScreen() {
               key={conversation.id}
               testID={`${testIDs.pressables.conversation}_${conversation.id}`}
               style={styles.row}
-              onPress={() => router.push(`/chat/${conversation.id}`)}
+              onPress={() =>
+                router.push(`/chat/${conversation.id}`, { withAnchor: true })
+              }
               accessibilityRole="button"
               accessibilityLabel={`${conversation.title}, conversation`}
             >

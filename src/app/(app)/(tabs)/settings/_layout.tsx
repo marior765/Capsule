@@ -1,5 +1,14 @@
 import { Stack } from "expo-router";
 
+/**
+ * A screen opened straight into this tab before it was visited (the
+ * palette, a reminder notification) still gets the tab's list beneath it,
+ * and so a back button. Navigation calls pass `withAnchor: true`.
+ */
+export const unstable_settings = {
+  anchor: "index",
+};
+
 // Every screen gets a human title — a Stack otherwise shows the route name
 // ("index", "inference", "import-export"). Back buttons are chevron-only for
 // the same reason.

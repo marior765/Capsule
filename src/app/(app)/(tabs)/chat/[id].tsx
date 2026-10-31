@@ -581,7 +581,9 @@ export default function ChatScreen() {
         onSwitchBranch={handleSwitchBranch}
         sources={sources}
         images={images}
-        onOpenSource={(capsuleId) => router.push(`/capsules/${capsuleId}`)}
+        onOpenSource={(capsuleId) =>
+          router.push(`/capsules/${capsuleId}`, { withAnchor: true })
+        }
         onLongPressMessage={handleLongPressMessage}
       />
       {editing && (

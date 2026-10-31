@@ -20,7 +20,9 @@ describe("openRoute", () => {
   ])("pushes when %s is focused", (_label, segments) => {
     const router = fakeRouter();
     openRoute(router, segments, "/capsules/abc");
-    expect(router.push).toHaveBeenCalledWith("/capsules/abc");
+    expect(router.push).toHaveBeenCalledWith("/capsules/abc", {
+      withAnchor: true,
+    });
     expect(router.dismissTo).not.toHaveBeenCalled();
   });
 
@@ -33,7 +35,9 @@ describe("openRoute", () => {
     (_label, segments) => {
       const router = fakeRouter();
       openRoute(router, segments, "/capsules/abc");
-      expect(router.dismissTo).toHaveBeenCalledWith("/capsules/abc");
+      expect(router.dismissTo).toHaveBeenCalledWith("/capsules/abc", {
+        withAnchor: true,
+      });
       expect(router.push).not.toHaveBeenCalled();
     },
   );

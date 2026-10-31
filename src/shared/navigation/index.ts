@@ -34,8 +34,8 @@ export function leaveScreen(router: ScreenRouter, fallback: Href): void {
 
 /** The slice of expo-router's `router` that `openRoute` needs. */
 export type OpeningRouter = {
-  push: (href: Href) => void;
-  dismissTo: (href: Href) => void;
+  push: (href: Href, options?: { withAnchor?: boolean }) => void;
+  dismissTo: (href: Href, options?: { withAnchor?: boolean }) => void;
 };
 
 /**
@@ -53,9 +53,11 @@ export function openRoute(
   segments: readonly string[],
   href: Href,
 ): void {
+  // withAnchor: a tab not visited yet gets its list screen (its stack's
+  // `unstable_settings.anchor`) beneath the opened screen — a back button.
   if (segments.includes("(tabs)")) {
-    router.push(href);
+    router.push(href, { withAnchor: true });
   } else {
-    router.dismissTo(href);
+    router.dismissTo(href, { withAnchor: true });
   }
 }
