@@ -4,7 +4,11 @@ import {
   upsertCapsuleValue,
   type Capsule,
 } from "@/entities/capsule";
+import { getFieldsByCapsuleType } from "@/entities/field";
 import { generateId } from "@/shared/lib";
+import { parseQuickCapture } from "./quickCapture";
+
+export { parseQuickCapture, type QuickCaptureResult } from "./quickCapture";
 
 export type CreateCapsuleInput = {
   capsuleTypeId: string;
@@ -49,4 +53,23 @@ export function createCapsule(
   }
 
   return capsule;
+}
+
+/**
+ * Quick capture (8.6, 10.43): creates a capsule of `capsuleTypeId` from one
+ * line of text, filling the type's fields that a simple pattern names
+ * ("Dune by Frank Herbert (1965)" → title Dune, Author, Year). See
+ * `parseQuickCapture` for the patterns; unmatched text stays in the title.
+ */
+export function captureQuickCapsule(
+  db: SQLiteDatabase,
+  input: { capsuleTypeId: string; text: string },
+): Capsule {
+  const fields = getFieldsByCapsuleType(db, input.capsuleTypeId);
+  const { title, values } = parseQuickCapture(input.text, fields);
+  return createCapsule(db, {
+    capsuleTypeId: input.capsuleTypeId,
+    title,
+    values,
+  });
 }

@@ -5305,3 +5305,14 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Round 2: the settle promise wasn't a queue, so two presses behind one drain both started. Fixed with a turn-taking lock.
 - Round 3: the lock makes an EXISTING bug fatal. `commit` never stops the recording when the voice model fails to load (or the screen unmounts mid-hold): a hot mic on iOS today, and with the lock a permanent Android voice-input deadlock. Attempt ceiling reached → quarantined. Work saved in `.claude/loop/patches/10.42-android-pcm.patch`; the pre-existing hot-mic bug is filed in BLOCKED.md as PRIORITY, to fix before retrying.
 - Takeaway: each round was a deeper layer of the same concurrency problem. The lock was correct in isolation; it exposed that its callers don't always stop what they start.
+
+## Beat 136 — 10.43 quick capture fills fields from patterns (done, 2 attempts)
+- `parseQuickCapture` in `features/create-capsule/quickCapture.ts` handles "X by Y" (last " by ") → the single author-like text field, and a trailing "(1965)" → a number field named Year. `captureQuickCapsule(db, { capsuleTypeId, text })` reads the type's fields, parses, and creates the capsule; the capsules screen uses it. It lives in create-capsule because features can't import each other. Unmatched or ambiguous input stays in the title.
+- Reviewer fail #1 (valid): a filled value skipped the field's own rules, so "Old Book (1850)" with a Year range of 1900–2100 stored an invalid value and would have blocked the capsule's next edit. Fixed: a value is only filled if `validateFieldValue` accepts it. Pass on re-review. A known, accepted false positive ("Learn to code by Friday" → Author "Friday") is editable afterwards.
+
+## Run summary — 2026-10-31 cloud session (beats 129–136)
+- Done: 10.36 (audit.log untracked), 10.37 (CI on push), 10.38 (render tests), 10.39 (Android follow-scroll in code; 10.14's box waits for the Android check), 10.43 (quick-capture patterns).
+- Reconciled as already done: 10.40 (double send, by 8.12; regression test added) and 10.41 (vault reset, by 4.7).
+- Quarantined: 10.42 (Android PCM voice), patch saved. It exposed a PRIORITY pre-existing privacy bug (mic left on when the voice model fails to load / screen unmounts mid-hold), filed in BLOCKED.md.
+- One red push (e607855, eslint), fixed forward within a minute; CI caught it on GitHub.
+- Nothing left that the loop can do unattended: all remaining items need a device, a decision, or are deferred.

@@ -95,3 +95,76 @@ describe("createCapsule — edge cases", () => {
     expect(child.parentCapsuleId).toBe(parent.id);
   });
 });
+
+// Tests for step 10.43 — written before implementation (TDD)
+//
+// Quick capture used to create a capsule with the whole text as its title.
+// captureQuickCapsule reads the type's fields, fills the ones a simple
+// pattern names ("Dune by Frank Herbert (1965)"), and creates the capsule.
+describe("captureQuickCapsule (10.43)", () => {
+  const { captureQuickCapsule } =
+    jest.requireActual<typeof import("../index")>("../index");
+  const { capsuleFieldsMigration, insertCapsuleField } =
+    jest.requireActual<typeof import("@/entities/field")>("@/entities/field");
+
+  const addField = (
+    id: string,
+    capsuleTypeId: string,
+    name: string,
+    fieldType: "text" | "number",
+  ) =>
+    insertCapsuleField(db, {
+      id,
+      capsuleTypeId,
+      name,
+      fieldType,
+      config: null,
+      sortOrder: 0,
+      required: false,
+      createdAt: 0,
+      updatedAt: 0,
+    });
+
+  beforeEach(() => {
+    runMigrations(db, [capsuleFieldsMigration]);
+    addField("f-author", "book", "Author", "text");
+    addField("f-year", "book", "Year", "number");
+    addField("f-other-author", "film", "Director", "text");
+  });
+
+  const valueMap = (capsuleId: string) =>
+    Object.fromEntries(
+      getValuesByCapsule(db, capsuleId).map((v) => [v.fieldId, v.value]),
+    );
+
+  it("creates the capsule with its title and the pattern's field values", () => {
+    const capsule = captureQuickCapsule(db, {
+      capsuleTypeId: "book",
+      text: "Dune by Frank Herbert (1965)",
+    });
+    expect(capsule.title).toBe("Dune");
+    expect(capsule.capsuleTypeId).toBe("book");
+    expect(valueMap(capsule.id)).toEqual({
+      "f-author": "Frank Herbert",
+      "f-year": "1965",
+    });
+  });
+
+  it("only uses the chosen type's own fields", () => {
+    const capsule = captureQuickCapsule(db, {
+      capsuleTypeId: "note",
+      text: "Dune by Frank Herbert",
+    });
+    expect(capsule.title).toBe("Dune by Frank Herbert");
+    expect(valueMap(capsule.id)).toEqual({});
+  });
+
+  it("keeps plain text as the title, with no values", () => {
+    const capsule = captureQuickCapsule(db, {
+      capsuleTypeId: "book",
+      text: "  Buy milk ",
+    });
+    expect(capsule.title).toBe("Buy milk");
+    expect(valueMap(capsule.id)).toEqual({});
+  });
+});

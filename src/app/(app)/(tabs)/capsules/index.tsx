@@ -25,7 +25,7 @@ import {
   getCapsulePreviews,
   type CapsulePreview,
 } from "@/features/capsule-preview";
-import { createCapsule } from "@/features/create-capsule";
+import { captureQuickCapsule } from "@/features/create-capsule";
 import { createComponentTestIDs } from "@/shared/testing";
 import { CapsuleList } from "@/widgets/CapsuleList";
 import { CapsuleBoard } from "@/widgets/CapsuleBoard";
@@ -142,8 +142,13 @@ export default function CapsuleListScreen() {
   // away via the freshly captured card itself, whenever more detail is
   // actually wanted). Re-fetching puts the new capsule at the top of the
   // (default updatedAt-desc-sorted) list immediately.
+  // The typed line may fill fields too ("Dune by Frank Herbert" → Author,
+  // 10.43); captureQuickCapsule reads the type's fields to decide.
   const handleCapture = (input: { capsuleTypeId: string; title: string }) => {
-    const created = createCapsule(db, input);
+    const created = captureQuickCapsule(db, {
+      capsuleTypeId: input.capsuleTypeId,
+      text: input.title,
+    });
     embeddings.indexCapsule(created.id);
     reloadCapsules();
   };

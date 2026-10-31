@@ -2911,4 +2911,34 @@ real Android phone.
 
 ---
 
+## 2026-10-31 — Reconcile before you ask, and know when to stop
+
+Two lessons from the second half of an unattended cloud run.
+
+First, two of the questions the agent had put to the user were about bugs
+that had already been fixed weeks earlier. The "open issues" file still
+listed them because nobody had marked them resolved. The user dutifully
+answered both, and the loop then found both done when it opened the code.
+The repair was cheap (a regression test for one, a sweep of the issues
+file for others), but the user's attention had been spent on settled
+questions. The rule is now written into the journal: check an open item
+against the code and the plan before turning it into a question for a
+human.
+
+Second, the loop's attempt ceiling did its job. Android voice input went
+through three review rounds, each finding a deeper layer of the same
+concurrency problem: a lost recording tail, then overlapping native
+recorders, then a lock that turned an existing bug into a permanent hang.
+On the third failure the step was quarantined, not patched a fourth time.
+The code was saved as a patch, and the bug it exposed went to the top of
+the human's queue. That bug turned out to be real and already shipping on
+iOS: if the speech model fails to load, the microphone is never stopped.
+
+**Article angle:** the most valuable output of a failed step can be the
+bug it uncovers in code that was assumed to be fine. A hard stop at three
+attempts keeps an agent from burying that discovery under a fourth clever
+fix; it turns "I couldn't finish" into "here is what you need to know".
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
