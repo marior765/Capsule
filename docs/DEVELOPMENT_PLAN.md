@@ -211,7 +211,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 
 **Decided 2026-11-07 (user, cloud session) — run in this order:**
 - [x] 10.44 Voice input never leaves the mic on: `commit` stops the recording when the voice model fails to load (VoiceModelError), and both chat screens cancel an in-progress recording on unmount; tests for both (privacy bug found reviewing 10.42)
-- [ ] 10.45 Voice recordings are deleted right after they're transcribed or cancelled (both platforms), and the full wipe also deletes iOS's `cache/ExpoAudio`
+- [x] 10.45 Voice recordings are deleted right after they're transcribed or cancelled (both platforms), and the full wipe also deletes iOS's `cache/ExpoAudio`
 - [ ] 10.46 Retry 10.42 (Android voice over PCM) on top of 10.44: apply `.claude/loop/patches/10.42-android-pcm.patch`, add a safety net (a new start force-stops a stranded recording; `stop()` idempotent), re-review. Needs the Android device check before ticking 10.42
 - [ ] 10.47 iOS status-bar tap-to-top stops chat follow-scroll (treated like the reader scrolling up), until they scroll back to the bottom
 - [ ] 10.48 Fill the remaining route testID gaps (onboarding, personas, models, chat list, settings, inference, home) via `createComponentTestIDs`, plus a guard test that every route Pressable/TextInput/Switch has a testID from a testIDs object

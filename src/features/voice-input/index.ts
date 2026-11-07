@@ -3,6 +3,20 @@ import {
   transcribeAudio,
   type WhisperContext,
 } from "@/shared/stt";
+import { deleteCacheFileIfExists } from "@/shared/fs";
+
+/**
+ * Deletes a recording once it has been used (10.45): it is the user's voice,
+ * and nothing keeps it after transcription. Best effort: a failure here
+ * never breaks voice input; the full wipe also clears the recordings folders.
+ */
+function discardRecording(uri: string): void {
+  try {
+    deleteCacheFileIfExists(uri);
+  } catch {
+    // A uri outside the cache, or the native delete failed; see above.
+  }
+}
 
 /**
  * A recording in progress, offered to the caller as a decision: keep it
@@ -35,13 +49,19 @@ export async function startVoiceInput(): Promise<VoiceInputSession> {
 
   return {
     cancel: async () => {
-      await recording.stop();
+      const { uri } = await recording.stop();
+      discardRecording(uri);
     },
     finish: async (sttCtx: WhisperContext | Promise<WhisperContext>) => {
       const { uri } = await recording.stop();
-      const transcription = transcribeAudio(await sttCtx, uri);
-      const result = await transcription.result;
-      return { text: result.text };
+      try {
+        const transcription = transcribeAudio(await sttCtx, uri);
+        const result = await transcription.result;
+        return { text: result.text };
+      } finally {
+        // Whisper has finished reading it (or never will).
+        discardRecording(uri);
+      }
     },
   };
 }

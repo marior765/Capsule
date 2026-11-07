@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 138,
+    "beat": 139,
     "status": "running",
     "completedAt": "2026-10-31T10:40:23Z",
     "completionNote": "Cloud session 2026-10-31: 10.36-10.39 + 10.43 done, 10.40/10.41 reconciled, 10.42 quarantined (patch saved; PRIORITY hot-mic bug filed). Remaining items need a device, a decision, or are deferred.",
@@ -11,7 +11,7 @@
     "lastBeatNote": "Beat 128 (2026-10-31): /loop /safe-loop all re-entered after PR #1 merge; no selectable step (remaining: 10.14 quarantined, 3.1 blocked, 8.1 + Phase 9 deferred, native steps awaiting device checks). Run stays complete."
   },
   "cursor": {
-    "step": "10.45",
+    "step": "10.46",
     "phase": 10
   },
   "steps": {
@@ -941,16 +941,16 @@
       "failureSignatures": [
         "reviewer fail #1: commit still stops the recording only after the model loads (mic hot for the whole first-run download); test asserted that window"
       ],
-      "checkpoint": "110857f",
+      "checkpoint": "910bc3b",
       "notes": "stop-first finish + unmount cancel in VoiceRecordButton; reviewer pass on attempt 2."
     },
     "10.45": {
-      "status": "pending",
+      "status": "done",
       "class": "logic",
       "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "",
-      "notes": ""
+      "checkpoint": "910bc3b",
+      "notes": "Recordings deleted after use + wipe covers ExpoAudio/Audio; reviewer pass on attempt 1."
     },
     "10.46": {
       "status": "pending",
@@ -1014,6 +1014,6 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-11-07T07:58:25Z"
+    "at": "2026-11-07T08:07:06Z"
   }
 }

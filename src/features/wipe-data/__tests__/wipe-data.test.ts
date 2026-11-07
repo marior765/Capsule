@@ -133,6 +133,8 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///cache/DocumentPicker");
     __missingUris.add("file:///cache/ImagePicker");
     __missingUris.add("file:///cache/Exports");
+    __missingUris.add("file:///cache/ExpoAudio");
+    __missingUris.add("file:///cache/Audio");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
     expect(__deletedDirectoryUris).toEqual([]);
   });
@@ -169,4 +171,11 @@ describe("wipeAllData — order (4.7, checker)", () => {
 it("deletes the exports cache folder (unencrypted export copies) too (5.5)", async () => {
   await wipeAllData(openDb());
   expect(__deletedDirectoryUris).toContain("file:///cache/Exports");
+});
+
+// 10.45: expo-audio's recordings (iOS: cache/ExpoAudio, Android: cache/Audio).
+it("deletes expo-audio's recordings folders on both platforms (10.45)", async () => {
+  await wipeAllData(openDb());
+  expect(__deletedDirectoryUris).toContain("file:///cache/ExpoAudio");
+  expect(__deletedDirectoryUris).toContain("file:///cache/Audio");
 });

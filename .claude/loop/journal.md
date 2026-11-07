@@ -5326,3 +5326,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - `VoiceRecordButton` cancels a hold that's in progress when it unmounts (leaving the chat mid-hold); both chat screens get this through their existing onHoldCancel. Render test with RNTL.
 - Reviewer fail #1 (valid): attempt 1 only stopped the mic on a FAILED load. On a first-run download the mic kept capturing for minutes after release, and my own test asserted that window as correct. Fixed at the root (stop-first). Pass on re-review.
 - Deliberate change: an empty recording plus a failed model now reports "Nothing was recorded" (there's nothing to transcribe either way).
+
+## Beat 139 — 10.45 voice recordings deleted after use (done, 1 attempt)
+- `features/voice-input` deletes each recording (best effort, through `shared/fs`) once whisper has finished with it (success, failure, or model load failure) and on cancel. `shared/stt` names expo-audio's folders (`RECORDING_CACHE_DIRECTORIES`: iOS `ExpoAudio`, Android `Audio`, read from its native sources), and the full wipe deletes both.
+- Reviewer pass on attempt 1. It traced both platforms' cache-URI construction to confirm `assertInsideCache` accepts real recorder URIs, so the best-effort catch isn't hiding a feature that never works (~90%; light device check in BLOCKED.md).

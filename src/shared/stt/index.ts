@@ -173,6 +173,13 @@ export async function releaseStt(ctx: WhisperContext): Promise<void> {
 }
 
 /**
+ * The cache folders expo-audio writes recordings into (read from its native
+ * sources): `ExpoAudio` on iOS, `Audio` on Android. The full wipe deletes
+ * them; voice input deletes each recording as soon as it's used (10.45).
+ */
+export const RECORDING_CACHE_DIRECTORIES = ["ExpoAudio", "Audio"] as const;
+
+/**
  * Overrides for the whisper-ready default preset below. Only
  * the scalar fields — not per-platform nested options — since nothing in
  * this app needs finer control yet. Re-declared rather than re-exported so

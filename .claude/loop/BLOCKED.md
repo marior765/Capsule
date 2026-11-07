@@ -1295,12 +1295,17 @@ without crash or garbled audio, denied permission message, wipe removes
 `cache/Recordings`. Expect two harmless LogBox warnings about
 NativeEventEmitter on Android dev builds.
 
-## Follow-up: voice recordings are never deleted after transcription (found reviewing 10.42, 2026-10-31)
+## RESOLVED by 10.45 (2026-11-07) — Follow-up: voice recordings are never deleted after transcription (found reviewing 10.42, 2026-10-31)
+
+**Fixed:** voice input deletes each recording after transcription (worked or not) and on cancel; the full wipe deletes `cache/ExpoAudio` (iOS) and `cache/Audio` (Android). Original note:
 
 Both platforms keep every recording in the cache after it's transcribed.
 iOS's expo-audio files go to `cache/ExpoAudio`, which the full wipe does
 **not** delete. Fix: delete the file after transcription and on cancel (in
 `features/voice-input`), and add `ExpoAudio` to the wipe. Not a step yet.
+
+## 10.45 recordings deleted after use — light device check (non-blocking, 2026-11-07)
+Box ticked (logic proven in Jest; the reviewer traced both platforms' native paths and is ~90% sure the delete accepts real recorder URIs). To confirm: on iOS and Android, record a few voice messages, then look in the app's cache (`ExpoAudio/` on iOS, `Audio/` on Android): it should be empty. A failed delete is silent by design (best effort), so this is the only way to see it.
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.

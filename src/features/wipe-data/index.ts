@@ -11,6 +11,7 @@ import {
 import { PICKER_CACHE_DIRECTORIES } from "@/shared/picker";
 import { cancelAllLocalNotifications } from "@/shared/notifications";
 import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
+import { RECORDING_CACHE_DIRECTORIES } from "@/shared/stt";
 
 /**
  * "features/wipe-data — secure full wipe (models, chats, capsules,
@@ -21,7 +22,8 @@ import { ATTACHMENTS_DIRECTORY } from "@/entities/attachment";
  * deletes needed. Files on disk are separate from their rows and need
  * their own deletion: chat models (`models/`), speech-to-text models
  * (`stt-models/`), the embedding model (`embedding-models/`), chat images (`chat-images/`), capsule attachments (`attachments/`), and the pickers'
- * temporary copies in the cache directory, all through `shared/fs`.
+ * temporary copies, exports and voice recordings in the cache directory,
+ * all through `shared/fs`.
  * Scheduled reminder notifications are cancelled too. One
  * known exception it can't reach: the iOS document picker's own
  * `tmp/<bundle-id>-Inbox/` copy (see `shared/fs`'s cache-section note).
@@ -57,6 +59,8 @@ export async function wipeAllData(db: SQLiteDatabase | null): Promise<void> {
   PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
   // Exports waiting for (or left after) the share sheet — plaintext copies.
   deleteCacheDirectoryIfExists(EXPORTS_CACHE_DIRECTORY);
+  // Voice recordings expo-audio left behind (10.45).
+  RECORDING_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
 
   // `db` is null when erasing from the lock screen: nothing is open, and
   // opening a database just to log would create one.
