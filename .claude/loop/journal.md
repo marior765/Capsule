@@ -5316,3 +5316,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Quarantined: 10.42 (Android PCM voice), patch saved. It exposed a PRIORITY pre-existing privacy bug (mic left on when the voice model fails to load / screen unmounts mid-hold), filed in BLOCKED.md.
 - One red push (e607855, eslint), fixed forward within a minute; CI caught it on GitHub.
 - Nothing left that the loop can do unattended: all remaining items need a device, a decision, or are deferred.
+
+## Beat 137 — user decisions round 4 → steps 10.44–10.52 (2026-11-07)
+- Before asking, reconciled BLOCKED.md against the code (the lesson from round 3): the 6.8/8.4 picker decisions and the 8.8 notifications decision were already settled, and "routes have no testIDs at all" was stale (20/35 route files use createComponentTestIDs). Marked those, and asked only real decisions.
+- The user answered 8 questions; they are now plan steps 10.44–10.52, privacy fixes first (hot mic → recording deletion → 10.42 retry). Not chosen: iOS reinstall key-without-data detection.

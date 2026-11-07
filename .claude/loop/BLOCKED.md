@@ -30,6 +30,19 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 
 ---
 
+## Resolved (2026-11-07) — user decisions, round 4 (now plan steps 10.44–10.52)
+
+- **Hot mic (PRIORITY bug)** → fix first (10.44).
+- **10.42 Android PCM** → retry after 10.44, with a safety net (10.46).
+- **Voice recordings** → delete right after transcription or cancel; wipe `cache/ExpoAudio` too (10.45).
+- **iOS status-bar tap** → stops follow-scroll like a drag up (10.47).
+- **Route testIDs** → one pass over the remaining gaps + a guard test (10.48).
+- **Personas in conversation export** → carry the persona (10.49).
+- **App lock follow-ups** → "set up Face ID again" (10.50) and the Android fingerprint-cancel notice (10.51). Not chosen: iOS reinstall key-without-data detection.
+- **Wipe audit** → keep one "Data wiped" entry in the fresh database (10.52).
+
+---
+
 ## Needs a decision (not started)
 
 ### 8.1 — Multiple backends toggle (optional cloud APIs behind consent gate)
@@ -845,7 +858,7 @@ file left by a failed download makes every retry fail until a wipe. Moving it
 onto `shared/fs` (relative path, re-mapping the legacy absolute value at
 runtime the way `resolveModelPath` does for chat models) fixes all three.
 
-### 6.8 — attachment field type: picker library decision + file-cleanup gap
+### RESOLVED (stale; expo-image-picker/document-picker installed and wired by 6.8) — 6.8 — attachment field type: picker library decision + file-cleanup gap
 `entities/attachment` (this beat) is deliberately metadata-only — `Attachment`
 records a `localUri` string, but nothing anywhere in this repo writes an
 actual file to that path yet. Two real things are missing before an
@@ -878,7 +891,7 @@ attachment's file plus the capsule's attachment folder before any rows;
 the full wipe deletes the whole `attachments/` folder. Remaining for 6.8:
 the picker UI wired into the capsule screen (next beat).
 
-### 8.4 — image/vision input: same picker decision as 6.8, plus a model pair decision
+### RESOLVED (stale; decided 2026-10-09, done in code by 8.4 — device check only, see the 8.4 plan line) — 8.4 — image/vision input: same picker decision as 6.8, plus a model pair decision
 Implemented and green: `shared/llm` gained `initMultimodalSupport`/
 `isMultimodalEnabled`/`getMultimodalSupport`/`releaseMultimodalSupport`
 (all methods on the same completion context `initLlm` returns, unlike
@@ -950,7 +963,7 @@ Models screen hides recommended specs already downloaded *by name*, so this
 is only reachable if a future release renames a recommended entry while
 keeping its URL — worth a filename-based "already downloaded" check then.
 
-### 8.8 — Local reminders: `expo-notifications` dependency decision
+### RESOLVED (decisions; device check below still open) — 8.8 — Local reminders: `expo-notifications` dependency decision
 
 > **Status (beat 81, 2026-10-10): done in code, box unchecked — device check
 > only.** Decisions 1–4 below were resolved 2026-10-09 (see "Resolved"
@@ -1032,7 +1045,7 @@ appears on the first reminder, not at app start; a reminder fires at its
 time with the app closed and in the foreground; capsule delete and the
 wipe cancel pending ones. Still to build: the reminder UI on the capsule
 screen.
-### `src/app/` routes have no testID coverage at all
+### STALE (2026-11-07: 20 of 35 route files already use createComponentTestIDs; remaining gaps are step 10.48) — `src/app/` routes have no testID coverage at all
 CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
 always via the component's `testIDs` object, never a hardcoded string
 inline." Confirmed via `grep -rln "createComponentTestIDs" src/app/` →
@@ -1051,7 +1064,7 @@ inconsistent (some elements covered, most not) while the rest of `src/app/`
 stays exactly as uncovered as before — cosmetic, not a real fix. Needs its
 own pass across the whole `app/` layer.
 
-### Personas and snippets aren't part of any portable scope (found during 5.2)
+### DECIDED 2026-11-07 → step 10.49 — Personas and snippets aren't part of any portable scope (found during 5.2)
 **Resolved for the full backup only (5.6, 2026-10-11):** the full backup carries personas and snippets (older backups without them leave the current ones untouched). The single-conversation and conversations-JSON exports still don't include them (an exported conversation can name a persona the other device doesn't have — it then simply has no system prompt).
 5.2 now round-trips conversations and capsules, but `entities/persona` and
 `entities/snippet` have no export/import at all. An exported conversation
