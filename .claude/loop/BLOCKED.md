@@ -1234,7 +1234,9 @@ next streamed token pulls the reader back to the bottom. Present on main
 before 10.39. Fix options: handle `onScrollToTop` as "stop following", or
 set `scrollsToTop={false}` on the chat list. Not a step yet.
 
-## PRIORITY bug (found reviewing 10.42, 2026-10-31, on main today): the mic stays on when the voice model fails to load
+## RESOLVED by 10.44 (2026-11-07) — PRIORITY bug (found reviewing 10.42, 2026-10-31): the mic stays on when the voice model fails to load
+
+**Fixed:** releasing the mic now stops the recording at once (`finish` stops before awaiting the model), and the mic button cancels a hold if it unmounts mid-press. Original note:
 
 `createVoiceInputController`'s `commit` (`src/features/voice-input/index.ts`,
 around lines 107–110) awaits `Promise.all([session, context])` and only then

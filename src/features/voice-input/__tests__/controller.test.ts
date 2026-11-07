@@ -100,7 +100,7 @@ describe("createVoiceInputController — happy path", () => {
     );
   });
 
-  it("cancel() waits for the context to become ready, then discards the recording", async () => {
+  it("cancel() discards the recording without waiting for the context", async () => {
     const { stop } = fakeRecording();
     fakeTranscription();
     const { getSttContext, release } = pendingSttContext();
@@ -198,5 +198,65 @@ describe("createVoiceInputController — model failure (10.1)", () => {
     const controller = createVoiceInputController(async () => sttCtx);
     const error = await controller.commit().catch((e: unknown) => e);
     expect(error).not.toBeInstanceOf(VoiceModelError);
+  });
+});
+
+// Tests for step 10.44 — written before implementation (TDD)
+//
+// Privacy bug found reviewing 10.42: the recording was stopped only once the
+// voice model had loaded. If the load failed, the mic never stopped; and on
+// a first run (model downloading) it kept capturing for the whole download
+// after the user had let go. Releasing the mic now stops the recording at
+// once; the model is awaited afterwards, to transcribe the saved file.
+describe("createVoiceInputController — the mic always stops (10.44)", () => {
+  it("commit() stops the recording at once, before a slow model load finishes", async () => {
+    const { stop } = fakeRecording();
+    fakeTranscription("hi");
+    const { getSttContext, release } = pendingSttContext();
+    const controller = createVoiceInputController(getSttContext);
+
+    const committed = controller.commit();
+    await new Promise((r) => setImmediate(r));
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(mockTranscribeAudio).not.toHaveBeenCalled();
+
+    release();
+    await expect(committed).resolves.toEqual({ text: "hi" });
+    expect(mockTranscribeAudio).toHaveBeenCalledWith(
+      sttCtx,
+      "file:///mock/take.m4a",
+    );
+  });
+
+  it("commit() stops the recording when the voice model fails to load", async () => {
+    const { stop } = fakeRecording();
+    const controller = createVoiceInputController(() =>
+      Promise.reject(new Error("download failed")),
+    );
+
+    await expect(controller.commit()).rejects.toThrow("download failed");
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(mockTranscribeAudio).not.toHaveBeenCalled();
+  });
+
+  it("stops the recording even if the model load never settles", async () => {
+    const { stop } = fakeRecording();
+    const controller = createVoiceInputController(
+      () => new Promise<WhisperContext>(() => {}),
+    );
+    void controller.commit();
+    await new Promise((r) => setImmediate(r));
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  // Nothing to transcribe either way: the empty recording is what's reported.
+  it("reports an empty recording even when the model also failed", async () => {
+    const { stop } = fakeRecording(null); // stop() throws "produced no file"
+    const controller = createVoiceInputController(() =>
+      Promise.reject(new Error("download failed")),
+    );
+
+    await expect(controller.commit()).rejects.toThrow("produced no file");
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 });

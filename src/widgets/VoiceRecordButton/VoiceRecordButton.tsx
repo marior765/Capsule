@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, Text } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { createComponentTestIDs } from "@/shared/testing";
@@ -29,6 +29,23 @@ export function VoiceRecordButton({
   onHoldCancel,
 }: VoiceRecordButtonProps) {
   const pressedAtRef = useRef<number | null>(null);
+  // The latest onHoldCancel, for the unmount cleanup below.
+  const onHoldCancelRef = useRef(onHoldCancel);
+  useEffect(() => {
+    onHoldCancelRef.current = onHoldCancel;
+  });
+
+  // Unmounting mid-press (leaving the chat while holding) fires no
+  // onPressOut, which left the recording running (10.44). A hold that
+  // started is always resolved: on unmount it's cancelled.
+  useEffect(
+    () => () => {
+      if (pressedAtRef.current === null) return;
+      pressedAtRef.current = null;
+      onHoldCancelRef.current();
+    },
+    [],
+  );
 
   const handlePressIn = () => {
     if (disabled) return;

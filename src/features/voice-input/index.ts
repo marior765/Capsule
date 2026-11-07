@@ -19,8 +19,14 @@ import {
 export type VoiceInputSession = {
   /** Stops recording and discards it. Nothing is transcribed. */
   cancel: () => Promise<void>;
-  /** Stops recording and transcribes it against the given context. */
-  finish: (sttCtx: WhisperContext) => Promise<{ text: string }>;
+  /**
+   * Stops recording at once, then transcribes it against the context. The
+   * context may still be loading (a promise): the mic is never kept on while
+   * waiting for the model (10.44).
+   */
+  finish: (
+    sttCtx: WhisperContext | Promise<WhisperContext>,
+  ) => Promise<{ text: string }>;
 };
 
 /** Begins recording from the microphone for voice input. */
@@ -31,9 +37,9 @@ export async function startVoiceInput(): Promise<VoiceInputSession> {
     cancel: async () => {
       await recording.stop();
     },
-    finish: async (sttCtx: WhisperContext) => {
+    finish: async (sttCtx: WhisperContext | Promise<WhisperContext>) => {
       const { uri } = await recording.stop();
-      const transcription = transcribeAudio(sttCtx, uri);
+      const transcription = transcribeAudio(await sttCtx, uri);
       const result = await transcription.result;
       return { text: result.text };
     },
@@ -91,8 +97,8 @@ export function createVoiceInputController(
   // ever cancels, nothing else would ever observe that rejection — Node
   // treats an unconsumed rejected promise as unhandled. This silences that
   // specific case without changing what `commit()` sees: attaching a
-  // handler here doesn't alter `context`'s own resolution, so the
-  // `Promise.all` below still gets the real rejection when commit() runs.
+  // handler here doesn't alter `context`'s own resolution, so commit()'s
+  // finish(context) still gets the real rejection.
   context.catch(() => {});
   // Same reasoning for a recording that fails to start (iOS refusing the
   // audio session, say): the user is still holding the button, so nothing
@@ -105,8 +111,11 @@ export function createVoiceInputController(
       await started.cancel();
     },
     commit: async () => {
-      const [started, ctx] = await Promise.all([session, context]);
-      return started.finish(ctx);
+      // The context goes in still loading: finish() stops the recording
+      // first, so the mic is off from the moment the user lets go, however
+      // long the model takes or if it fails (10.44).
+      const started = await session;
+      return started.finish(context);
     },
   };
 }

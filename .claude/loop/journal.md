@@ -5320,3 +5320,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ## Beat 137 — user decisions round 4 → steps 10.44–10.52 (2026-11-07)
 - Before asking, reconciled BLOCKED.md against the code (the lesson from round 3): the 6.8/8.4 picker decisions and the 8.8 notifications decision were already settled, and "routes have no testIDs at all" was stale (20/35 route files use createComponentTestIDs). Marked those, and asked only real decisions.
 - The user answered 8 questions; they are now plan steps 10.44–10.52, privacy fixes first (hot mic → recording deletion → 10.42 retry). Not chosen: iOS reinstall key-without-data detection.
+
+## Beat 138 — 10.44 the mic always stops (done, 2 attempts)
+- `features/voice-input`: `finish` stops the recording first and awaits the model after (it takes the context as a promise); `commit` passes the still-loading context in. The mic is off from the moment the user lets go: slow load, failed load, or a load that never settles.
+- `VoiceRecordButton` cancels a hold that's in progress when it unmounts (leaving the chat mid-hold); both chat screens get this through their existing onHoldCancel. Render test with RNTL.
+- Reviewer fail #1 (valid): attempt 1 only stopped the mic on a FAILED load. On a first-run download the mic kept capturing for minutes after release, and my own test asserted that window as correct. Fixed at the root (stop-first). Pass on re-review.
+- Deliberate change: an empty recording plus a failed model now reports "Nothing was recorded" (there's nothing to transcribe either way).
