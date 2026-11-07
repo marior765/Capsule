@@ -215,7 +215,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [ ] 10.46 Retry 10.42 (Android voice over PCM) on top of 10.44: apply `.claude/loop/patches/10.42-android-pcm.patch`, add a safety net (a new start force-stops a stranded recording; `stop()` idempotent), re-review. Needs the Android device check before ticking 10.42
 - [x] 10.47 iOS status-bar tap-to-top stops chat follow-scroll (treated like the reader scrolling up), until they scroll back to the bottom
 - [x] 10.48 Fill the remaining route testID gaps (onboarding, personas, models, chat list, settings, inference, home) via `createComponentTestIDs`, plus a guard test that every route Pressable/TextInput/Switch has a testID from a testIDs object
-- [ ] 10.49 Exporting a single conversation (or the conversations vault) carries its persona; import adds the persona if it's missing, so `personaId` no longer dangles
+- [x] 10.49 Exporting a single conversation (or the conversations vault) carries its persona; import adds the persona if it's missing, so `personaId` no longer dangles
 - [ ] 10.50 App lock: "Set up Face ID / fingerprint again" control for when the OS invalidated the biometric key copy (new face or finger enrolled)
 - [ ] 10.51 App lock on Android: cancelling the fingerprint prompt while turning the lock on tells the user biometrics weren't set up (instead of silently skipping)
 - [ ] 10.52 After a full wipe, the fresh database gets one "Data wiped" audit entry (the wipe's own record no longer disappears with the data)

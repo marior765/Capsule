@@ -2,7 +2,7 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 142,
+    "beat": 143,
     "status": "running",
     "completedAt": "2026-10-31T10:40:23Z",
     "completionNote": "Cloud session 2026-10-31: 10.36-10.39 + 10.43 done, 10.40/10.41 reconciled, 10.42 quarantined (patch saved; PRIORITY hot-mic bug filed). Remaining items need a device, a decision, or are deferred.",
@@ -11,7 +11,7 @@
     "lastBeatNote": "Beat 128 (2026-10-31): /loop /safe-loop all re-entered after PR #1 merge; no selectable step (remaining: 10.14 quarantined, 3.1 blocked, 8.1 + Phase 9 deferred, native steps awaiting device checks). Run stays complete."
   },
   "cursor": {
-    "step": "10.49",
+    "step": "10.50",
     "phase": 10
   },
   "steps": {
@@ -975,16 +975,18 @@
       "class": "ui",
       "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "0a67965",
+      "checkpoint": "b140389",
       "notes": "Already done by 8.10 (routeTestIDs guard test passes); reconciled, no code change."
     },
     "10.49": {
-      "status": "pending",
+      "status": "done",
       "class": "logic",
-      "attempts": 0,
-      "failureSignatures": [],
-      "checkpoint": "",
-      "notes": ""
+      "attempts": 2,
+      "failureSignatures": [
+        "reviewer fail #1: restoreConversation doc block stranded above restorePersona; module header's 'always fresh ids' principle doesn't name the persona exception"
+      ],
+      "checkpoint": "b140389",
+      "notes": "Persona in conversation/vault export; validated, transactional import; reviewer pass on attempt 2."
     },
     "10.50": {
       "status": "pending",
@@ -1016,6 +1018,6 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-11-07T08:31:54Z"
+    "at": "2026-11-07T08:47:08Z"
   }
 }

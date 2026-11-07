@@ -1066,7 +1066,9 @@ inconsistent (some elements covered, most not) while the rest of `src/app/`
 stays exactly as uncovered as before — cosmetic, not a real fix. Needs its
 own pass across the whole `app/` layer.
 
-### DECIDED 2026-11-07 → step 10.49 — Personas and snippets aren't part of any portable scope (found during 5.2)
+### RESOLVED for personas by 10.49 (2026-11-07) — Personas and snippets aren't part of any portable scope (found during 5.2)
+
+**Fixed:** a conversation export (single or whole vault) carries its persona; import adds it if missing (a local one always wins). Snippets remain full-backup only. Original note:
 **Resolved for the full backup only (5.6, 2026-10-11):** the full backup carries personas and snippets (older backups without them leave the current ones untouched). The single-conversation and conversations-JSON exports still don't include them (an exported conversation can name a persona the other device doesn't have — it then simply has no system prompt).
 5.2 now round-trips conversations and capsules, but `entities/persona` and
 `entities/snippet` have no export/import at all. An exported conversation
