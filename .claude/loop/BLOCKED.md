@@ -1257,43 +1257,24 @@ context still stops the recording; unmounting mid-hold cancels it. This is a
 privacy bug, so it should go before any retry of 10.42. Suggested as its own
 step; not added to the plan unattended.
 
-## 10.42 — QUARANTINED: Android voice input over PCM (2026-10-31)
+## 10.42 / 10.46 Android voice input over PCM — done in code by 10.46 (2026-11-07), needs an Android dev build + device check
 
-**Status:** three reviewer rounds; the code is saved in
-`.claude/loop/patches/10.42-android-pcm.patch` (applies cleanly to c61bd65;
-`git apply` it). Main is unchanged: Android still records AAC, which whisper
-can't read.
+**History:** 10.42 was quarantined on 2026-10-31 after three review rounds; round 3 found that a lock it added turned the pre-existing hot-mic bug into a permanent Android voice-input hang. 10.44 fixed that bug (the recording stops the moment the user lets go, and on unmount mid-hold). 10.46 then re-applied the saved patch and added a safety net.
 
-**What the patch does:** on Android, `startRecording` in `shared/stt` streams
-16 kHz mono 16-bit PCM with `@fugood/react-native-audio-pcm-stream` and
-`stop()` writes a WAV (`encodeWav`, 44-byte header, byte-checked against
-whisper.rn 0.6's reader) into `cache/Recordings/`, which the full wipe
-deletes. `stop()` keeps listening `PCM_DRAIN_MS` (250 ms) after the native
-stop (the native read thread emits its last buffer afterwards), and a
-turn-taking lock (`pcmTurn`) runs recordings strictly one after another (the
-native module has one shared recorder; overlap garbles audio or crashes).
-Also: device-default buffer size (the native side drops the first two
-buffers), "Recording captured no audio" mapped to the "Nothing was recorded"
-message, and a typed module declaration (the package's own .d.ts names a
-different module). 1763 tests green with the patch.
+**What's on main now:** on Android, `startRecording` in `src/shared/stt/index.ts` streams 16 kHz mono 16-bit PCM with `@fugood/react-native-audio-pcm-stream`, and `stop()` writes a WAV (`encodeWav`, a 44-byte header byte-checked against whisper.rn 0.6's reader) into `cache/Recordings/`. Voice input deletes it after transcription (10.45), and the full wipe deletes the folder. `stop()` keeps listening `PCM_DRAIN_MS` (250 ms) after the native stop, because the read thread emits its last buffer afterwards. Recordings run strictly one after another (`pcmTurn`), since the native module has one shared recorder. Safety net (10.46): `stop()` is idempotent (a second call can't end the next recording), and a recording still live when the next one starts is force-stopped and its audio discarded, so a missed stop can't wedge voice input. iOS is unchanged. Proven in Jest against a mock of the native module; the real module has never run.
 
-**Why quarantined:** each round found a different real problem: (1) the end
-of every recording was dropped, a quick re-press could crash, a short hold
-showed the wrong message; (2) the re-press guard wasn't a queue; (3) the lock
-turns the PRIORITY bug above (a recording never stopped on model-load
-failure) into a permanent Android voice-input deadlock until restart.
+**Build:** the package has been in package.json since about 10.12, so autolinking has probably already put it in recent dev builds; rebuild if unsure. It's a legacy (non-TurboModule) module that relies on React Native's interop layer. Expect two harmless LogBox warnings about `new NativeEventEmitter()` (missing `addListener` / `removeListeners`) at app start in Android dev builds.
 
-**To finish it:** fix the PRIORITY bug above first, then apply the patch, and
-consider a safety net in `shared/stt` (a new start force-stops a stranded
-previous recording, or the turn is released after a maximum time). Also make
-`stop()` idempotent (a second call after the turn has passed would end the
-*next* recording, since the native `isRecording` flag is shared; no caller
-does this today). Then run the 7-step Android device check that the patch's
-BLOCKED notes describe: first and last word survive, 10+ s sentence, brief tap
-shows the hint, ~0.5 s hold, rapid release-and-re-press and double-tap-then-hold
-without crash or garbled audio, denied permission message, wipe removes
-`cache/Recordings`. Expect two harmless LogBox warnings about
-NativeEventEmitter on Android dev builds.
+**Device check (Android phone or emulator with a mic), then tick 10.42 and 10.46:**
+1. In a chat, hold the mic, say a sentence, release: the words appear in the message box, including the **first and last word**.
+2. Hold for a long sentence (10+ s): the whole sentence is transcribed.
+3. Tap the mic briefly: the "Hold the mic to talk" hint appears and nothing errors.
+4. Hold for about half a second without saying much: either a short transcript or "Nothing was recorded. Hold the mic a little longer…", never "Couldn't start recording".
+5. Release and immediately press and hold again, several times; also **double-tap quickly, then hold**: no crash, and the held recording transcribes cleanly (no garbled or doubled audio).
+6. Deny microphone access in Android settings, then hold: "Capsule needs microphone access…".
+7. After a few recordings, check `cache/Recordings` (Device Explorer): it should be empty (each recording is deleted after use).
+
+If step 1 gives garbled or silent text, check that `init` really applies 16 kHz on that device. whisper.rn resamples any 16-bit PCM WAV, so the fix would only be to record at a supported rate and write that rate in the header, or to try audioSource 1 (MIC).
 
 ## RESOLVED by 10.45 (2026-11-07) — Follow-up: voice recordings are never deleted after transcription (found reviewing 10.42, 2026-10-31)
 

@@ -174,7 +174,8 @@ export function describeVoiceError(error: unknown): string {
   if (/permission/i.test(message)) {
     return "Capsule needs microphone access for voice input — allow it in Settings.";
   }
-  if (/produced no file/i.test(message)) {
+  // iOS: "produced no file"; Android (10.42): "captured no audio".
+  if (/produced no file|captured no audio/i.test(message)) {
     return "Nothing was recorded. Hold the mic a little longer and try again.";
   }
   if (/transcrib/i.test(message)) {

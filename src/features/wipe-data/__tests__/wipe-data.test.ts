@@ -135,6 +135,7 @@ describe("wipeAllData — edge cases", () => {
     __missingUris.add("file:///cache/Exports");
     __missingUris.add("file:///cache/ExpoAudio");
     __missingUris.add("file:///cache/Audio");
+    __missingUris.add("file:///cache/Recordings");
     await expect(wipeAllData(openDb())).resolves.not.toThrow();
     expect(__deletedDirectoryUris).toEqual([]);
   });
@@ -178,4 +179,10 @@ it("deletes expo-audio's recordings folders on both platforms (10.45)", async ()
   await wipeAllData(openDb());
   expect(__deletedDirectoryUris).toContain("file:///cache/ExpoAudio");
   expect(__deletedDirectoryUris).toContain("file:///cache/Audio");
+});
+
+// 10.42: Android voice input writes WAV recordings into the cache.
+it("deletes the voice recordings cache folder too (10.42)", async () => {
+  await wipeAllData(openDb());
+  expect(__deletedDirectoryUris).toContain("file:///cache/Recordings");
 });

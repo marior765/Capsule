@@ -59,7 +59,7 @@ export async function wipeAllData(db: SQLiteDatabase | null): Promise<void> {
   PICKER_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
   // Exports waiting for (or left after) the share sheet — plaintext copies.
   deleteCacheDirectoryIfExists(EXPORTS_CACHE_DIRECTORY);
-  // Voice recordings expo-audio left behind (10.45).
+  // Voice recordings: expo-audio's folders and Android's PCM path (10.45).
   RECORDING_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
 
   // `db` is null when erasing from the lock screen: nothing is open, and

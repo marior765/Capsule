@@ -56,7 +56,7 @@ describe("startRecording — happy path", () => {
     expect(uri).toBe("file:///mock/take-1.m4a");
   });
 
-  // 10.1: whisper.rn only reads 16 kHz mono 16-bit PCM WAV. The old default
+  // 10.1: whisper.rn reads only 16-bit PCM WAV. The old default
   // (HIGH_QUALITY: 44.1 kHz stereo AAC .m4a) recorded fine and then failed
   // every transcription — found in the simulator, not by this suite.
   it("records 16 kHz mono by default — what whisper reads", async () => {
@@ -104,41 +104,9 @@ describe("startRecording — happy path", () => {
   });
 });
 
-describe("startRecording — Android (10.1)", () => {
-  // Android's MediaRecorder can't write WAV, so it still records AAC — the
-  // file must then be named .m4a, not inherit the iOS ".wav".
-  it("names the Android AAC recording .m4a", async () => {
-    // A fresh module registry so the preset is re-flattened for Android.
-    // react-native and the expo-audio mock are taken from that same registry:
-    // Platform.OS is set there before shared/stt loads, and the recorder calls
-    // read back are the ones this run made.
-    let isolatedRecorder: jest.Mock | undefined;
-    let started: Promise<unknown> | undefined;
-    jest.isolateModules(() => {
-      const { Platform } =
-        jest.requireActual<typeof import("react-native")>("react-native");
-      Object.defineProperty(Platform, "OS", {
-        value: "android",
-        configurable: true,
-      });
-      isolatedRecorder = jest.requireActual<
-        typeof import("@/__mocks__/expo-audio")
-      >("expo-audio").AudioRecorder as unknown as jest.Mock;
-      const { startRecording: startOnAndroid } =
-        jest.requireActual<typeof import("../index")>("../index");
-      started = startOnAndroid();
-    });
-    await started;
-    const calls = isolatedRecorder?.mock.calls ?? [];
-    const passed = calls[calls.length - 1]?.[0] as
-      | Record<string, unknown>
-      | undefined;
-    expect(passed).toEqual(
-      expect.objectContaining({ extension: ".m4a", outputFormat: "mpeg4" }),
-    );
-    expect(passed).not.toHaveProperty("linearPCMBitDepth");
-  });
-});
+// 10.1 recorded AAC (.m4a) on Android, which whisper can't read. 10.42
+// replaced that with a PCM stream written as WAV; its tests are in
+// androidRecording.test.ts.
 
 describe("startRecording — edge cases", () => {
   it("merges caller options over the default preset rather than replacing it", async () => {

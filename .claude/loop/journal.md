@@ -5330,3 +5330,9 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ## Beat 139 — 10.45 voice recordings deleted after use (done, 1 attempt)
 - `features/voice-input` deletes each recording (best effort, through `shared/fs`) once whisper has finished with it (success, failure, or model load failure) and on cancel. `shared/stt` names expo-audio's folders (`RECORDING_CACHE_DIRECTORIES`: iOS `ExpoAudio`, Android `Audio`, read from its native sources), and the full wipe deletes both.
 - Reviewer pass on attempt 1. It traced both platforms' cache-URI construction to confirm `assertInsideCache` accepts real recorder URIs, so the best-effort catch isn't hiding a feature that never works (~90%; light device check in BLOCKED.md).
+
+## Beat 140 — 10.46 retry of 10.42 Android PCM voice (done in code, 1 attempt; boxes wait for Android)
+- Re-applied `.claude/loop/patches/10.42-android-pcm.patch` with `git apply --3way` on top of 10.44/10.45. Two conflicts in wipe-data, resolved by putting the PCM path's `Recordings` folder into 10.45's `RECORDING_CACHE_DIRECTORIES` (one list for the wipe). tsc caught a missing `});` from my conflict merge.
+- Safety net: `stop()` is idempotent (`stopping ??=`), so a late second call can't end the next recording; and a recording still live when the next one starts is force-stopped and its audio discarded (`liveRecording`), so a missed stop can't wedge voice input.
+- Reviewer pass on attempt 1. It re-derived all three earlier rounds' findings against the merged code and native sources; its minor notes (pin the stopping-recording guard with a test, two outdated comments) were folded in before the commit.
+- 10.42 and 10.46 stay unticked: the 7-step Android device check is in BLOCKED.md ("10.42 / 10.46").

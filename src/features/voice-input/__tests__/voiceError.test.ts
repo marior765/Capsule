@@ -24,6 +24,14 @@ describe("describeVoiceError", () => {
     expect(message).toMatch(/record/i);
   });
 
+  // 10.42: Android's PCM path reports an empty capture this way. A hold just
+  // past the button's minimum can end before the first buffer arrives.
+  it("says a too-short Android hold recorded nothing", () => {
+    expect(
+      describeVoiceError(new Error("Recording captured no audio")),
+    ).toMatch(/nothing was recorded/i);
+  });
+
   it("says when a recording came out empty", () => {
     expect(describeVoiceError(new Error("Recording produced no file"))).toMatch(
       /nothing was recorded/i,

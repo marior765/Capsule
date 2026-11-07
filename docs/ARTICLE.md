@@ -2941,4 +2941,28 @@ fix; it turns "I couldn't finish" into "here is what you need to know".
 
 ---
 
+## 2026-11-07 — A quarantined step, fixed at the root, passed on the first try
+
+A week earlier the loop had quarantined Android voice input after three
+failed reviews, and filed the bug that the last review exposed: when the
+speech model failed to load, the microphone was never stopped. This run
+fixed that bug first, as its own step (the mic now stops the moment you let
+go). It then re-applied the saved patch from the quarantined attempt and
+added two small guards. The independent reviewer re-checked every earlier
+finding against the merged code and passed it on the first attempt.
+
+The ordering is the lesson. The earlier attempts kept adding concurrency
+machinery to the Android recorder (a drain window, then a lock, then a
+queue) while the real fault sat one layer up, in code that assumed its
+callers always stop what they start. Each new safeguard made that
+assumption more dangerous. Once the caller was fixed, the same machinery
+was correct.
+
+**Article angle:** a quarantine with a saved patch and a written-down
+reason is not a failure state; it's a cheap pause. Fix what the
+quarantine pointed at, then reapply the old work. The agent didn't need
+to be smarter on the retry, just to work in the right order.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->
