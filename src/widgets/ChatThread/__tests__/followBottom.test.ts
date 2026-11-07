@@ -6,7 +6,11 @@
 // reader is at the bottom; scrolling up to reread must not be hijacked.
 import { readFileSync } from "fs";
 import { join } from "path";
-import { FOLLOW_THRESHOLD, isNearBottom } from "../followBottom";
+import {
+  FOLLOW_THRESHOLD,
+  isNearBottom,
+  isSystemScrollUp,
+} from "../followBottom";
 
 const scroll = (
   offsetY: number,
@@ -71,7 +75,9 @@ describe("ChatThread wiring (static)", () => {
     expect(source).toMatch(/onMomentumScrollBegin=/);
     expect(source).toMatch(/onScrollEndDrag=/);
     expect(source).toMatch(/onMomentumScrollEnd=/);
-    expect(source).not.toMatch(/\bonScroll=/);
+    // onScroll is used for one thing only (10.47): spotting a system scroll
+    // up (iOS status-bar tap) as it starts, via isSystemScrollUp.
+    expect(source).toMatch(/onScroll=\{[^}]*isSystemScrollUp\(/s);
     expect(source).toMatch(/isNearBottom\(/);
     expect(source).toMatch(/nextFollowState\(/);
   });
@@ -198,5 +204,103 @@ describe("nextFollowState (idle / dragging / settling)", () => {
       s,
     );
     expect(s).toEqual({ following: true, phase: "idle" });
+  });
+});
+
+// Tests for step 10.47 — written before implementation (TDD)
+//
+// Found reviewing 10.39: tapping the iOS status bar scrolls the chat to the
+// top and fires only onScrollToTop (no drag, no reader momentum), so the
+// thread kept following and the next streamed token pulled the reader back
+// down. A status-bar tap now counts like scrolling up to reread.
+describe("nextFollowState — status-bar tap to top (10.47)", () => {
+  const { nextFollowState, INITIAL_FOLLOW_STATE } =
+    jest.requireActual<typeof import("../followBottom")>("../followBottom");
+
+  it("stops following", () => {
+    expect(
+      nextFollowState(INITIAL_FOLLOW_STATE, { type: "scrollToTop" }),
+    ).toEqual({ following: false, phase: "idle" });
+  });
+
+  it("the app's own momentum afterwards doesn't turn following back on", () => {
+    let s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "scrollToTop" });
+    s = nextFollowState(s, { type: "momentumEnd", nearBottom: true });
+    expect(s.following).toBe(false);
+  });
+
+  it("dragging back to the bottom resumes following", () => {
+    let s = nextFollowState(INITIAL_FOLLOW_STATE, { type: "scrollToTop" });
+    s = nextFollowState(s, { type: "dragBegin" });
+    s = nextFollowState(s, { type: "dragEnd", nearBottom: true });
+    s = nextFollowState(s, { type: "momentumBegin" });
+    s = nextFollowState(s, { type: "momentumEnd", nearBottom: true });
+    expect(s).toEqual({ following: true, phase: "idle" });
+  });
+});
+
+// Reviewer finding (10.47, round 1): onScrollToTop fires only AFTER the
+// ~0.3 s scroll-to-top animation, and a streamed token's scrollToEnd in that
+// window cancels the animation on iOS. The tap is spotted as it starts: with
+// no drag in progress, the app itself only ever scrolls DOWN, so the list
+// moving up to somewhere away from the bottom is the system's doing.
+describe("isSystemScrollUp (10.47)", () => {
+  it("is false for the first scroll event (nothing to compare with)", () => {
+    expect(isSystemScrollUp(null, scroll(0, 2000, 800))).toBe(false);
+  });
+
+  it("is true when the list moved up to away from the bottom", () => {
+    expect(isSystemScrollUp(1200, scroll(900, 2000, 800))).toBe(true);
+  });
+
+  it("is false when the list moved down (the app following)", () => {
+    expect(isSystemScrollUp(900, scroll(1200, 2000, 800))).toBe(false);
+  });
+
+  // Dismissing the keyboard grows the viewport and clamps the offset up,
+  // but the reader is still at the bottom.
+  it("is false when it moved up but is still at the bottom", () => {
+    expect(isSystemScrollUp(1500, scroll(1200, 2000, 800))).toBe(false);
+  });
+
+  it("is false for sub-point jitter", () => {
+    expect(isSystemScrollUp(900.4, scroll(900, 2000, 800))).toBe(false);
+  });
+});
+
+describe("nextFollowState — systemScrollUp (10.47)", () => {
+  const { nextFollowState, INITIAL_FOLLOW_STATE } =
+    jest.requireActual<typeof import("../followBottom")>("../followBottom");
+
+  it("stops following when nobody is touching the list", () => {
+    expect(
+      nextFollowState(INITIAL_FOLLOW_STATE, { type: "systemScrollUp" }),
+    ).toEqual({ following: false, phase: "idle" });
+  });
+
+  it("leaves a drag in progress to the drag's own events", () => {
+    const dragging = { following: false, phase: "dragging" as const };
+    expect(nextFollowState(dragging, { type: "systemScrollUp" })).toBe(
+      dragging,
+    );
+  });
+
+  // iOS: a release at the bottom with no fling stays "settling" until the
+  // next momentumEnd. A reader's own fling always brings momentumBegin
+  // (following off) first, so moving up away from the bottom while settling
+  // with following on can only be the system.
+  it("also stops following after a release at the bottom (settling)", () => {
+    const settling = { following: true, phase: "settling" as const };
+    expect(nextFollowState(settling, { type: "systemScrollUp" })).toEqual({
+      following: false,
+      phase: "idle",
+    });
+  });
+
+  it("leaves a fling in progress alone (settling, not following)", () => {
+    const flinging = { following: false, phase: "settling" as const };
+    expect(nextFollowState(flinging, { type: "systemScrollUp" })).toBe(
+      flinging,
+    );
   });
 });

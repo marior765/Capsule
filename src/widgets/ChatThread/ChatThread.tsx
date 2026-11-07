@@ -15,6 +15,7 @@ import { createComponentTestIDs } from "@/shared/testing";
 import {
   INITIAL_FOLLOW_STATE,
   isNearBottom,
+  isSystemScrollUp,
   nextFollowState,
   type FollowEvent,
 } from "./followBottom";
@@ -71,6 +72,8 @@ export function ChatThread({
   const listRef = useRef<FlatList<Message>>(null);
   const follow = useRef(INITIAL_FOLLOW_STATE);
   const hasScrolledInitially = useRef(false);
+  // The previous scroll event's offset, for isSystemScrollUp (10.47).
+  const lastOffsetY = useRef<number | null>(null);
 
   // Deferred a frame: a scrollToEnd issued synchronously from the first
   // onContentSizeChange is dropped — the list's viewport isn't laid out yet.
@@ -168,6 +171,14 @@ export function ChatThread({
           onFollowEvent({ type: "dragEnd", nearBottom: nearBottom(e) })
         }
         onMomentumScrollBegin={() => onFollowEvent({ type: "momentumBegin" })}
+        onScroll={(e) => {
+          if (isSystemScrollUp(lastOffsetY.current, e.nativeEvent)) {
+            onFollowEvent({ type: "systemScrollUp" });
+          }
+          lastOffsetY.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
+        onScrollToTop={() => onFollowEvent({ type: "scrollToTop" })}
         onMomentumScrollEnd={(e) =>
           onFollowEvent({ type: "momentumEnd", nearBottom: nearBottom(e) })
         }

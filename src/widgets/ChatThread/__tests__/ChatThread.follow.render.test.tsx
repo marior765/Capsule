@@ -172,4 +172,56 @@ describe("ChatThread follow-scroll (rendered, 10.39)", () => {
     await grow();
     expect(scrollToEnd).toHaveBeenCalledTimes(2);
   });
+
+  // 10.47: an iOS status-bar tap scrolls to the top and fires only
+  // onScrollToTop; the thread must stop pulling the reader back down.
+  it("a status-bar tap to the top stops following", async () => {
+    await render(<ChatThread messages={[message("m1", "hi")]} />);
+    await grow();
+    scrollToEnd.mockClear();
+
+    await fireEvent(list(), "scrollToTop", scrollEvent(0));
+    await grow();
+    expect(scrollToEnd).not.toHaveBeenCalled();
+  });
+
+  // Reviewer finding (10.47, round 1): stop following as the tap's scroll
+  // STARTS, so a token arriving mid-animation can't pull the reader back.
+  it("a status-bar tap mid-stream: no scrollToEnd fights the scroll to the top", async () => {
+    await render(<ChatThread messages={[message("m1", "hi")]} />);
+    await grow();
+    await fireEvent(list(), "scroll", scrollEvent(AT_BOTTOM));
+    scrollToEnd.mockClear();
+
+    // The system animation starts moving the list up...
+    await fireEvent(list(), "scroll", scrollEvent(AT_BOTTOM - 300));
+    // ...and a token arrives before it reaches the top.
+    await grow();
+    expect(scrollToEnd).not.toHaveBeenCalled();
+  });
+
+  it("the mount-time scroll event at offset 0 doesn't stop following", async () => {
+    await render(<ChatThread messages={[message("m1", "hi")]} />);
+    await fireEvent(list(), "scroll", scrollEvent(0));
+    await fireEvent(list(), "scroll", scrollEvent(0));
+    await grow();
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("the keyboard closing at the bottom doesn't stop following", async () => {
+    await render(<ChatThread messages={[message("m1", "hi")]} />);
+    await grow();
+    await fireEvent(list(), "scroll", scrollEvent(AT_BOTTOM));
+    scrollToEnd.mockClear();
+    // Viewport grows by 300 and the offset clamps up: still at the bottom.
+    await fireEvent(list(), "scroll", {
+      nativeEvent: {
+        contentOffset: { x: 0, y: AT_BOTTOM - 300 },
+        contentSize: { width: 400, height: CONTENT },
+        layoutMeasurement: { width: 400, height: VIEWPORT + 300 },
+      },
+    });
+    await grow();
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+  });
 });

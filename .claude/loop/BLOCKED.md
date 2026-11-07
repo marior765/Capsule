@@ -1226,7 +1226,9 @@ until the reader nudges the list.
 
 The same five checks on iOS should behave identically (iOS worked before; this is a regression check).
 
-## Follow-up: iOS status-bar tap doesn't stop chat follow-scroll (found reviewing 10.39, 2026-10-31)
+## RESOLVED by 10.47 (2026-11-07) — Follow-up: iOS status-bar tap doesn't stop chat follow-scroll (found reviewing 10.39, 2026-10-31)
+
+**Fixed (in code):** following stops as soon as the list starts moving up with no drag in progress (`isSystemScrollUp` on `onScroll`), so a streamed token can't cancel the scroll-to-top animation; `onScrollToTop` is the backstop when it finishes. Dragging back to the bottom resumes following. **iOS check (simulator or phone):** while a long reply streams, tap the status bar: the chat goes to the top and stays there; drag back to the bottom and it follows again. Also confirm that closing the keyboard at the bottom, and opening a long chat, still follow as before. Note: iOS only scrolls to top when exactly one visible scroll view allows it, so a status-bar tap does nothing while the persona picker is open (harmless). Original note:
 
 Tapping the iOS status bar scrolls the chat to the top and emits only
 `onScrollToTop`, with no drag or momentum events. Following stays on, so the

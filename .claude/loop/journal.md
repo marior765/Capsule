@@ -5336,3 +5336,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Safety net: `stop()` is idempotent (`stopping ??=`), so a late second call can't end the next recording; and a recording still live when the next one starts is force-stopped and its audio discarded (`liveRecording`), so a missed stop can't wedge voice input.
 - Reviewer pass on attempt 1. It re-derived all three earlier rounds' findings against the merged code and native sources; its minor notes (pin the stopping-recording guard with a test, two outdated comments) were folded in before the commit.
 - 10.42 and 10.46 stay unticked: the 7-step Android device check is in BLOCKED.md ("10.42 / 10.46").
+
+## Beat 141 — 10.47 iOS status-bar tap stops follow-scroll (done, 2 attempts)
+- `onScrollToTop` feeds a `scrollToTop` event (following off until the reader drags back to the bottom).
+- Reviewer fail #1 (valid): onScrollToTop fires only after the ~0.3 s animation, and a streamed token's scrollToEnd in that window cancels the system animation on iOS. Fixed by catching the tap as it starts: `isSystemScrollUp` on `onScroll`, i.e. the list moving up to away from the bottom with no drag in progress. The app only scrolls toward the bottom; the keyboard closing stays near the bottom; the mount-time onScroll at 0 has no previous offset. This brings back onScroll, which 10.14 had removed for misreading the app's own scrolls; the new rule avoids both old traps, and the static guard now requires onScroll to go through isSystemScrollUp.
+- Pass on re-review. Folded in its optional hardening (also applies in "settling" after a release at the bottom) and a docstring fix. iOS check in BLOCKED.md.
