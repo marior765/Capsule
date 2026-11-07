@@ -36,7 +36,7 @@ hardware-green — ticking these off is yours to do, after verifying on a device
 - **10.42 Android PCM** → retry after 10.44, with a safety net (10.46).
 - **Voice recordings** → delete right after transcription or cancel; wipe `cache/ExpoAudio` too (10.45).
 - **iOS status-bar tap** → stops follow-scroll like a drag up (10.47).
-- **Route testIDs** → one pass over the remaining gaps + a guard test (10.48).
+- **Route testIDs** → one pass over the remaining gaps + a guard test (10.48). Turned out already done by 8.10 (guard test exists and passes); my gap count was a grep miscount.
 - **Personas in conversation export** → carry the persona (10.49).
 - **App lock follow-ups** → "set up Face ID again" (10.50) and the Android fingerprint-cancel notice (10.51). Not chosen: iOS reinstall key-without-data detection.
 - **Wipe audit** → keep one "Data wiped" entry in the fresh database (10.52).
@@ -1045,7 +1045,9 @@ appears on the first reminder, not at app start; a reminder fires at its
 time with the app closed and in the foreground; capsule delete and the
 wipe cancel pending ones. Still to build: the reminder UI on the capsule
 screen.
-### STALE (2026-11-07: 20 of 35 route files already use createComponentTestIDs; remaining gaps are step 10.48) — `src/app/` routes have no testID coverage at all
+### RESOLVED by 8.10 (stale; reconciled in 10.48, 2026-11-07) — `src/app/` routes have no testID coverage at all
+
+8.10 added `src/shared/testing/__tests__/routeTestIDs.test.ts`, a guard that every interactive element in every route has a testID from its testIDs object; it passes. The "gaps" counted on 2026-11-07 were a grep miscount (multi-line tags).
 CLAUDE.md's hard rule: "Every interactive UI element must have a testID —
 always via the component's `testIDs` object, never a hardcoded string
 inline." Confirmed via `grep -rln "createComponentTestIDs" src/app/` →
