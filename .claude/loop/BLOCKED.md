@@ -1304,6 +1304,9 @@ Box ticked (logic proven in Jest; the reviewer traced both platforms' native pat
 
 **To finish it:** (1) in `AppLockGate`, re-read `hasBiometricUnlock()` when it relocks (the AppState "active" branch before `setRelocked(true)`), with a gate test; (2) apply the patch; (3) its BLOCKED device check (iPhone: no prompt at setup, Face ID asked at next unlock; Android: prompt at setup, cancel leaves passphrase only) then holds in-session. Suggest doing (1) as its own small step first.
 
+## 10.51 Android fingerprint cancel while turning the lock on — device check (2026-11-09)
+Done in code (box unchecked: biometrics are native). On an Android phone with a fingerprint enrolled: Privacy → turn app lock on with "Also unlock with Face ID / fingerprint" on → when the fingerprint prompt appears, cancel it → an alert "App lock is on — Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase…" appears; tap OK → the app restarts to the lock screen offering the passphrase only. Accepting the prompt instead restarts straight away with fingerprint unlock offered. (iPhone shows no prompt at this point, so the alert only appears there if Face ID can't store the key.)
+
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.
 

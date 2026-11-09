@@ -92,9 +92,21 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
     setBusy(true);
     setError(null);
     try {
-      await turnOnAppLock(passphrase, {
-        biometrics: biometricAvailable && useBiometrics,
+      const wanted = biometricAvailable && useBiometrics;
+      const { biometricsSetUp } = await turnOnAppLock(passphrase, {
+        biometrics: wanted,
       });
+      if (wanted && !biometricsSetUp) {
+        // Said before the restart (10.51): e.g. the Android fingerprint
+        // prompt was cancelled. Not dismissable: the restart must happen.
+        Alert.alert(
+          "App lock is on",
+          "Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase. To add it, turn app lock off and on again.",
+          [{ text: "OK", onPress: onChanged }],
+          { cancelable: false },
+        );
+        return;
+      }
       onChanged();
     } catch (e) {
       finish(e, "Couldn't turn on app lock.");

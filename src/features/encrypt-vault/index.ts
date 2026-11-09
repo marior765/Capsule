@@ -193,6 +193,11 @@ export function forgetStalePlainCopy(): void {
  * biometric copy of the key stored (the OS prompt can take a while — the
  * plaintext must not wait on it).
  *
+ * Resolves with whether biometric unlock was actually set up (10.51): with
+ * `biometrics` asked for, the OS may still refuse (no face/fingerprint
+ * enrolled, or the Android prompt cancelled), and the lock is then on with
+ * the passphrase only.
+ *
  * Any failure before the plain file is deleted undoes the change: the plain
  * database is reopened as it was and the encrypted copy removed. One
  * exception: if the saved key can't be forgotten, the encrypted copy is
@@ -201,7 +206,7 @@ export function forgetStalePlainCopy(): void {
 export async function turnOnAppLock(
   passphrase: string,
   options: { biometrics: boolean },
-): Promise<void> {
+): Promise<{ biometricsSetUp: boolean }> {
   await assertCanSetUp(passphrase);
   if (openDatabaseFile() === "vault") {
     throw new Error("The encrypted database is already open");
@@ -267,18 +272,26 @@ export async function turnOnAppLock(
   } catch {
     leftover = true; // stays marked stale: removed at the next unlock
   }
+  let biometricsSetUp = false;
   if (options.biometrics) {
     try {
       await storeBiometricKey(masterKeyHex);
+      biometricsSetUp = true;
     } catch {
-      // No biometrics enrolled (or refused): the passphrase still unlocks.
+      // No biometrics enrolled, or the prompt was cancelled (Android asks
+      // when the copy is saved): the passphrase still unlocks. Reported to
+      // the caller (10.51) rather than silently skipped.
     }
   }
   if (leftover) {
     throw new LeftoverCopyError(
-      "App lock is on, but the unencrypted copy couldn't be removed yet. It will be removed the next time you unlock Capsule.",
+      "App lock is on, but the unencrypted copy couldn't be removed yet. It will be removed the next time you unlock Capsule." +
+        (options.biometrics && !biometricsSetUp
+          ? " Face ID / fingerprint wasn't set up, so unlock with your passphrase. To add it, turn app lock off and on again."
+          : ""),
     );
   }
+  return { biometricsSetUp };
 }
 
 /**
