@@ -43,10 +43,8 @@ import {
  * has an open `db` handle (see BLOCKED.md).
  *
  * Erasing everything (4.7) is the app layer's `eraseEverything`: it runs
- * `features/wipe-data` and then this module's `forgetVaultKeys`. Its audit
- * entry is erased along with the data it records — whether wipe audit
- * entries need a home outside the store being wiped is an open question
- * (see BLOCKED.md).
+ * `features/wipe-data` and then this module's `forgetVaultKeys`, and then
+ * records the wipe as one entry in the fresh database (10.52).
  */
 
 const VAULT_STORAGE_KEY = "encryptVault.wrappedMasterKey";

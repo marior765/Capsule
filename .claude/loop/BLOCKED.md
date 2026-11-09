@@ -488,7 +488,7 @@ wiring exists. Not a bug to fix in this step (it needs 4.2's app-lock gate
 to exist first) — flagged here so it isn't mistaken for "done, just
 unverified" when it's closer to "correctly built, not yet connected."
 
-**A related open design question, not decided here:** `resetVault()` (the
+**RESOLVED (user decision 2026-11-07, step 10.52):** after a full wipe the fresh database keeps one "wipe" audit entry. Original note: **A related open design question, not decided here:** `resetVault()` (the
 wipe-and-restart recovery path) writes a `"wipe"` audit entry before
 deleting the database — but `deleteDb()` then deletes that very entry along
 with everything else, so a *successful* reset leaves no durable trace of

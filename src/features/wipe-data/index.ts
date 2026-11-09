@@ -34,10 +34,9 @@ import { RECORDING_CACHE_DIRECTORIES } from "@/shared/stt";
  * having already destroyed data the wipe never actually finished). Then log
  * the audit entry while the db is still open and writable. Then
  * `deleteDb()` (both database files), and clear MMKV settings last.
- * Caveat: the audit entry does not survive the wipe it records, since
- * `deleteDb()` removes the audit table along with everything else — whether
- * a wipe audit entry needs a home outside the store being wiped is an open
- * question.
+ * The audit entry written here goes with the database `deleteDb()` removes;
+ * the lasting record is written afterwards by the app layer's
+ * `eraseEverything` (10.52), into the fresh database the app starts with.
  *
  * Doesn't touch the app-lock keys — `features/encrypt-vault` owns those,
  * and features can't import each other. The app layer's `eraseEverything`
@@ -63,7 +62,8 @@ export async function wipeAllData(db: SQLiteDatabase | null): Promise<void> {
   RECORDING_CACHE_DIRECTORIES.forEach(deleteCacheDirectoryIfExists);
 
   // `db` is null when erasing from the lock screen: nothing is open, and
-  // opening a database just to log would create one.
+  // this function doesn't create one just to log (eraseEverything creates
+  // the fresh one afterwards, on purpose, for the lasting record).
   if (db !== null) {
     insertAuditEntry(db, {
       id: generateId(),

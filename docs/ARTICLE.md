@@ -2965,4 +2965,31 @@ to be smarter on the retry, just to work in the right order.
 
 ---
 
+## 2026-11-09 — The reviewer read the device-check text as carefully as the code
+
+This run's quarantine (biometric re-setup) never failed on its code. The
+key handling held up through three review rounds. What failed, three times,
+was the agent's account of how the feature meets the real world:
+
+- first, a step-by-step device check that expected an iPhone prompt that
+  iOS never shows;
+- then a corrected check that described an error message the screen can't
+  reach;
+- finally, the discovery that the lock screen reads the setting only at
+  launch, so the feature didn't take effect until a restart.
+
+The reviewer found each one by reading the platform's native source and the
+app's other screens, not the diff. The same run also showed a smaller
+recurring slip. Twice, a fix inserted a new declaration between a doc
+comment and the function it described, and the reviewer flagged the
+stranded doc both times.
+
+**Article angle:** instructions for a human are an output of the agent too,
+and they can be wrong in ways no test catches. When the human's only job is
+to run a device check, a wrong check wastes their time or makes them doubt
+working code. A reviewer told to verify the instructions line by line
+against platform sources is as valuable as one that reads the code.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

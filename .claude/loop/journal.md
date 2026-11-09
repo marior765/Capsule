@@ -5359,3 +5359,14 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - `turnOnAppLock` resolves `{ biometricsSetUp }` (it used to swallow a refused biometric write), and the leftover-copy message notes it too. `AppLockSettings` shows a non-dismissable "App lock is on — Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase. To add it, turn app lock off and on again." before restarting.
 - Reviewer fail #1 (valid): the widget's `wanted &&` guard was untested, so removing it would have alerted everyone who turned biometrics off. Added that test (a Switch needs `valueChange`, not a press) plus the minors. Pass on re-review.
 - Applied the 10.50 lesson up front: the reviewer was told to check the device-check text against real platform behaviour, and confirmed the gate re-reads the flag after the restart.
+
+## Beat 147 — 10.52 the wipe leaves one record (done, 3 attempts)
+- `eraseEverything` (app layer), after the wipe and AFTER the lock keys are forgotten, opens the fresh database, runs the app's migrations, and writes one "wipe" audit entry ("Everything was erased; the activity log starts again here."; the log labels it "Data wiped"). Best effort with a local warning: a failed log line can't make a successful erase look failed. Tests pin both orderings (no record if the wipe or the key-forgetting fails). An old test asserting "no database is created" was deliberately rewritten, since that behaviour is what the user chose to change.
+- Reviewer fails #1 and #2 were both comments: (1) doc comments elsewhere still called the lost wipe record an open question; (2) my fix inserted a constant between eraseEverything's JSDoc and the function, stranding the doc. That's the same mistake as 10.49. Habit to keep: when adding a declaration near a documented one, put it above the doc block, never between doc and code.
+
+## Run summary — 2026-11-07..09 cloud session (beats 137–147)
+- Done: 10.44 (mic always stops), 10.45 (recordings deleted after use), 10.47 (iOS status-bar tap), 10.49 (persona travels with a conversation), 10.52 (wipe record).
+- Done in code, waiting for a device: 10.46 (+10.42, Android PCM voice), 10.51 (fingerprint-cancel notice).
+- Reconciled as already done: 10.48 (route testIDs, by 8.10; my grep miscount had created the step).
+- Quarantined: 10.50 (biometric re-setup), patch saved; prerequisite filed: AppLockGate must refresh its biometrics flag on relock.
+- Nothing left that the loop can do unattended.

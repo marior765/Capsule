@@ -218,7 +218,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.49 Exporting a single conversation (or the conversations vault) carries its persona; import adds the persona if it's missing, so `personaId` no longer dangles
 - [ ] 10.50 App lock: "Set up Face ID / fingerprint again" control for when the OS invalidated the biometric key copy (new face or finger enrolled)
 - [ ] 10.51 App lock on Android: cancelling the fingerprint prompt while turning the lock on tells the user biometrics weren't set up (instead of silently skipping)
-- [ ] 10.52 After a full wipe, the fresh database gets one "Data wiped" audit entry (the wipe's own record no longer disappears with the data)
+- [x] 10.52 After a full wipe, the fresh database gets one "Data wiped" audit entry (the wipe's own record no longer disappears with the data)
 
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format
