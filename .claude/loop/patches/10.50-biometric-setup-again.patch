@@ -1,0 +1,520 @@
+diff --git a/src/features/encrypt-vault/__tests__/biometric-setup.test.ts b/src/features/encrypt-vault/__tests__/biometric-setup.test.ts
+new file mode 100644
+index 0000000..1c48d76
+--- /dev/null
++++ b/src/features/encrypt-vault/__tests__/biometric-setup.test.ts
+@@ -0,0 +1,136 @@
++// Tests for step 10.50 — written before implementation (TDD). "hard" depth:
++// it handles the vault's master key.
++//
++// When the OS invalidates the biometric copy of the key (a new face or
++// fingerprint enrolled), biometric unlock kept failing until the lock was
++// turned off and on again. setUpBiometricUnlock(passphrase) stores a fresh
++// biometric copy (or a first one, for a lock turned on without biometrics).
++import { clearAllSettings } from "@/shared/storage";
++import {
++  __resetSecureStoreMock,
++  deleteItemAsync,
++  setItemAsync,
++} from "@/__mocks__/expo-secure-store";
++import { __resetSqliteMock } from "@/__mocks__/expo-sqlite";
++import { _resetDbForTesting, openDb, runMigrations } from "@/shared/db";
++import { auditMigration, getAllAuditEntries } from "@/entities/audit";
++import {
++  BiometricSetupError,
++  hasBiometricUnlock,
++  setUpBiometricUnlock,
++  turnOnAppLock,
++  unlockVault,
++  unlockVaultWithBiometrics,
++  VaultUnlockError,
++} from "../index";
++
++const PASS = "correct horse battery staple";
++const BIOMETRIC_KEY = "encryptVault.biometricMasterKey";
++
++beforeEach(() => {
++  clearAllSettings();
++  __resetSecureStoreMock();
++  __resetSqliteMock();
++  _resetDbForTesting();
++  runMigrations(openDb(), [auditMigration]);
++});
++
++/** Makes the OS refuse to store a biometric-protected item. */
++async function withBiometricWritesRefused<T>(work: () => Promise<T>) {
++  const original = setItemAsync.getMockImplementation()!;
++  setItemAsync.mockImplementation(
++    async (key: string, value: string, options?: unknown) => {
++      if (
++        (options as { requireAuthentication?: boolean } | undefined)
++          ?.requireAuthentication
++      ) {
++        throw new Error("User canceled");
++      }
++      return original(key, value);
++    },
++  );
++  try {
++    return await work();
++  } finally {
++    setItemAsync.mockImplementation(original);
++  }
++}
++
++describe("setUpBiometricUnlock (10.50)", () => {
++  it("restores biometric unlock after the OS invalidated the key copy", async () => {
++    await turnOnAppLock(PASS, { biometrics: true });
++    const masterKey = await unlockVault(PASS);
++    // The OS drops the protected item when a new face/finger is enrolled.
++    await deleteItemAsync(BIOMETRIC_KEY);
++    await expect(unlockVaultWithBiometrics()).rejects.toThrow(VaultUnlockError);
++
++    await setUpBiometricUnlock(PASS);
++
++    await expect(unlockVaultWithBiometrics()).resolves.toBe(masterKey);
++    expect(await hasBiometricUnlock()).toBe(true);
++  });
++
++  it("sets up biometric unlock for a lock that was turned on without it", async () => {
++    await turnOnAppLock(PASS, { biometrics: false });
++    expect(await hasBiometricUnlock()).toBe(false);
++
++    await setUpBiometricUnlock(PASS);
++
++    expect(await hasBiometricUnlock()).toBe(true);
++    await expect(unlockVaultWithBiometrics()).resolves.toBe(
++      await unlockVault(PASS),
++    );
++  });
++
++  it("refuses a wrong passphrase and changes nothing", async () => {
++    await turnOnAppLock(PASS, { biometrics: false });
++    setItemAsync.mockClear();
++
++    await expect(setUpBiometricUnlock("wrong")).rejects.toThrow(
++      VaultUnlockError,
++    );
++    expect(setItemAsync).not.toHaveBeenCalled();
++    expect(await hasBiometricUnlock()).toBe(false);
++  });
++
++  it("refuses while app lock is off", async () => {
++    await expect(setUpBiometricUnlock(PASS)).rejects.toThrow(VaultUnlockError);
++  });
++
++  it("when the OS refuses (prompt cancelled), says so and leaves biometrics off", async () => {
++    await turnOnAppLock(PASS, { biometrics: true });
++    await deleteItemAsync(BIOMETRIC_KEY);
++
++    await withBiometricWritesRefused(async () => {
++      await expect(setUpBiometricUnlock(PASS)).rejects.toThrow(
++        BiometricSetupError,
++      );
++    });
++    // No flag claiming biometrics work while the key copy is missing.
++    expect(await hasBiometricUnlock()).toBe(false);
++    // The passphrase still unlocks.
++    await expect(unlockVault(PASS)).resolves.toBeTruthy();
++  });
++
++  it("logs that biometric unlock was set up", async () => {
++    await turnOnAppLock(PASS, { biometrics: false });
++    await setUpBiometricUnlock(PASS);
++    const details = getAllAuditEntries(openDb()).map((e) => e.detail);
++    expect(details).toContain("Face ID / fingerprint unlock set up");
++  });
++});
++
++describe("setUpBiometricUnlock — a failed audit write (10.50)", () => {
++  it("still reports success, and warns locally", async () => {
++    await turnOnAppLock(PASS, { biometrics: false });
++    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
++    openDb().execSync("DROP TABLE audit_entries;");
++    try {
++      await expect(setUpBiometricUnlock(PASS)).resolves.toBeUndefined();
++      expect(await hasBiometricUnlock()).toBe(true);
++      expect(warn).toHaveBeenCalledTimes(1);
++    } finally {
++      warn.mockRestore();
++    }
++  });
++});
+diff --git a/src/features/encrypt-vault/index.ts b/src/features/encrypt-vault/index.ts
+index 4d7fd28..10c8daa 100644
+--- a/src/features/encrypt-vault/index.ts
++++ b/src/features/encrypt-vault/index.ts
+@@ -81,6 +81,18 @@ export class LeftoverCopyError extends Error {
+   }
+ }
+ 
++/**
++ * The OS refused to store the biometric copy of the key (the prompt was
++ * cancelled, or no face/fingerprint is enrolled). The passphrase still
++ * unlocks; biometric unlock stays off.
++ */
++export class BiometricSetupError extends Error {
++  constructor(message = "Face ID / fingerprint couldn't be set up") {
++    super(message);
++    this.name = "BiometricSetupError";
++  }
++}
++
+ export class VaultUnlockError extends Error {
+   constructor(message = "Incorrect passphrase or corrupted vault") {
+     super(message);
+@@ -340,6 +352,45 @@ async function storeBiometricKey(masterKeyHex: string): Promise<void> {
+   await setItemAsync(BIOMETRIC_FLAG, "1");
+ }
+ 
++/**
++ * Sets up biometric unlock again (10.50) — e.g. after the OS invalidated the
++ * biometric copy of the key because a new face or fingerprint was enrolled,
++ * or for a lock that was turned on without biometrics. Checks the passphrase
++ * (throws `VaultUnlockError` if it's wrong or the lock is off), forgets the
++ * old copy, then stores a fresh one. If the OS refuses, throws
++ * `BiometricSetupError` and biometric unlock is left off, never half-set —
++ * including for a user whose biometrics still worked and who cancels the
++ * prompt (Android prompts when the copy is written; iOS only at the next
++ * unlock). The passphrase always still unlocks.
++ */
++export async function setUpBiometricUnlock(passphrase: string): Promise<void> {
++  const masterKeyHex = await unlockVault(passphrase);
++  // Flag first, then the copy: no flag may claim a copy that isn't there.
++  await deleteItemAsync(BIOMETRIC_FLAG);
++  await deleteItemAsync(BIOMETRIC_KEY);
++  try {
++    await storeBiometricKey(masterKeyHex);
++  } catch {
++    await deleteItemAsync(BIOMETRIC_FLAG).catch(() => {});
++    throw new BiometricSetupError();
++  }
++  if (openDatabaseFile() !== null) {
++    try {
++      insertAuditEntry(openDb(), {
++        id: generateId(),
++        action: "vault_setup",
++        detail: "Face ID / fingerprint unlock set up",
++        createdAt: Date.now(),
++      });
++    } catch (e) {
++      // The setup itself succeeded; a failed log entry mustn't report it
++      // as failed (the screen would say it wasn't set up when it was). The
++      // gap is surfaced locally (dev console only; nothing leaves the device).
++      console.warn("Couldn't write the audit entry for biometric setup", e);
++    }
++  }
++}
++
+ /** Whether the vault can be unlocked with biometrics. Never prompts. */
+ export async function hasBiometricUnlock(): Promise<boolean> {
+   return (await getItemAsync(BIOMETRIC_FLAG)) === "1";
+diff --git a/src/widgets/AppLockSettings/AppLockSettings.tsx b/src/widgets/AppLockSettings/AppLockSettings.tsx
+index ec39683..e1905ce 100644
+--- a/src/widgets/AppLockSettings/AppLockSettings.tsx
++++ b/src/widgets/AppLockSettings/AppLockSettings.tsx
+@@ -6,6 +6,7 @@ import {
+   hasBiometricUnlock,
+   isVaultConfigured,
+   LeftoverCopyError,
++  setUpBiometricUnlock,
+   turnOffAppLock,
+   turnOnAppLock,
+ } from "@/features/encrypt-vault";
+@@ -48,7 +49,10 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
+   const [confirmation, setConfirmation] = useState("");
+   const [lockAfter, setLockAfterState] = useState<LockAfter>(getLockAfter);
+   const [error, setError] = useState<string | null>(null);
++  const [notice, setNotice] = useState<string | null>(null);
+   const [busy, setBusy] = useState(false);
++  // Which action `busy` belongs to, so each button only labels its own.
++  const [settingUpBiometrics, setSettingUpBiometrics] = useState(false);
+   // A ref, not state: a fast double tap must not start two lock changes
+   // before the busy re-render lands.
+   const inFlight = useRef(false);
+@@ -125,6 +129,7 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
+   };
+ 
+   const handleTurnOff = () => {
++    setNotice(null);
+     if (!passphrase) {
+       setError("Enter your passphrase to turn app lock off.");
+       return;
+@@ -143,6 +148,42 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
+     );
+   };
+ 
++  // 10.50: after the OS invalidated the biometric key copy (a new face or
++  // fingerprint enrolled), or for a lock turned on without biometrics.
++  const handleSetUpBiometrics = async () => {
++    if (!passphrase) {
++      setError("Enter your passphrase to set up Face ID / fingerprint.");
++      return;
++    }
++    if (inFlight.current) return;
++    inFlight.current = true;
++    setBusy(true);
++    setSettingUpBiometrics(true);
++    setError(null);
++    setNotice(null);
++    try {
++      await setUpBiometricUnlock(passphrase);
++      setBiometricOn(true);
++      setPassphrase("");
++      setNotice("Face ID / fingerprint unlock is set up.");
++    } catch (e) {
++      if (e instanceof Error && e.name === "VaultUnlockError") {
++        setError("That passphrase didn't work.");
++      } else if (e instanceof Error && e.name === "BiometricSetupError") {
++        setBiometricOn(false);
++        setError(
++          "Face ID / fingerprint wasn't set up. Your passphrase still unlocks Capsule.",
++        );
++      } else {
++        setError("Couldn't set up Face ID / fingerprint.");
++      }
++    } finally {
++      inFlight.current = false;
++      setBusy(false);
++      setSettingUpBiometrics(false);
++    }
++  };
++
+   const handleLockAfter = (value: LockAfter) => {
+     setLockAfter(value);
+     setLockAfterState(value);
+@@ -191,7 +232,7 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
+           </Pressable>
+         ))}
+ 
+-        <Text style={styles.label}>Turn off app lock</Text>
++        <Text style={styles.label}>Your passphrase</Text>
+         <TextInput
+           testID={testIDs.inputs.currentPassphrase}
+           style={styles.input}
+@@ -203,6 +244,33 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
+           accessibilityLabel="Current passphrase"
+         />
+         {errorText}
++        {notice !== null && (
++          <Text
++            testID={testIDs.texts.notice}
++            style={styles.meta}
++            accessibilityLiveRegion="polite"
++          >
++            {notice}
++          </Text>
++        )}
++        {biometricAvailable && (
++          <Pressable
++            testID={testIDs.buttons.setUpBiometrics}
++            style={styles.option}
++            onPress={() => void handleSetUpBiometrics()}
++            disabled={busy}
++            accessibilityRole="button"
++            accessibilityState={{ disabled: busy, busy }}
++          >
++            <Text style={styles.optionLabel}>
++              {settingUpBiometrics
++                ? "Setting up…"
++                : biometricOn
++                  ? "Set up Face ID / fingerprint again"
++                  : "Set up Face ID / fingerprint"}
++            </Text>
++          </Pressable>
++        )}
+         <Pressable
+           testID={testIDs.buttons.turnOff}
+           style={styles.secondary}
+@@ -212,7 +280,9 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
+           accessibilityState={{ disabled: busy, busy }}
+         >
+           <Text style={styles.secondaryLabel}>
+-            {busy ? "Turning off…" : "Turn off app lock"}
++            {busy && !settingUpBiometrics
++              ? "Turning off…"
++              : "Turn off app lock"}
+           </Text>
+         </Pressable>
+       </View>
+@@ -355,14 +425,14 @@ const styles = StyleSheet.create((theme) => ({
+ 
+ const testIDs = createComponentTestIDs("AppLockSettings", {
+   containers: ["root"] as const,
+-  texts: ["status", "error"] as const,
++  texts: ["status", "error", "notice"] as const,
+   inputs: [
+     "passphrase",
+     "confirmation",
+     "currentPassphrase",
+     "biometrics",
+   ] as const,
+-  buttons: ["turnOn", "turnOff"] as const,
++  buttons: ["turnOn", "turnOff", "setUpBiometrics"] as const,
+   pressables: ["lockAfter"] as const,
+ });
+ 
+diff --git a/src/widgets/AppLockSettings/__tests__/AppLockSettings.biometric.render.test.tsx b/src/widgets/AppLockSettings/__tests__/AppLockSettings.biometric.render.test.tsx
+new file mode 100644
+index 0000000..65c0515
+--- /dev/null
++++ b/src/widgets/AppLockSettings/__tests__/AppLockSettings.biometric.render.test.tsx
+@@ -0,0 +1,158 @@
++// Tests for step 10.50 — written before implementation (TDD)
++//
++// With app lock on, the Privacy screen offers to set up Face ID /
++// fingerprint again (after the OS invalidated it) or for the first time,
++// using the passphrase. The vault logic itself is tested in
++// features/encrypt-vault; this checks the screen wires it up and says what
++// happened in plain words.
++import { render, screen, userEvent } from "@testing-library/react-native";
++import { AppLockSettings } from "../AppLockSettings";
++
++const mockSetUp = jest.fn<Promise<void>, [string]>();
++let mockBiometricOn = true;
++let mockBiometricAvailable = true;
++
++jest.mock("@/features/encrypt-vault", () => {
++  const actual = jest.requireActual<typeof import("@/features/encrypt-vault")>(
++    "@/features/encrypt-vault",
++  );
++  return {
++    ...actual,
++    isVaultConfigured: async () => true,
++    hasBiometricUnlock: async () => mockBiometricOn,
++    setUpBiometricUnlock: (passphrase: string) => mockSetUp(passphrase),
++  };
++});
++jest.mock("@/features/app-lock", () => {
++  const actual = jest.requireActual<typeof import("@/features/app-lock")>(
++    "@/features/app-lock",
++  );
++  return {
++    ...actual,
++    isBiometricAvailable: async () => mockBiometricAvailable,
++  };
++});
++
++const { buttons, inputs, texts } = AppLockSettings.testIDs;
++
++beforeEach(() => {
++  mockSetUp.mockReset();
++  mockSetUp.mockResolvedValue(undefined);
++  mockBiometricOn = true;
++  mockBiometricAvailable = true;
++});
++
++async function renderOn() {
++  await render(<AppLockSettings onChanged={jest.fn()} />);
++  await screen.findByTestId(buttons.setUpBiometrics);
++}
++
++describe("AppLockSettings — set up Face ID / fingerprint (10.50)", () => {
++  it("sets it up again with the passphrase and says so", async () => {
++    const user = userEvent.setup();
++    await renderOn();
++    expect(
++      screen.getByText("Set up Face ID / fingerprint again"),
++    ).toBeOnTheScreen();
++
++    await user.type(screen.getByTestId(inputs.currentPassphrase), "secret");
++    await user.press(screen.getByTestId(buttons.setUpBiometrics));
++
++    expect(mockSetUp).toHaveBeenCalledWith("secret");
++    expect(await screen.findByTestId(texts.notice)).toHaveTextContent(
++      "Face ID / fingerprint unlock is set up.",
++    );
++    expect(screen.getByTestId(inputs.currentPassphrase)).toHaveDisplayValue("");
++  });
++
++  it("offers a first-time setup when the lock was turned on without it", async () => {
++    mockBiometricOn = false;
++    await renderOn();
++    expect(screen.getByText("Set up Face ID / fingerprint")).toBeOnTheScreen();
++  });
++
++  it("asks for the passphrase first", async () => {
++    const user = userEvent.setup();
++    await renderOn();
++    await user.press(screen.getByTestId(buttons.setUpBiometrics));
++
++    expect(mockSetUp).not.toHaveBeenCalled();
++    expect(screen.getByTestId(texts.error)).toHaveTextContent(
++      "Enter your passphrase to set up Face ID / fingerprint.",
++    );
++  });
++
++  it("says when the passphrase is wrong", async () => {
++    const user = userEvent.setup();
++    const { VaultUnlockError } = jest.requireActual<
++      typeof import("@/features/encrypt-vault")
++    >("@/features/encrypt-vault");
++    mockSetUp.mockRejectedValue(new VaultUnlockError());
++    await renderOn();
++    await user.type(screen.getByTestId(inputs.currentPassphrase), "nope");
++    await user.press(screen.getByTestId(buttons.setUpBiometrics));
++
++    expect(await screen.findByTestId(texts.error)).toHaveTextContent(
++      "That passphrase didn't work.",
++    );
++  });
++
++  it("says when the OS didn't set it up, and that the passphrase still works", async () => {
++    const user = userEvent.setup();
++    const { BiometricSetupError } = jest.requireActual<
++      typeof import("@/features/encrypt-vault")
++    >("@/features/encrypt-vault");
++    mockSetUp.mockRejectedValue(new BiometricSetupError());
++    await renderOn();
++    await user.type(screen.getByTestId(inputs.currentPassphrase), "secret");
++    await user.press(screen.getByTestId(buttons.setUpBiometrics));
++
++    expect(await screen.findByTestId(texts.error)).toHaveTextContent(
++      "Face ID / fingerprint wasn't set up. Your passphrase still unlocks Capsule.",
++    ); // Biometric unlock is now off, so the button offers a first-time setup.
++    expect(screen.getByText("Set up Face ID / fingerprint")).toBeOnTheScreen();
++  });
++
++  // Reviewer findings (10.50): the turn-off button mustn't claim to be
++  // turning off while biometrics are being set up, and an old notice
++  // mustn't linger next to a later error.
++  it("shows which action is running", async () => {
++    const user = userEvent.setup();
++    let finish: () => void = () => {};
++    mockSetUp.mockImplementation(
++      () =>
++        new Promise<void>((resolve) => {
++          finish = resolve;
++        }),
++    );
++    await renderOn();
++    await user.type(screen.getByTestId(inputs.currentPassphrase), "secret");
++    await user.press(screen.getByTestId(buttons.setUpBiometrics));
++
++    expect(screen.queryByText("Turning off…")).toBeNull();
++    expect(screen.getByText("Setting up…")).toBeOnTheScreen();
++    expect(screen.getByTestId(buttons.turnOff)).toBeDisabled();
++    finish();
++    expect(await screen.findByTestId(texts.notice)).toBeOnTheScreen();
++  });
++
++  it("clears the 'set up' notice when another action reports an error", async () => {
++    const user = userEvent.setup();
++    await renderOn();
++    await user.type(screen.getByTestId(inputs.currentPassphrase), "secret");
++    await user.press(screen.getByTestId(buttons.setUpBiometrics));
++    await screen.findByTestId(texts.notice);
++
++    // Turn off with an empty passphrase field: an error, and no stale notice.
++    await user.press(screen.getByTestId(buttons.turnOff));
++    expect(screen.getByTestId(texts.error)).toBeOnTheScreen();
++    expect(screen.queryByTestId(texts.notice)).toBeNull();
++  });
++
++  it("isn't offered on a device without Face ID / fingerprint", async () => {
++    mockBiometricAvailable = false;
++    await render(<AppLockSettings onChanged={jest.fn()} />);
++    await screen.findByTestId(buttons.turnOff);
++    expect(screen.queryByTestId(buttons.setUpBiometrics)).toBeNull();
++  });
++});

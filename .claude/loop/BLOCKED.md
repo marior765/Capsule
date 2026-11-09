@@ -1294,6 +1294,16 @@ iOS's expo-audio files go to `cache/ExpoAudio`, which the full wipe does
 ## 10.45 recordings deleted after use — light device check (non-blocking, 2026-11-07)
 Box ticked (logic proven in Jest; the reviewer traced both platforms' native paths and is ~90% sure the delete accepts real recorder URIs). To confirm: on iOS and Android, record a few voice messages, then look in the app's cache (`ExpoAudio/` on iOS, `Audio/` on Android): it should be empty. A failed delete is silent by design (best effort), so this is the only way to see it.
 
+## 10.50 — QUARANTINED: "Set up Face ID / fingerprint again" (2026-11-09)
+
+**Status:** three review rounds; the code is saved in `.claude/loop/patches/10.50-biometric-setup-again.patch` (applies cleanly to 3d933fd; `git apply` it). Main is unchanged.
+
+**What the patch does:** `setUpBiometricUnlock(passphrase)` + `BiometricSetupError` in `features/encrypt-vault` (checks the passphrase, forgets the old biometric copy and flag, stores a fresh copy, never leaves the flag on without a copy; audit entry, best effort with a local warning), and a "Set up Face ID / fingerprint (again)" button under "Your passphrase" in `AppLockSettings`, with plain-language messages and per-action busy labels. 1857 tests green with the patch, including the feature tests (real logic against the secure-store mock) and a widget render test.
+
+**Why quarantined:** round 1 — the device check claimed an iOS prompt at setup (expo-secure-store prompts on iOS only on read/update, not create); round 2 — the corrected iPhone check described a message the screen can't show (the button isn't offered without Face ID); round 3 — **the lock screen inside a session doesn't know about the change**: `src/app/providers/AppLockGate.tsx` reads `hasBiometricUnlock()` once at launch, so a first-time setup only takes effect after a restart, and after a cancelled re-setup the relock still offers a biometric button that can't work.
+
+**To finish it:** (1) in `AppLockGate`, re-read `hasBiometricUnlock()` when it relocks (the AppState "active" branch before `setRelocked(true)`), with a gate test; (2) apply the patch; (3) its BLOCKED device check (iPhone: no prompt at setup, Face ID asked at next unlock; Android: prompt at setup, cancel leaves passphrase only) then holds in-session. Suggest doing (1) as its own small step first.
+
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.
 
