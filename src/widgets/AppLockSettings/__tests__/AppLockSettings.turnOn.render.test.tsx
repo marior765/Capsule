@@ -79,6 +79,8 @@ describe("AppLockSettings — turning on with biometrics (10.51)", () => {
     expect(title).toBe("App lock is on");
     expect(message).toMatch(/Face ID \/ fingerprint wasn't set up/);
     expect(message).toMatch(/passphrase/);
+    // 10.54: points to the setup button rather than turning the lock off.
+    expect(message).toMatch(/"Set up Face ID \/ fingerprint" in Privacy/);
     // Not dismissable: the restart must happen.
     expect(alert.mock.calls[0][3]).toEqual({ cancelable: false });
     buttonsArg[0].onPress?.();

@@ -2,16 +2,16 @@
   "run": {
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
-    "beat": 149,
-    "status": "running",
-    "completedAt": "2026-11-09T19:27:08Z",
-    "completionNote": "Round-4 steps 10.44-10.52: 5 done, 10.46/10.51 done in code (device checks), 10.48 reconciled, 10.50 quarantined (patch saved; needs AppLockGate relock refresh).",
+    "beat": 150,
+    "status": "complete",
+    "completedAt": "2026-11-10T18:50:08Z",
+    "completionNote": "2026-11-10: 10.53 done; 10.54 (= 10.50) done in code, waiting for the device check. Nothing left unattended.",
     "resumedAt": "2026-11-10",
     "resumeNote": "Reopened 2026-11-10: 10.53 (lock gate refreshes biometrics on relock) and 10.54 (retry 10.50).",
     "lastBeatNote": "Beat 128 (2026-10-31): /loop /safe-loop all re-entered after PR #1 merge; no selectable step (remaining: 10.14 quarantined, 3.1 blocked, 8.1 + Phase 9 deferred, native steps awaiting device checks). Run stays complete."
   },
   "cursor": {
-    "step": "10.54",
+    "step": null,
     "phase": 10
   },
   "steps": {
@@ -989,7 +989,7 @@
       "notes": "Persona in conversation/vault export; validated, transactional import; reviewer pass on attempt 2."
     },
     "10.50": {
-      "status": "quarantined",
+      "status": "blocked",
       "class": "native",
       "attempts": 3,
       "failureSignatures": [
@@ -998,7 +998,7 @@
         "reviewer fail #3: AppLockGate reads hasBiometricUnlock() only at launch; a first-time setup only takes effect after restart, and a cancelled re-setup leaves a dead biometric button on relock"
       ],
       "checkpoint": "3d933fd",
-      "notes": "Quarantined at the attempt ceiling (3). Work saved in .claude/loop/patches/10.50-biometric-setup-again.patch. Blocked on AppLockGate refreshing its biometrics flag on relock; see BLOCKED.md."
+      "notes": "Done in code by 10.54 (2026-11-10); waiting for the device check in BLOCKED.md (\"10.50 / 10.54\")."
     },
     "10.51": {
       "status": "done",
@@ -1026,16 +1026,16 @@
       "class": "logic",
       "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "d658e9c",
+      "checkpoint": "22b82db",
       "notes": "Relock re-reads hasBiometricUnlock (ordered); reviewer pass on attempt 1."
     },
     "10.54": {
-      "status": "pending",
+      "status": "done",
       "class": "native",
       "attempts": 0,
       "failureSignatures": [],
-      "checkpoint": "",
-      "notes": ""
+      "checkpoint": "22b82db",
+      "notes": "Done in code (native, box unchecked): 10.50 patch on top of 10.53; reviewer pass on attempt 1."
     }
   },
   "quarantinedThisRun": [],
@@ -1043,6 +1043,6 @@
     "tsc": "pass",
     "jest": "pass",
     "eslint": "pass",
-    "at": "2026-11-10T18:40:14Z"
+    "at": "2026-11-10T18:50:08Z"
   }
 }

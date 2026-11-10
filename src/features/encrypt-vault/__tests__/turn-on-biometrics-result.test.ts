@@ -93,7 +93,7 @@ describe("turnOnAppLock reports whether biometrics were set up (10.51)", () => {
         /Face ID \/ fingerprint wasn't set up/,
       );
       expect((error as Error).message).toMatch(
-        /turn app lock off and on again/,
+        /"Set up Face ID \/ fingerprint" in Privacy/,
       );
     } finally {
       spy.mockRestore();

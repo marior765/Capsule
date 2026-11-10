@@ -6,6 +6,7 @@ import {
   hasBiometricUnlock,
   isVaultConfigured,
   LeftoverCopyError,
+  setUpBiometricUnlock,
   turnOffAppLock,
   turnOnAppLock,
 } from "@/features/encrypt-vault";
@@ -48,7 +49,10 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
   const [confirmation, setConfirmation] = useState("");
   const [lockAfter, setLockAfterState] = useState<LockAfter>(getLockAfter);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Which action `busy` belongs to, so each button only labels its own.
+  const [settingUpBiometrics, setSettingUpBiometrics] = useState(false);
   // A ref, not state: a fast double tap must not start two lock changes
   // before the busy re-render lands.
   const inFlight = useRef(false);
@@ -101,7 +105,7 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
         // prompt was cancelled. Not dismissable: the restart must happen.
         Alert.alert(
           "App lock is on",
-          "Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase. To add it, turn app lock off and on again.",
+          'Face ID / fingerprint wasn\'t set up, so Capsule will unlock with your passphrase. To add it, use "Set up Face ID / fingerprint" in Privacy.',
           [{ text: "OK", onPress: onChanged }],
           { cancelable: false },
         );
@@ -137,6 +141,7 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
   };
 
   const handleTurnOff = () => {
+    setNotice(null);
     if (!passphrase) {
       setError("Enter your passphrase to turn app lock off.");
       return;
@@ -153,6 +158,46 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
         },
       ],
     );
+  };
+
+  // 10.50: after the OS invalidated the biometric key copy (a new face or
+  // fingerprint enrolled), or for a lock turned on without biometrics.
+  const handleSetUpBiometrics = async () => {
+    if (!passphrase) {
+      setError("Enter your passphrase to set up Face ID / fingerprint.");
+      return;
+    }
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setSettingUpBiometrics(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await setUpBiometricUnlock(passphrase);
+      setBiometricOn(true);
+      setPassphrase("");
+      setNotice("Face ID / fingerprint unlock is set up.");
+    } catch (e) {
+      if (e instanceof Error && e.name === "VaultUnlockError") {
+        setError("That passphrase didn't work.");
+      } else if (e instanceof Error && e.name === "BiometricSetupError") {
+        setBiometricOn(false);
+        setError(
+          "Face ID / fingerprint wasn't set up. Your passphrase still unlocks Capsule.",
+        );
+      } else {
+        setError("Couldn't set up Face ID / fingerprint.");
+        // Something failed partway: show what is actually set up now.
+        void hasBiometricUnlock()
+          .catch(() => false)
+          .then(setBiometricOn);
+      }
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+      setSettingUpBiometrics(false);
+    }
   };
 
   const handleLockAfter = (value: LockAfter) => {
@@ -203,7 +248,7 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
           </Pressable>
         ))}
 
-        <Text style={styles.label}>Turn off app lock</Text>
+        <Text style={styles.label}>Your passphrase</Text>
         <TextInput
           testID={testIDs.inputs.currentPassphrase}
           style={styles.input}
@@ -215,6 +260,33 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
           accessibilityLabel="Current passphrase"
         />
         {errorText}
+        {notice !== null && (
+          <Text
+            testID={testIDs.texts.notice}
+            style={styles.meta}
+            accessibilityLiveRegion="polite"
+          >
+            {notice}
+          </Text>
+        )}
+        {biometricAvailable && (
+          <Pressable
+            testID={testIDs.buttons.setUpBiometrics}
+            style={styles.option}
+            onPress={() => void handleSetUpBiometrics()}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy, busy }}
+          >
+            <Text style={styles.optionLabel}>
+              {settingUpBiometrics
+                ? "Setting up…"
+                : biometricOn
+                  ? "Set up Face ID / fingerprint again"
+                  : "Set up Face ID / fingerprint"}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
           testID={testIDs.buttons.turnOff}
           style={styles.secondary}
@@ -224,7 +296,9 @@ export function AppLockSettings({ onChanged }: AppLockSettingsProps) {
           accessibilityState={{ disabled: busy, busy }}
         >
           <Text style={styles.secondaryLabel}>
-            {busy ? "Turning off…" : "Turn off app lock"}
+            {busy && !settingUpBiometrics
+              ? "Turning off…"
+              : "Turn off app lock"}
           </Text>
         </Pressable>
       </View>
@@ -367,14 +441,14 @@ const styles = StyleSheet.create((theme) => ({
 
 const testIDs = createComponentTestIDs("AppLockSettings", {
   containers: ["root"] as const,
-  texts: ["status", "error"] as const,
+  texts: ["status", "error", "notice"] as const,
   inputs: [
     "passphrase",
     "confirmation",
     "currentPassphrase",
     "biometrics",
   ] as const,
-  buttons: ["turnOn", "turnOff"] as const,
+  buttons: ["turnOn", "turnOff", "setUpBiometrics"] as const,
   pressables: ["lockAfter"] as const,
 });
 

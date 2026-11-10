@@ -79,6 +79,18 @@ export class LeftoverCopyError extends Error {
   }
 }
 
+/**
+ * The OS refused to store the biometric copy of the key (the prompt was
+ * cancelled, or no face/fingerprint is enrolled). The passphrase still
+ * unlocks; biometric unlock stays off.
+ */
+export class BiometricSetupError extends Error {
+  constructor(message = "Face ID / fingerprint couldn't be set up") {
+    super(message);
+    this.name = "BiometricSetupError";
+  }
+}
+
 export class VaultUnlockError extends Error {
   constructor(message = "Incorrect passphrase or corrupted vault") {
     super(message);
@@ -285,7 +297,7 @@ export async function turnOnAppLock(
     throw new LeftoverCopyError(
       "App lock is on, but the unencrypted copy couldn't be removed yet. It will be removed the next time you unlock Capsule." +
         (options.biometrics && !biometricsSetUp
-          ? " Face ID / fingerprint wasn't set up, so unlock with your passphrase. To add it, turn app lock off and on again."
+          ? ' Face ID / fingerprint wasn\'t set up, so unlock with your passphrase. To add it, use "Set up Face ID / fingerprint" in Privacy.'
           : ""),
     );
   }
@@ -349,6 +361,45 @@ async function storeBiometricKey(masterKeyHex: string): Promise<void> {
     authenticationPrompt: BIOMETRIC_PROMPT,
   });
   await setItemAsync(BIOMETRIC_FLAG, "1");
+}
+
+/**
+ * Sets up biometric unlock again (10.50) — e.g. after the OS invalidated the
+ * biometric copy of the key because a new face or fingerprint was enrolled,
+ * or for a lock that was turned on without biometrics. Checks the passphrase
+ * (throws `VaultUnlockError` if it's wrong or the lock is off), forgets the
+ * old copy, then stores a fresh one. If the OS refuses, throws
+ * `BiometricSetupError` and biometric unlock is left off, never half-set —
+ * including for a user whose biometrics still worked and who cancels the
+ * prompt (Android prompts when the copy is written; iOS only at the next
+ * unlock). The passphrase always still unlocks.
+ */
+export async function setUpBiometricUnlock(passphrase: string): Promise<void> {
+  const masterKeyHex = await unlockVault(passphrase);
+  // Flag first, then the copy: no flag may claim a copy that isn't there.
+  await deleteItemAsync(BIOMETRIC_FLAG);
+  await deleteItemAsync(BIOMETRIC_KEY);
+  try {
+    await storeBiometricKey(masterKeyHex);
+  } catch {
+    await deleteItemAsync(BIOMETRIC_FLAG).catch(() => {});
+    throw new BiometricSetupError();
+  }
+  if (openDatabaseFile() !== null) {
+    try {
+      insertAuditEntry(openDb(), {
+        id: generateId(),
+        action: "vault_setup",
+        detail: "Face ID / fingerprint unlock set up",
+        createdAt: Date.now(),
+      });
+    } catch (e) {
+      // The setup itself succeeded; a failed log entry mustn't report it
+      // as failed (the screen would say it wasn't set up when it was). The
+      // gap is surfaced locally (dev console only; nothing leaves the device).
+      console.warn("Couldn't write the audit entry for biometric setup", e);
+    }
+  }
 }
 
 /** Whether the vault can be unlocked with biometrics. Never prompts. */

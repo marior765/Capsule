@@ -160,7 +160,7 @@ fresh, empty app. (f) Confirm on disk (Xcode container / adb) that only one of
 `capsule.db` / `capsule-vault.db` remains after each change, and that
 `capsule-vault.db` is not readable as plain SQLite.
 
-**Known follow-ups, deliberately not done in 4.6:**
+**Known follow-ups, deliberately not done in 4.6** (since done: the invalidated-biometrics and Android-cancel items, by 10.54 and 10.51):
 - If the OS invalidates the biometric copy of the key (a new face or
   fingerprint enrolled), biometric unlock keeps failing until the lock is
   turned off and on again; the passphrase always works. A "set up Face ID
@@ -1294,18 +1294,31 @@ iOS's expo-audio files go to `cache/ExpoAudio`, which the full wipe does
 ## 10.45 recordings deleted after use — light device check (non-blocking, 2026-11-07)
 Box ticked (logic proven in Jest; the reviewer traced both platforms' native paths and is ~90% sure the delete accepts real recorder URIs). To confirm: on iOS and Android, record a few voice messages, then look in the app's cache (`ExpoAudio/` on iOS, `Audio/` on Android): it should be empty. A failed delete is silent by design (best effort), so this is the only way to see it.
 
-## 10.50 — QUARANTINED: "Set up Face ID / fingerprint again" (2026-11-09) — user decided 2026-11-10: steps 10.53 (gate refresh) then 10.54 (retry)
+## 10.50 / 10.54 "Set up Face ID / fingerprint again" — done in code by 10.54 (2026-11-10), needs a device check
 
-**Status:** three review rounds; the code is saved in `.claude/loop/patches/10.50-biometric-setup-again.patch` (applies cleanly to 3d933fd; `git apply` it). Main is unchanged.
+**History:** 10.50 was quarantined on 2026-11-09 after three review rounds. Round 3 found that `AppLockGate` read the biometric flag only at launch, so a change made in Privacy didn't reach the lock screen until a restart. 10.53 fixed that (the relock lock screen re-reads it). 10.54 re-applied the saved patch on top.
 
-**What the patch does:** `setUpBiometricUnlock(passphrase)` + `BiometricSetupError` in `features/encrypt-vault` (checks the passphrase, forgets the old biometric copy and flag, stores a fresh copy, never leaves the flag on without a copy; audit entry, best effort with a local warning), and a "Set up Face ID / fingerprint (again)" button under "Your passphrase" in `AppLockSettings`, with plain-language messages and per-action busy labels. 1857 tests green with the patch, including the feature tests (real logic against the secure-store mock) and a widget render test.
+**What's on main now:** `setUpBiometricUnlock(passphrase)` + `BiometricSetupError` in `features/encrypt-vault`: it checks the passphrase, forgets the old biometric copy and flag, then stores a fresh copy. It never leaves the flag on without a copy, and its audit entry is best effort with a local warning. Under "Your passphrase", `AppLockSettings` has a "Set up Face ID / fingerprint again" button (or "Set up Face ID / fingerprint" when it's off) with plain-language messages. 10.51's alert and leftover-copy note now point to this button instead of "turn app lock off and on again". The plan boxes for 10.50 and 10.54 stay unticked until the check below.
 
-**Why quarantined:** round 1 — the device check claimed an iOS prompt at setup (expo-secure-store prompts on iOS only on read/update, not create); round 2 — the corrected iPhone check described a message the screen can't show (the button isn't offered without Face ID); round 3 — **the lock screen inside a session doesn't know about the change**: `src/app/providers/AppLockGate.tsx` reads `hasBiometricUnlock()` once at launch, so a first-time setup only takes effect after a restart, and after a cancelled re-setup the relock still offers a biometric button that can't work.
+How the platforms differ (expo-secure-store 56): **Android** asks for the fingerprint/face when the key copy is written, so setup shows a prompt. **iOS** doesn't prompt when a new protected item is created; Face ID is asked at the next unlock.
 
-**To finish it:** (1) in `AppLockGate`, re-read `hasBiometricUnlock()` when it relocks (the AppState "active" branch before `setRelocked(true)`), with a gate test; (2) apply the patch; (3) its BLOCKED device check (iPhone: no prompt at setup, Face ID asked at next unlock; Android: prompt at setup, cancel leaves passphrase only) then holds in-session. Suggest doing (1) as its own small step first.
+**iPhone:**
+1. Turn the lock on with Face ID; enroll an alternate appearance (Settings → Face ID); lock Capsule (leave it longer than the lock timing): Face ID unlock fails, the passphrase works.
+2. Unlock with the passphrase, go to Privacy, enter the passphrase, tap "Set up Face ID / fingerprint again": no prompt; "Face ID / fingerprint unlock is set up."; leave Capsule longer than the lock timing and come back: the lock screen offers Face ID, and it unlocks. No restart needed. (iPhone allows one alternate appearance; if one exists already, reset Face ID instead.)
+3. With no Face ID enrolled, or Face ID turned off for Capsule (Settings → Capsule), the button isn't offered (the screen checks availability when it opens).
+
+**Android:**
+1. Turn the lock on with fingerprint; enroll a new fingerprint; lock Capsule: fingerprint unlock fails, the passphrase works.
+2. Unlock, go to Privacy, enter the passphrase, tap the button: the fingerprint prompt appears; accept: "Face ID / fingerprint unlock is set up."; leave longer than the lock timing and come back: fingerprint unlocks.
+3. Repeat but cancel the prompt: "Face ID / fingerprint wasn't set up. Your passphrase still unlocks Capsule."; leave longer than the lock timing and come back: the lock screen offers the passphrase only.
+
+**Both:** a wrong passphrase gives "That passphrase didn't work."; on a lock turned on without biometrics the button reads "Set up Face ID / fingerprint" and, once set up, the next lock screen offers it (no restart).
 
 ## 10.51 Android fingerprint cancel while turning the lock on — device check (2026-11-09)
-Done in code (box unchecked: biometrics are native). On an Android phone with a fingerprint enrolled: Privacy → turn app lock on with "Also unlock with Face ID / fingerprint" on → when the fingerprint prompt appears, cancel it → an alert "App lock is on — Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase…" appears; tap OK → the app restarts to the lock screen offering the passphrase only. Accepting the prompt instead restarts straight away with fingerprint unlock offered. (iPhone shows no prompt at this point, so the alert only appears there if Face ID can't store the key.)
+Done in code (box unchecked: biometrics are native). On an Android phone with a fingerprint enrolled: Privacy → turn app lock on with "Also unlock with Face ID / fingerprint" on → when the fingerprint prompt appears, cancel it → an alert "App lock is on — Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase. To add it, use \"Set up Face ID / fingerprint\" in Privacy." appears; tap OK → the app restarts to the lock screen offering the passphrase only. Accepting the prompt instead restarts straight away with fingerprint unlock offered. (iPhone shows no prompt at this point, so the alert only appears there if Face ID can't store the key.)
+
+## Follow-up: Android weak vs strong biometrics (found reviewing 10.54, 2026-11-10)
+`isBiometricAvailable` (features/app-lock) accepts weak biometrics (class 2, e.g. some face unlocks), but expo-secure-store's protected items need strong ones (class 3). On a phone with only weak biometrics, the biometrics switch and the "Set up Face ID / fingerprint" button are offered but always end in "wasn't set up" (the message stays true). Fix: check for strong biometrics (`SecurityLevel.BIOMETRIC_STRONG`) in `isBiometricAvailable`. Not a step yet.
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.
