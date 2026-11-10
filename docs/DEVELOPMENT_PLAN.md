@@ -221,7 +221,7 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.52 After a full wipe, the fresh database gets one "Data wiped" audit entry (the wipe's own record no longer disappears with the data)
 
 **Decided 2026-11-10 (user, cloud session):**
-- [ ] 10.53 The lock screen re-checks whether biometric unlock is set up each time Capsule relocks (`AppLockGate` reads `hasBiometricUnlock()` on relock, not only at launch), with a gate test
+- [x] 10.53 The lock screen re-checks whether biometric unlock is set up each time Capsule relocks (`AppLockGate` reads `hasBiometricUnlock()` on relock, not only at launch), with a gate test
 - [ ] 10.54 Retry 10.50 ("Set up Face ID / fingerprint again") on top of 10.53 from `.claude/loop/patches/10.50-biometric-setup-again.patch`; boxes for 10.50 and 10.54 wait for the device check
 
 ### Phase 9 — Future releases (deferred)

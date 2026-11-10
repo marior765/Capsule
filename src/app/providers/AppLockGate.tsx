@@ -1,5 +1,5 @@
 import { reloadAppAsync } from "expo";
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import {
   Alert,
   AppState,
@@ -30,7 +30,8 @@ type Phase = "starting" | "locked" | "ready" | "failed";
  * can touch the database — until the lock screen unlocks the encrypted one.
  * After that, returning from the background longer than the lock timing
  * covers the app with the lock screen again (the database stays open; the
- * passphrase or biometrics are checked again before the app shows).
+ * passphrase or biometrics are checked again before the app shows). Whether
+ * that lock screen offers biometrics is re-read each time (10.53).
  */
 export function AppLockGate({ children }: PropsWithChildren) {
   const [phase, setPhase] = useState<Phase>("starting");
@@ -38,6 +39,9 @@ export function AppLockGate({ children }: PropsWithChildren) {
   const [biometrics, setBiometrics] = useState(false);
   const [relocked, setRelocked] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Which relock the latest biometrics check belongs to: an older, slower
+  // check must not overwrite a newer one.
+  const relockCount = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -68,7 +72,17 @@ export function AppLockGate({ children }: PropsWithChildren) {
       } else if (state === "active") {
         if (shouldRelock(leftAt, Date.now(), getLockAfter())) {
           Keyboard.dismiss();
+          // Cover the app at once; don't wait for the check below.
           setRelocked(true);
+          // Biometric unlock may have been set up or removed since launch
+          // (10.53): re-read it for this lock screen. A failed check means
+          // off — the passphrase always works.
+          const thisRelock = ++relockCount.current;
+          void hasBiometricUnlock()
+            .catch(() => false)
+            .then((on) => {
+              if (thisRelock === relockCount.current) setBiometrics(on);
+            });
         }
         leftAt = null;
       }

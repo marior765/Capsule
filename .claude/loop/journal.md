@@ -5373,3 +5373,8 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 
 ## Beat 148 — user decision: finish 10.50 via 10.53 + 10.54 (2026-11-10)
 - `/loop` restarted with nothing selectable; asked the one open decision instead of idling. The user chose both steps: 10.53 makes AppLockGate re-read the biometric flag on relock (the round-3 blocker), and 10.54 retries 10.50 from its saved patch on top of it.
+
+## Beat 149 — 10.53 lock gate re-reads biometrics on relock (done, 1 attempt)
+- `AppLockGate`: on relock it covers the app first (unchanged), then re-reads `hasBiometricUnlock()` for that lock screen; a failed check means off; a per-relock counter makes an older, slower check unable to overwrite a newer one (the reviewer's minor note, folded in with a test).
+- First gate render test (`AppLockGate.render.test.tsx`). Harness lessons: capture AppState listeners, stub `Keyboard.dismiss` (it isn't implemented in Jest, and it threw before `setRelocked`, silently), and use async `act` (a sync act doesn't flush React 19 state). 3 of 4 tests failed for the right reason before the change; the "covers the app at once" test guards the security ordering.
+- Reviewer pass on attempt 1. This removes 10.50's round-3 blocker; 10.54 retries 10.50 next.
