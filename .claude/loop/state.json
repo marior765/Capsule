@@ -3,15 +3,15 @@
     "scope": "all",
     "started": "2026-08-12T21:47:20Z",
     "beat": 147,
-    "status": "complete",
+    "status": "running",
     "completedAt": "2026-11-09T19:27:08Z",
     "completionNote": "Round-4 steps 10.44-10.52: 5 done, 10.46/10.51 done in code (device checks), 10.48 reconciled, 10.50 quarantined (patch saved; needs AppLockGate relock refresh).",
-    "resumedAt": "2026-11-07",
-    "resumeNote": "Reopened 2026-11-07 for user decisions round 4: steps 10.44-10.52 (privacy fixes first).",
+    "resumedAt": "2026-11-10",
+    "resumeNote": "Reopened 2026-11-10: 10.53 (lock gate refreshes biometrics on relock) and 10.54 (retry 10.50).",
     "lastBeatNote": "Beat 128 (2026-10-31): /loop /safe-loop all re-entered after PR #1 merge; no selectable step (remaining: 10.14 quarantined, 3.1 blocked, 8.1 + Phase 9 deferred, native steps awaiting device checks). Run stays complete."
   },
   "cursor": {
-    "step": null,
+    "step": "10.53",
     "phase": 10
   },
   "steps": {
@@ -1020,11 +1020,25 @@
       ],
       "checkpoint": "ba32bb3",
       "notes": "Wipe record in fresh db after keys forgotten; reviewer pass on attempt 3."
+    },
+    "10.53": {
+      "status": "pending",
+      "class": "logic",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": "",
+      "notes": ""
+    },
+    "10.54": {
+      "status": "pending",
+      "class": "native",
+      "attempts": 0,
+      "failureSignatures": [],
+      "checkpoint": "",
+      "notes": ""
     }
   },
-  "quarantinedThisRun": [
-    "10.50"
-  ],
+  "quarantinedThisRun": [],
   "lastGate": {
     "tsc": "pass",
     "jest": "pass",

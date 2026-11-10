@@ -1294,7 +1294,7 @@ iOS's expo-audio files go to `cache/ExpoAudio`, which the full wipe does
 ## 10.45 recordings deleted after use — light device check (non-blocking, 2026-11-07)
 Box ticked (logic proven in Jest; the reviewer traced both platforms' native paths and is ~90% sure the delete accepts real recorder URIs). To confirm: on iOS and Android, record a few voice messages, then look in the app's cache (`ExpoAudio/` on iOS, `Audio/` on Android): it should be empty. A failed delete is silent by design (best effort), so this is the only way to see it.
 
-## 10.50 — QUARANTINED: "Set up Face ID / fingerprint again" (2026-11-09)
+## 10.50 — QUARANTINED: "Set up Face ID / fingerprint again" (2026-11-09) — user decided 2026-11-10: steps 10.53 (gate refresh) then 10.54 (retry)
 
 **Status:** three review rounds; the code is saved in `.claude/loop/patches/10.50-biometric-setup-again.patch` (applies cleanly to 3d933fd; `git apply` it). Main is unchanged.
 
