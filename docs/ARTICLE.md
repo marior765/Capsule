@@ -2992,4 +2992,29 @@ against platform sources is as valuable as one that reads the code.
 
 ---
 
+## 2026-11-14 — The tests didn't run the same code as the app
+
+The tap-latency audit found one clear cause quickly: two screens ran one
+database query per capsule on the JS thread. The agent fixed those, and
+then claimed a second suspect was ruled out because the React Compiler
+memoizes render-time work. The reviewer compiled the screen and showed
+otherwise: the compiler had wrapped the entire render in one memo block
+keyed on every piece of state, so any tap re-ran the queries.
+
+The fix for that exposed a subtler gap. The agent added a dependency the
+compiler doesn't see (it infers inputs from values the code actually uses),
+so in the real app the board would go stale after an edit. The tests
+passed, because Jest never runs the compiler; the app does. The final fix
+made the dependency real, and a new test compiles the hook with the
+compiler and checks the generated memo guards.
+
+**Article angle:** when a build step rewrites your code (a compiler, a
+bundler, a minifier), tests that skip that step are testing a different
+program. "It's memoized" and "the tests pass" were both true of the source
+and false of the shipped code. The reviewer's move of compiling the file
+and reading the output turned an assumption into evidence, and the same
+move became a permanent test.
+
+---
+
 <!-- Append new dated entries above this line as work progresses. -->

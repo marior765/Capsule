@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
   getAllCapsules,
-  getValuesByCapsule,
+  getAllCapsuleValues,
   type Capsule,
 } from "@/entities/capsule";
 
@@ -18,10 +18,18 @@ export function searchCapsules(db: SQLiteDatabase, query: string): Capsule[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return getAllCapsules(db);
 
-  return getAllCapsules(db).filter((capsule) => {
-    if (capsule.title.toLowerCase().includes(needle)) return true;
-    return getValuesByCapsule(db, capsule.id).some((value) =>
-      value.value?.toLowerCase().includes(needle),
-    );
-  });
+  // Runs on every keystroke, on the JS thread: one query for all values
+  // (10.56), not one per capsule. Matching stays in JS: SQLite's lower()
+  // only folds ASCII, which would break non-Latin searches.
+  const matchingByValue = new Set<string>();
+  for (const value of getAllCapsuleValues(db)) {
+    if (value.value?.toLowerCase().includes(needle)) {
+      matchingByValue.add(value.capsuleId);
+    }
+  }
+  return getAllCapsules(db).filter(
+    (capsule) =>
+      capsule.title.toLowerCase().includes(needle) ||
+      matchingByValue.has(capsule.id),
+  );
 }

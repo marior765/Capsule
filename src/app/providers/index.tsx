@@ -33,6 +33,7 @@ export { useStt } from "./SttProvider";
 export { useEmbeddings } from "./EmbeddingProvider";
 export { useDb } from "./useDb";
 export { eraseEverything } from "./eraseEverything";
+export { useCapsuleListQueries } from "./useCapsuleListQueries";
 export {
   exportForSharing,
   importFile,

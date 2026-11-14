@@ -19,6 +19,7 @@ export {
   deleteCapsule,
   orphanChildCapsules,
   getValuesByCapsule,
+  getAllCapsuleValues,
   getValueByCapsuleAndField,
   getValuesByField,
   upsertCapsuleValue,

@@ -12,6 +12,7 @@ import {
   getTagById,
   getTagByName,
   getTagsByCapsule,
+  getTagsForAllCapsules,
   insertTag,
   removeTagFromCapsule,
   tagsMigration,
@@ -139,5 +140,26 @@ describe("entities/tag — capsule/tag junction", () => {
 
   it("a capsule with no tags returns an empty array, not an error", () => {
     expect(getTagsByCapsule(db, "untagged-capsule")).toEqual([]);
+  });
+});
+
+// 10.56: one query for every capsule's tags (capsule previews).
+describe("entities/tag — getTagsForAllCapsules", () => {
+  it("groups tags by capsule, each list sorted by name", () => {
+    const urgent = makeTag({ id: "t-u", name: "urgent" });
+    const books = makeTag({ id: "t-b", name: "books" });
+    insertTag(db, urgent);
+    insertTag(db, books);
+    addTagToCapsule(db, "c1", urgent.id, 1000);
+    addTagToCapsule(db, "c1", books.id, 1000);
+    addTagToCapsule(db, "c2", urgent.id, 1000);
+
+    const byCapsule = getTagsForAllCapsules(db);
+    expect(byCapsule.get("c1")?.map((t) => t.name)).toEqual([
+      "books",
+      "urgent",
+    ]);
+    expect(byCapsule.get("c2")?.map((t) => t.name)).toEqual(["urgent"]);
+    expect(byCapsule.has("c3")).toBe(false);
   });
 });

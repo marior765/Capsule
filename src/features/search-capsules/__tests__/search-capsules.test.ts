@@ -75,3 +75,41 @@ describe("searchCapsules", () => {
     expect(searchCapsules(db, "dune")).toHaveLength(1);
   });
 });
+
+// Tests for step 10.56 — written before implementation (TDD)
+//
+// Tap-latency audit: every keystroke in the capsule search ran one
+// synchronous query per capsule on the JS thread. The number of queries
+// must not grow with the number of capsules.
+describe("searchCapsules — query count (10.56)", () => {
+  const countQueries = (n: number, query: string): number => {
+    for (let i = 0; i < n; i++) {
+      createCapsule(db, { capsuleTypeId: "ct-1", title: `Item ${n}-${i}` });
+    }
+    const spy = jest.spyOn(db, "getAllSync");
+    try {
+      searchCapsules(db, query);
+      return spy.mock.calls.length;
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  it("runs a fixed number of queries, however many capsules there are", () => {
+    const few = countQueries(2, "zzz");
+    const many = countQueries(40, "zzz");
+    expect(many).toBe(few);
+    expect(many).toBeLessThanOrEqual(2);
+  });
+
+  // Case-insensitive matching stays in JS (SQLite's lower() only folds
+  // ASCII), so non-Latin text keeps matching.
+  it("still matches field values case-insensitively, beyond ASCII", () => {
+    const c = createCapsule(db, {
+      capsuleTypeId: "ct-1",
+      title: "Untitled",
+      values: { f1: "Тарас Шевченко" },
+    });
+    expect(searchCapsules(db, "шевченко").map((x) => x.id)).toEqual([c.id]);
+  });
+});

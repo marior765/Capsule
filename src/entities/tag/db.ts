@@ -108,6 +108,25 @@ export function getTagsByCapsule(db: SQLiteDatabase, capsuleId: string): Tag[] {
   return rows.map(rowToTag);
 }
 
+/**
+ * Every capsule's tags, by capsule id, each list sorted by name — in one
+ * query (10.56), instead of one per capsule.
+ */
+export function getTagsForAllCapsules(db: SQLiteDatabase): Map<string, Tag[]> {
+  const rows = db.getAllSync(
+    `SELECT tags.*, capsule_tags.capsule_id AS capsule_id FROM tags
+     JOIN capsule_tags ON capsule_tags.tag_id = tags.id
+     ORDER BY tags.name ASC;`,
+  ) as (TagRow & { capsule_id: string })[];
+  const byCapsule = new Map<string, Tag[]>();
+  for (const row of rows) {
+    const list = byCapsule.get(row.capsule_id) ?? [];
+    list.push(rowToTag(row));
+    byCapsule.set(row.capsule_id, list);
+  }
+  return byCapsule;
+}
+
 /** Every capsule id tagged with one tag. */
 export function getCapsuleIdsByTag(
   db: SQLiteDatabase,

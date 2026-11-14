@@ -9,6 +9,7 @@ export {
   updateTag,
   deleteTag,
   getTagsByCapsule,
+  getTagsForAllCapsules,
   getCapsuleIdsByTag,
   addTagToCapsule,
   removeTagFromCapsule,

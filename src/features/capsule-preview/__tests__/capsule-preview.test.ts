@@ -157,3 +157,38 @@ describe("capsules screen (static)", () => {
     expect(screen).not.toMatch(/setCapsules\(getAllCapsules\(db\)\)/);
   });
 });
+
+// Tests for step 10.56 — written before implementation (TDD)
+//
+// Tap-latency audit: the capsules tab rebuilds every preview each time it
+// gains focus, and this ran two synchronous queries per capsule on the JS
+// thread (values, then tags). With hundreds of capsules that blocks taps.
+// The number of queries must not grow with the number of capsules.
+describe("getCapsulePreviews — query count (10.56)", () => {
+  const countQueries = (n: number): number => {
+    const all: Capsule[] = [];
+    for (let i = 0; i < n; i++) {
+      const c = capsule(`c${n}-${i}`);
+      insertCapsule(db, c);
+      setValue(c.id, "author", `Author ${i}`);
+      all.push(c);
+    }
+    const spy = jest.spyOn(db, "getAllSync");
+    const firstSpy = jest.spyOn(db, "getFirstSync");
+    try {
+      getCapsulePreviews(db, all);
+      return spy.mock.calls.length + firstSpy.mock.calls.length;
+    } finally {
+      spy.mockRestore();
+      firstSpy.mockRestore();
+    }
+  };
+
+  it("runs a fixed number of queries, however many capsules there are", () => {
+    insertTag(db, { id: "t1", name: "sci-fi", createdAt: 0, updatedAt: 0 });
+    const few = countQueries(2);
+    const many = countQueries(40);
+    expect(many).toBe(few);
+    expect(many).toBeLessThanOrEqual(4);
+  });
+});

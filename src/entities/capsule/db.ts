@@ -193,6 +193,18 @@ export function getValuesByCapsule(
   return rows.map(rowToCapsuleValue);
 }
 
+/**
+ * Every capsule value, in one query (10.56). For screens that need the
+ * values of many capsules at once (previews, search), instead of one
+ * synchronous query per capsule on the JS thread.
+ */
+export function getAllCapsuleValues(db: SQLiteDatabase): CapsuleValue[] {
+  const rows = db.getAllSync(
+    "SELECT * FROM capsule_values;",
+  ) as CapsuleValueRow[];
+  return rows.map(rowToCapsuleValue);
+}
+
 export function getValueByCapsuleAndField(
   db: SQLiteDatabase,
   capsuleId: string,

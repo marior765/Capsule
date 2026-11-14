@@ -13,6 +13,7 @@ import {
   getChildCapsules,
   getValueByCapsuleAndField,
   getValuesByCapsule,
+  getAllCapsuleValues,
   getValuesByField,
   insertCapsule,
   orphanChildCapsules,
@@ -348,5 +349,33 @@ describe("entities/capsule — CapsuleValue reads and cleanup", () => {
 
   it("getValuesByField returns an empty array when no capsule has a value for that field", () => {
     expect(getValuesByField(db, "f-status")).toEqual([]);
+  });
+});
+
+// 10.56: one query for every capsule's values (previews, search).
+describe("entities/capsule — getAllCapsuleValues", () => {
+  it("returns the values of every capsule", () => {
+    for (const [id, capsuleId, value] of [
+      ["v1", "c1", "a"],
+      ["v2", "c1", "b"],
+      ["v3", "c2", null],
+    ] as const) {
+      upsertCapsuleValue(db, {
+        id,
+        capsuleId,
+        fieldId: id,
+        value,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    }
+    const values = getAllCapsuleValues(db);
+    expect(values.map((v) => [v.capsuleId, v.value]).sort()).toEqual(
+      [
+        ["c1", "a"],
+        ["c1", "b"],
+        ["c2", null],
+      ].sort(),
+    );
   });
 });

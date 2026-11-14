@@ -1147,7 +1147,7 @@ _(none)_
 ## Phase 10 decisions (2026-10-16)
 
 - **Quick capture parsing.** Typing "Dune by Frank Herbert" into quick capture puts the whole string in the title; Author stays empty. Should quick capture try to fill fields (e.g. "X by Y" → Author, or the local model extracting fields)? Not a step until decided.
-- **Tap latency** (2026-11-14: code audit is step 10.56; on-device profiling still open). In the simulator taps often landed 1–3 s late. Needs profiling on a real device (JS thread busy? re-render storm?) before it can be a concrete step.
+- **Tap latency** (2026-11-14: code audit done by 10.56, see "10.56 tap-latency audit"; on-device profiling still open). In the simulator taps often landed 1–3 s late. Needs profiling on a real device (JS thread busy? re-render storm?) before it can be a concrete step.
 
 ## 10.1 — voice input (2026-10-16)
 
@@ -1322,6 +1322,23 @@ Done in code (box unchecked: biometrics are native). On an Android phone with a 
 
 ## 10.55 strong biometrics only — device check (2026-11-14)
 Done in code (box unchecked: biometrics are native). `isBiometricAvailable` now requires `getEnrolledLevelAsync() >= BIOMETRIC_STRONG`. Check: (1) on an Android phone with only weak face unlock enrolled (no fingerprint), Privacy shows no "Also unlock with Face ID / fingerprint" switch and no "Set up Face ID / fingerprint" button; (2) add a fingerprint: both appear again and work; (3) on an iPhone with Face ID: unchanged (iOS reports any enrolled biometric as strong), except that during a Face ID lockout (too many failed attempts) the switch and button are hidden until the lockout ends.
+
+## 10.56 tap-latency audit (no device) — findings and what still needs profiling (2026-11-14)
+
+**Fixed (proven in Jest by counting queries):** two interactive paths ran one synchronous SQLite query per capsule on the JS thread.
+- `getCapsulePreviews` (every focus of the Capsules tab): it was 2 queries per capsule (values, tags); now it's 2 in total plus 1 per capsule type.
+- `searchCapsules` (every keystroke in the capsule search): it was 1 query per capsule; now it's 2 in total. Matching stays case-insensitive in JS (SQLite's `lower()` only folds ASCII), with a non-Latin test.
+
+**Also fixed — a re-render storm on taps** (found by the reviewer, who compiled the screen with the React Compiler): the compiler memoizes the capsules screen's render as ONE block keyed on all its state, so any tap that changed state (selecting a capsule, opening Filter & sort or Capture, switching view) re-ran the search and the board's field/value queries. They now live in `useCapsuleListQueries` (src/app/providers), each memoized on its real inputs; a hook test proves a re-render with the same inputs runs no query, and a reload (focus) or a new query does. Because Jest runs without the React Compiler, a second test compiles the hook with babel-plugin-react-compiler and checks that each board read is guarded by the reloaded capsules (a dependency that's only listed is dropped by the compiler; the reads now take the capsules as an argument).
+
+**Still needs on-device profiling** (React Native perf monitor / Hermes profiler; these can't be measured here):
+1. Sync SQLite reads when a screen mounts (chat thread history, capsule detail: values, links, attachments, versions, reminders). Each is small, but all run synchronously on tap → navigate.
+2. The embedding backfill at startup: `indexAllCapsules` (features/capsule-rag) runs about 4 synchronous queries per capsule at every start, even for capsules it skips (provable now; its effect on taps needs a device), plus JS-side work around the native embedding calls and re-indexing after edits.
+3. `scheduleUnscheduledReminders` at startup: one reminders query per capsule (startup only, not per tap).
+4. Whether the simulator's 1–3 s delay happens on a real device at all (the iOS simulator's touch handling plus a debug JS build are slow on their own).
+5. The Home tab loads every capsule and conversation on each focus to show the 5 most recent of each (`getRecentActivity`, features/home-overview); a LIMIT query would avoid it.
+
+To profile: open the dev menu → Perf Monitor, tap around the Capsules tab and a chat, and watch the JS frame rate drop; or record with the Hermes profiler (dev menu → Enable Sampling Profiler) and look for long synchronous `getAllSync` / `getFirstSync` stacks.
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)
 iOS verified in the simulator. On an Android device/emulator: open a capsule with a date field → tap it → the system date dialog appears → pick a day → the field shows that same day (not the day before — the dialog answers in midnight UTC, read with UTC getters); Cancel leaves the value unchanged; Clear empties it. Same pattern as the device-verified reminder picker, so low risk.

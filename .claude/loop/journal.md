@@ -5390,3 +5390,14 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 ## Beat 152 — 10.55 strong biometrics only (done in code, 1 attempt; box waits for Android)
 - `isBiometricAvailable` now requires `getEnrolledLevelAsync() >= BIOMETRIC_STRONG`. The reviewer confirmed against native sources that this is exactly what expo-secure-store's Android `assertBiometricsSupport` enforces, and that iOS reports any biometric as strong (unchanged, apart from hiding the option during a Face ID lockout). Users who only ever had weak biometrics never had a biometric copy saved, so nothing changes for them on upgrade.
 - Reviewer pass on attempt 1; its minors were folded in.
+
+## Beat 153 — 10.56 tap-latency audit (done, 3 attempts)
+- Fixed: `getCapsulePreviews` (every Capsules-tab focus) and `searchCapsules` (every keystroke) ran one synchronous SQLite query per capsule on the JS thread; now a fixed count (batched `getAllCapsuleValues` / `getTagsForAllCapsules`), proven by query-counting tests; search stays case-insensitive in JS (SQLite lower() is ASCII-only).
+- Reviewer fail #1: my "ruled out re-render storms — the React Compiler memoizes it" was false. Compiled, the screen's render is ONE memo block keyed on all state, so every tap re-ran search/board queries. Moved those reads into `useCapsuleListQueries`, each memoized on real inputs.
+- Reviewer fail #2: under the compiler, a dependency that's only listed (`void capsules`) is dropped — the board went stale after edits elsewhere — and Jest never runs the compiler, so the tests passed. Fix: pass the reloaded capsules into the read helpers as a used argument; new test compiles the hook with babel-plugin-react-compiler and asserts each read's guard. Pass on round 3 (the reviewer also ran the behaviour tests against the compiled hook).
+- What still needs a device is in BLOCKED.md ("10.56 tap-latency audit").
+
+## Run summary — 2026-11-10..14 (beats 148–153)
+- Done: 10.53 (lock gate re-reads biometrics), 10.56 (tap-latency audit + fixes).
+- Done in code, waiting for device checks: 10.54 (= 10.50, set up Face ID again), 10.55 (strong biometrics only).
+- No quarantines. Nothing left that the loop can do unattended.

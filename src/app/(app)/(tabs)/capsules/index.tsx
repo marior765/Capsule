@@ -2,25 +2,14 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useDb, useEmbeddings } from "@/app/providers";
-import {
-  getAllCapsules,
-  getValuesByField,
-  type Capsule,
-} from "@/entities/capsule";
+import { useCapsuleListQueries, useDb, useEmbeddings } from "@/app/providers";
+import { getAllCapsules, type Capsule } from "@/entities/capsule";
 import type { BulkOperationResult } from "@/shared/lib";
 import { getAllCapsuleTypes, type CapsuleType } from "@/entities/capsule-type";
-import { getFieldsByCapsuleType, parseSelectOptions } from "@/entities/field";
 import {
-  boardableTypeIds,
-  filterCapsulesByType,
-  findBoardField,
-  groupCapsulesBySelectField,
-  sortCapsules,
   type CapsuleSortKey,
   type SortDirection,
 } from "@/features/filter-sort-capsules";
-import { searchCapsules } from "@/features/search-capsules";
 import {
   getCapsulePreviews,
   type CapsulePreview,
@@ -68,50 +57,21 @@ export default function CapsuleListScreen() {
     capsuleTypes.map((type) => [type.id, type]),
   );
 
-  // Only re-query the db (searchCapsules' own field-value scan) once there's
-  // an actual query — otherwise reuse the already-fetched `capsules` state,
-  // matching the rest of this route's "refresh on focus" convention rather
-  // than re-hitting the db on every render.
-  const searched = query.trim() ? searchCapsules(db, query) : capsules;
-  const filtered = filterCapsulesByType(searched, selectedTypeId);
-  const visibleCapsules = sortCapsules(filtered, sortKey, sortDirection);
-
-  // Board view (8.7) only makes sense scoped to ONE capsule type — a
-  // single_select field's options are defined per-type, so grouping
-  // across types would mix unrelated option sets. Groups by the type's
-  // FIRST single_select field; a type with none, or no type selected at
-  // all, has nothing to group by (handled in the render below, not here).
-  const boardField =
-    viewMode === "board" && selectedTypeId
-      ? findBoardField(getFieldsByCapsuleType(db, selectedTypeId))
-      : null;
+  // The screen's database reads, each memoized on its real inputs (10.56):
+  // a tap that only changes, e.g., the selection mustn't re-run the search
+  // or the board's queries on the JS thread.
+  const { visibleCapsules, boardField, boardTypes, boardColumns } =
+    useCapsuleListQueries({
+      db,
+      capsules,
+      capsuleTypes,
+      query,
+      selectedTypeId,
+      sortKey,
+      sortDirection,
+      viewMode,
+    });
   const boardReady = boardField !== null;
-  // Types the board can show, offered right in the hint when it can't show
-  // the current choice — one tap instead of a trip to Filter & sort.
-  const boardTypes =
-    viewMode === "board" && !boardReady
-      ? boardableTypeIds(
-          capsuleTypes.map((type) => type.id),
-          Object.fromEntries(
-            capsuleTypes.map((type) => [
-              type.id,
-              getFieldsByCapsuleType(db, type.id),
-            ]),
-          ),
-        ).map((id) => capsuleTypesById[id])
-      : [];
-  const boardColumns = boardField
-    ? groupCapsulesBySelectField(
-        visibleCapsules,
-        parseSelectOptions(boardField.config),
-        Object.fromEntries(
-          getValuesByField(db, boardField.id).map((v) => [
-            v.capsuleId,
-            v.value,
-          ]),
-        ),
-      )
-    : [];
 
   // Toggling selection mode off also clears the selection — re-entering
   // select mode later should never resurrect a stale, possibly-deleted
