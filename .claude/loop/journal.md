@@ -5383,3 +5383,6 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 - Re-applied `.claude/loop/patches/10.50-biometric-setup-again.patch` unchanged on top of 10.53; it applied cleanly. 10.51's alert and leftover note now point to the new button instead of "turn app lock off and on again". BLOCKED.md's device check was rewritten; it holds in-session now that the gate re-reads the flag on relock.
 - Reviewer pass on attempt 1, re-deriving all three of 10.50's failed rounds against the merged code and native sources. Minor notes folded in: a requireAuthentication assertion, re-reading the real state after an unexpected error, device-check wording, marking the old 4.6 follow-ups done. Filed the Android weak/strong biometrics mismatch as a follow-up.
 - Same shape as 10.42→10.46: quarantine, fix the root cause as its own small step, then the saved patch passes on the first try.
+
+## Beat 151 — user decisions round 5 (2026-11-14)
+- Asked the open BLOCKED items as questions. Decisions: 10.55 strong biometrics only; 10.56 tap-latency code audit; the user will verify the ChatGPT/Claude importers with their own export. No device checks done yet, so no boxes ticked.

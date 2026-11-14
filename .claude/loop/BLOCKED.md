@@ -744,7 +744,7 @@ All five of 5.4's formats are now implemented (CSV, JSON, Markdown in beat
 Claude) remain unverified against real export files — see this entry and
 the next.
 
-### 5.4 — Claude export importer: built from public docs, unverified
+### 5.4 — Claude export importer: built from public docs, unverified — 2026-11-14: the user will test with their own export (ChatGPT and Claude.ai) and report
 `parseClaudeExport`/`importClaudeExport` (`features/migrate-import`) follow the
 publicly described claude.ai data export shape (no formal schema is
 published) — `conversations.json`: an
@@ -1147,7 +1147,7 @@ _(none)_
 ## Phase 10 decisions (2026-10-16)
 
 - **Quick capture parsing.** Typing "Dune by Frank Herbert" into quick capture puts the whole string in the title; Author stays empty. Should quick capture try to fill fields (e.g. "X by Y" → Author, or the local model extracting fields)? Not a step until decided.
-- **Tap latency.** In the simulator taps often landed 1–3 s late. Needs profiling on a real device (JS thread busy? re-render storm?) before it can be a concrete step.
+- **Tap latency** (2026-11-14: code audit is step 10.56; on-device profiling still open). In the simulator taps often landed 1–3 s late. Needs profiling on a real device (JS thread busy? re-render storm?) before it can be a concrete step.
 
 ## 10.1 — voice input (2026-10-16)
 
@@ -1317,7 +1317,7 @@ How the platforms differ (expo-secure-store 56): **Android** asks for the finger
 ## 10.51 Android fingerprint cancel while turning the lock on — device check (2026-11-09)
 Done in code (box unchecked: biometrics are native). On an Android phone with a fingerprint enrolled: Privacy → turn app lock on with "Also unlock with Face ID / fingerprint" on → when the fingerprint prompt appears, cancel it → an alert "App lock is on — Face ID / fingerprint wasn't set up, so Capsule will unlock with your passphrase. To add it, use \"Set up Face ID / fingerprint\" in Privacy." appears; tap OK → the app restarts to the lock screen offering the passphrase only. Accepting the prompt instead restarts straight away with fingerprint unlock offered. (iPhone shows no prompt at this point, so the alert only appears there if Face ID can't store the key.)
 
-## Follow-up: Android weak vs strong biometrics (found reviewing 10.54, 2026-11-10)
+## Follow-up: Android weak vs strong biometrics (found reviewing 10.54, 2026-11-10) — DECIDED 2026-11-14 → step 10.55
 `isBiometricAvailable` (features/app-lock) accepts weak biometrics (class 2, e.g. some face unlocks), but expo-secure-store's protected items need strong ones (class 3). On a phone with only weak biometrics, the biometrics switch and the "Set up Face ID / fingerprint" button are offered but always end in "wasn't set up" (the message stays true). Fix: check for strong biometrics (`SecurityLevel.BIOMETRIC_STRONG`) in `isBiometricAvailable`. Not a step yet.
 
 ## 10.22 date field picker — Android check (non-blocking, 2026-10-25)

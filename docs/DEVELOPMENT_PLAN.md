@@ -224,6 +224,10 @@ Each phase is shippable on its own. AI core and local-first foundation ship firs
 - [x] 10.53 The lock screen re-checks whether biometric unlock is set up each time Capsule relocks (`AppLockGate` reads `hasBiometricUnlock()` on relock, not only at launch), with a gate test
 - [ ] 10.54 Retry 10.50 ("Set up Face ID / fingerprint again") on top of 10.53 from `.claude/loop/patches/10.50-biometric-setup-again.patch`; boxes for 10.50 and 10.54 wait for the device check
 
+**Decided 2026-11-14 (user, cloud session):**
+- [ ] 10.55 Offer Face ID / fingerprint only where it can work: `isBiometricAvailable` (features/app-lock) requires strong biometrics (Android class 3, what expo-secure-store's protected items need), so phones with only weak biometrics no longer see an option that always fails
+- [ ] 10.56 Tap-latency code audit (no device): find likely causes of the 1–3 s late taps seen in the simulator that can be proven without a device (re-render storms, heavy synchronous work on the JS thread at tap time), fix what's found with tests, and write what still needs on-device profiling to BLOCKED.md
+
 ### Phase 9 — Future releases (deferred)
 - [ ] 9.1 Spike: CRDT model fit (Yjs vs Automerge) against the portable format
 - [ ] 9.2 LAN device discovery + E2E-encrypted transport, fully isolated behind a flag
