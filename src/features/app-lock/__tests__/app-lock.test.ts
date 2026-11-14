@@ -9,12 +9,17 @@
 // lives here, testable without rendering, and a future provider only has to
 // supply the concrete `unlockVault` wrapper plus mount an AppState listener
 // and a lock-screen UI. See BLOCKED.md for that remaining wiring.
-import { isEnrolledAsync, authenticateAsync } from "expo-local-authentication";
+import {
+  getEnrolledLevelAsync,
+  authenticateAsync,
+} from "expo-local-authentication";
 import {
   __resetLocalAuthMock,
   __setHasHardware,
   __setEnrolled,
   __setNextAuthResult,
+  __setEnrolledLevel,
+  SecurityLevel,
 } from "@/__mocks__/expo-local-authentication";
 import {
   isBiometricAvailable,
@@ -45,7 +50,27 @@ describe("isBiometricAvailable", () => {
   it("does not check enrollment when there is no hardware at all", async () => {
     __setHasHardware(false);
     await isBiometricAvailable();
-    expect(isEnrolledAsync).not.toHaveBeenCalled();
+    expect(getEnrolledLevelAsync).not.toHaveBeenCalled();
+  });
+
+  // Tests for step 10.55 — written before implementation (TDD).
+  // expo-secure-store's biometric-protected items need STRONG biometrics
+  // (Android class 3). With only weak ones (some face unlocks), offering
+  // biometrics led to a setup that always failed.
+  it("is false when only weak biometrics are enrolled (Android)", async () => {
+    __setEnrolledLevel(SecurityLevel.BIOMETRIC_WEAK);
+    await expect(isBiometricAvailable()).resolves.toBe(false);
+  });
+
+  it("is false when only a PIN / pattern is set", async () => {
+    __setEnrolledLevel(SecurityLevel.SECRET);
+    await expect(isBiometricAvailable()).resolves.toBe(false);
+  });
+
+  // iOS reports any enrolled biometric as strong (there are no weak ones).
+  it("is true with strong biometrics", async () => {
+    __setEnrolledLevel(SecurityLevel.BIOMETRIC_STRONG);
+    await expect(isBiometricAvailable()).resolves.toBe(true);
   });
 });
 

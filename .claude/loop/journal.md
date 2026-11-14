@@ -5386,3 +5386,7 @@ Gate: tsc clean, jest 1574, eslint clean. Checkpoint `5e71fb8`. Cursor → 10.19
 
 ## Beat 151 — user decisions round 5 (2026-11-14)
 - Asked the open BLOCKED items as questions. Decisions: 10.55 strong biometrics only; 10.56 tap-latency code audit; the user will verify the ChatGPT/Claude importers with their own export. No device checks done yet, so no boxes ticked.
+
+## Beat 152 — 10.55 strong biometrics only (done in code, 1 attempt; box waits for Android)
+- `isBiometricAvailable` now requires `getEnrolledLevelAsync() >= BIOMETRIC_STRONG`. The reviewer confirmed against native sources that this is exactly what expo-secure-store's Android `assertBiometricsSupport` enforces, and that iOS reports any biometric as strong (unchanged, apart from hiding the option during a Face ID lockout). Users who only ever had weak biometrics never had a biometric copy saved, so nothing changes for them on upgrade.
+- Reviewer pass on attempt 1; its minors were folded in.

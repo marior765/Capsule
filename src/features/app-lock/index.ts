@@ -1,7 +1,8 @@
 import {
   hasHardwareAsync,
-  isEnrolledAsync,
+  getEnrolledLevelAsync,
   authenticateAsync,
+  SecurityLevel,
 } from "expo-local-authentication";
 import { getString, setString } from "@/shared/storage";
 
@@ -45,18 +46,22 @@ export type PassphraseAuthenticator = (
 const DEFAULT_PROMPT_MESSAGE = "Unlock Capsule";
 
 /**
- * Whether biometric authentication can actually be attempted right now —
- * both hardware present *and* something enrolled to check against. Skips
+ * Whether biometric unlock can actually work right now — hardware present
+ * *and* strong biometrics enrolled (10.55; see the comment below). Skips
  * the enrollment check entirely when there's no hardware at all, since
- * asking the OS "is anything enrolled" on a device with no sensor is a
- * wasted round trip with only one possible answer.
+ * asking the OS "what is enrolled" on a device with no sensor is a wasted
+ * round trip with only one possible answer.
  */
 export async function isBiometricAvailable(): Promise<boolean> {
   const hasHardware = await hasHardwareAsync();
   if (!hasHardware) {
     return false;
   }
-  return isEnrolledAsync();
+  // Strong biometrics only (10.55): the vault key's biometric copy lives in
+  // expo-secure-store, whose protected items need Android's class-3
+  // ("strong") biometrics. With only weak ones (some face unlocks) setup
+  // always failed. iOS reports any enrolled biometric as strong.
+  return (await getEnrolledLevelAsync()) >= SecurityLevel.BIOMETRIC_STRONG;
 }
 
 /**
